@@ -3528,12 +3528,10 @@
 
 
       function itemLuck(item) {
-        // New formula: sixth root of (value / 2). This produces significantly higher
-        // luck values than the old formula (value^(1/6) / 10), allowing end-game luck
-        // to reach ~1500 with 20 high-value ores. Divisor in currentMaxValueMultiplier
-        // is adjusted to /500 to compensate for inflation, preventing late-game ore
-        // value from becoming excessive while still rewarding luck plot progression.
-        return item && item.value > 0 ? Math.pow(item.value / 2, 1 / 6) : 0;
+        // Formula: (value^(1/6)) / 2, then multiply by 20 for total luck plot
+        // Single ore luck = value^(1/6) / 2
+        // Total with 20 ores = (value^(1/6) / 2) * 20
+        return item && item.value > 0 ? Math.pow(item.value, 1 / 6) / 2 : 0;
       }
 
       function totalPlotLuck() {
