@@ -1229,8 +1229,8 @@
     <small id="controlsToggleStatus">VISIBLE</small>
   </button>
 
-  <button id="cloudButton" aria-label="Open cloud save and account menu">
-    CLOUD SAVE
+  <button id="cloudButton" aria-label="Open login and account menu">
+    <span id="cloudButtonLabel">LOG IN</span>
     <small id="cloudButtonStatus">LOCAL ONLY</small>
   </button>
 
@@ -1740,6 +1740,7 @@
       const controlsToggleButton = document.getElementById("controlsToggleButton");
       const controlsToggleStatus = document.getElementById("controlsToggleStatus");
       const cloudButton = document.getElementById("cloudButton");
+      const cloudButtonLabel = document.getElementById("cloudButtonLabel");
       const cloudButtonStatus = document.getElementById("cloudButtonStatus");
       const cloudStatusBox = document.getElementById("cloudStatusBox");
       const cloudEmail = document.getElementById("cloudEmail");
@@ -2771,6 +2772,7 @@
         cloudSignUp.disabled = cloudBusy || !cloudConfigured;
         cloudButton.classList.toggle("connected", signedIn);
         cloudButton.classList.toggle("saving", cloudBusy);
+        cloudButtonLabel.textContent = signedIn ? "ACCOUNT" : "LOG IN";
         cloudButtonStatus.textContent = cloudBusy
           ? "SYNCING…"
           : signedIn
