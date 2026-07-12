@@ -1807,16 +1807,16 @@
       // first (already in price arrays), then apply 50% of luck scaling.
       // Formula: 1.0 + (luck_factor - 1.0) * 0.5
       const TIER_LUCK_SCALING = [
-        1.052,  // Tier 1: 50% of 1.103
-        1.052,  // Tier 2: 50% of 1.103
-        1.217,  // Tier 3: 50% of 1.434
-        1.246,  // Tier 4: 50% of 1.492
-        1.372,  // Tier 5: 50% of 1.743
-        1.622,  // Tier 6: 50% of 2.244
-        1.868,  // Tier 7: 50% of 2.735
-        2.039,  // Tier 8: 50% of 3.077
-        2.196,  // Tier 9: 50% of 3.391
-        2.446   // Tier 10: 50% of 3.891
+        1.052,  // Tier 1: 0 luck, no adjustment
+        1.084,  // Tier 2: 10 luck, 3.1% increase
+        1.297,  // Tier 3: 22 luck, 6.6% increase
+        1.376,  // Tier 4: 35 luck, 10.4% increase
+        1.583,  // Tier 5: 53 luck, 15.4% increase
+        1.979,  // Tier 6: 78 luck, 22.0% increase
+        2.422,  // Tier 7: 109 luck, 29.6% increase
+        2.816,  // Tier 8: 146 luck, 38.1% increase
+        3.221,  // Tier 9: 188 luck, 46.7% increase
+        3.814   // Tier 10: 236 luck, 55.9% increase
       ];
 
       function roundPrice(value) {
