@@ -3904,6 +3904,7 @@
           for (let x = 0; x < WORLD_W; x++) {
             if (isProtectedArea(x, y)) continue;
             if (tileAt(x, y) === AIR) continue;
+            if (tileAt(x, y) === DIRT || tileAt(x, y) === GRASS) continue;
 
             // Calculate depth from surface
             const depth = y - GROUND_Y;
