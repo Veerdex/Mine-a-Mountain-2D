@@ -2143,8 +2143,8 @@
       let desktopModeJustToggled = false; // prevents immediate action after mode switch
       let mobileControlsVisible = true;
       let playerInShop = false; // tracks if player is inside equipment shop
-      let shopInteriorStartX = -30; // shop interior positioned to the left, out of view
-      let shopInteriorY = GROUND_Y - 5; // y-coordinate of shop interior
+      let shopInteriorStartX = 330; // shop interior positioned far right, out of view
+      let shopInteriorY = 10; // y-coordinate of shop interior (at top of world)
       let shopExitX = null; // where player was before entering shop
 
       // Lightweight synthesized audio avoids network requests and large sound
@@ -3990,37 +3990,9 @@
         }
 
         if (name === "equipment") {
-          // Enter shop interior to the left
+          // Enter separate shop world
           playerInShop = true;
           shopExitX = player.x;
-
-          // Create shop interior with walls and floor
-          for (let x = shopInteriorStartX; x < shopInteriorStartX + 28; x++) {
-            for (let y = shopInteriorY - 5; y <= shopInteriorY; y++) {
-              if (y >= 0 && y < WORLD_H) {
-                // Create solid walls on left and right
-                if (x === shopInteriorStartX || x === shopInteriorStartX + 27) {
-                  setTile(x, y, STONE);
-                }
-                // Create floor at bottom
-                else if (y === shopInteriorY) {
-                  setTile(x, y, STONE);
-                }
-                // Create ceiling at top
-                else if (y === shopInteriorY - 5) {
-                  setTile(x, y, STONE);
-                }
-                // Interior space is air
-                else {
-                  setTile(x, y, AIR);
-                }
-              }
-            }
-          }
-
-          player.x = (shopInteriorStartX + 10) * TILE;
-          player.y = (shopInteriorY - 2) * TILE;
-          camera.zoom = 2.0;
           input.mine = false;
           input.jump = false;
           input.build = false;
@@ -6687,8 +6659,12 @@
 
       function update(dt) {
         if (playerInShop) {
-          checkShopInteractions();
-          updateMovement(dt);
+          // Simple shop movement with exit on jump
+          if (input.jump && !player.jumpWasDown) {
+            closeModal();
+            exitEquipmentShop();
+          }
+          player.jumpWasDown = input.jump;
         } else if (!activeModal) {
           updateMovement(dt);
           updateBuilding(dt);
@@ -7444,7 +7420,51 @@
         ctx.stroke();
       }
 
+      function drawShopWorld(now) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Wooden shop interior background
+        ctx.fillStyle = "#8B4513";
+        ctx.fillRect(0, 0, screenW, screenH);
+
+        // Wooden pattern
+        ctx.fillStyle = "#6B3410";
+        for (let i = 0; i < 10; i++) {
+          ctx.fillRect(i * screenW / 10, 0, screenW / 20, screenH);
+        }
+
+        // Draw pickaxes section label
+        ctx.fillStyle = "#D4A574";
+        ctx.font = "bold 48px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("PICKAXES", screenW * 0.25, screenH * 0.4);
+
+        // Draw backpacks section label
+        ctx.fillText("BACKPACKS", screenW * 0.75, screenH * 0.4);
+
+        // Draw player
+        const playerScreenX = screenW * 0.5;
+        const playerScreenY = screenH * 0.6;
+        ctx.fillStyle = "#f2c84b";
+        ctx.fillRect(playerScreenX - 12, playerScreenY - 20, 24, 32);
+        ctx.fillStyle = "#263b3e";
+        ctx.fillRect(playerScreenX + 4, playerScreenY - 14, 5, 4);
+        ctx.fillStyle = "#ce9630";
+        ctx.fillRect(playerScreenX - 8, playerScreenY + 12, 16, 6);
+
+        // Draw exit instruction
+        ctx.fillStyle = "#FFD700";
+        ctx.font = "24px Arial";
+        ctx.fillText("JUMP to EXIT", screenW * 0.5, screenH * 0.9);
+      }
+
       function draw(now) {
+        if (playerInShop) {
+          drawShopWorld(now);
+          return;
+        }
+
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         drawParallaxBackground(now || performance.now());
         drawCaveBackground();
@@ -7462,7 +7482,6 @@
         drawMiningTarget();
         drawAimIndicator();
         drawPlayer();
-        drawShopInterior(ctx);
         drawLightingAndFog();
 
         if (camera.revealTimer > 0 && currentMountain) {
