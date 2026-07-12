@@ -4779,7 +4779,13 @@
 
         const visibleW = screenW / camera.zoom;
         const visibleH = screenH / camera.zoom;
-        camera.x = clamp(player.x - visibleW * 0.35, 0, WORLD_W * TILE - visibleW);
+
+        // Adjust camera bounds based on whether player is in shop
+        if (playerInShop) {
+          camera.x = clamp(player.x - visibleW * 0.35, (shopInteriorStartX - 2) * TILE, (shopInteriorStartX + 30) * TILE - visibleW);
+        } else {
+          camera.x = clamp(player.x - visibleW * 0.35, 0, WORLD_W * TILE - visibleW);
+        }
         camera.y = clamp(player.y - visibleH * 0.55, 0, WORLD_H * TILE - visibleH);
       }
 
@@ -4887,7 +4893,12 @@
           }
         }
 
-        player.x = clamp(player.x, 0, WORLD_W * TILE - player.w);
+        // Allow negative X when in shop, otherwise clamp to world bounds
+        if (playerInShop) {
+          player.x = clamp(player.x, (shopInteriorStartX - 2) * TILE, (shopInteriorStartX + 30) * TILE - player.w);
+        } else {
+          player.x = clamp(player.x, 0, WORLD_W * TILE - player.w);
+        }
 
         if (player.grounded && Math.abs(player.vx) > 28 && Math.abs(horizontal) > 0.12) {
           walkSoundTimer -= dt;
