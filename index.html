@@ -5637,13 +5637,16 @@
 
         // Ambient underground darkness covers all terrain, not only the
         // purchased mountain. Each column begins at its actual terrain surface.
-        // Kept near-opaque so anywhere not currently lit by the player, a torch,
-        // sunlight, or a glowing block reads as dark — this is what makes torches
-        // necessary. Every light source carves this layer each frame, so areas go
-        // dark again once the source (e.g. the player) moves away.
+        // Fully opaque so anywhere not currently lit by the player, a torch,
+        // sunlight, or a glowing block is completely black — unlit terrain, mined
+        // tunnels, and ores stay hidden, which is what makes torches necessary.
+        // Opacity also avoids the faint vertical seams a semi-transparent fill
+        // produced where the per-column rectangles overlap. Every light source
+        // carves this layer each frame, so areas go dark again once the source
+        // (e.g. the player) moves away.
         lightCtx.globalCompositeOperation = "source-over";
         lightCtx.globalAlpha = 1;
-        lightCtx.fillStyle = "rgba(4,9,15,0.95)";
+        lightCtx.fillStyle = "rgb(4,9,15)";
         for (let x = firstX; x <= lastX; x++) {
           const sx = worldToScreenX(x * TILE);
           const sy = worldToScreenY(terrainSurfaceYAt(x) * TILE);
