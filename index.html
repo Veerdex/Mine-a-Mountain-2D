@@ -1826,6 +1826,17 @@
       const playerLightCosts = new Float64Array(PLAYER_LIGHT_DIAMETER * PLAYER_LIGHT_DIAMETER);
       const lightCanvas = document.createElement("canvas");
       const lightCtx = lightCanvas.getContext("2d");
+      // Small 1px-per-tile darkness texture. The per-tile light level is written
+      // here, then blitted upscaled with bilinear smoothing over the scene. A
+      // single interpolated image has no per-tile rectangle boundaries, so it is
+      // free of the seam artifacts that overlapping/adjacent tile rects produce.
+      const darkTexCanvas = document.createElement("canvas");
+      const darkTexCtx = darkTexCanvas.getContext("2d");
+      let lightLevelBuf = new Float32Array(0);
+      function lightLevelBuffer(size) {
+        if (lightLevelBuf.length < size) lightLevelBuf = new Float32Array(size);
+        return lightLevelBuf;
+      }
       const chunkCache = new Map();
       let chunkUseCounter = 0;
 
@@ -5614,18 +5625,9 @@
       }
 
       function drawLightingAndFog() {
-        if (!lightCtx) return;
+        if (!darkTexCtx) return;
         updateSunlightMap();
         updatePlayerLightField();
-
-        const lw = Math.max(1, Math.ceil(screenW * LIGHT_RENDER_SCALE));
-        const lh = Math.max(1, Math.ceil(screenH * LIGHT_RENDER_SCALE));
-        if (lightCanvas.width !== lw || lightCanvas.height !== lh) {
-          lightCanvas.width = lw;
-          lightCanvas.height = lh;
-        }
-        lightCtx.setTransform(LIGHT_RENDER_SCALE, 0, 0, LIGHT_RENDER_SCALE, 0, 0);
-        lightCtx.clearRect(0, 0, screenW, screenH);
 
         const visibleW = screenW / camera.zoom;
         const visibleH = screenH / camera.zoom;
@@ -5633,132 +5635,120 @@
         const lastX = Math.min(WORLD_W - 1, Math.ceil((camera.x + visibleW) / TILE) + 1);
         const firstY = Math.max(0, Math.floor(camera.y / TILE) - 1);
         const lastY = Math.min(WORLD_H - 1, Math.ceil((camera.y + visibleH) / TILE) + 1);
-        const tileSize = TILE * camera.zoom;
+        const cols = lastX - firstX + 1;
+        const rows = lastY - firstY + 1;
+        if (cols <= 0 || rows <= 0) return;
 
-        // Ambient underground darkness covers all terrain, not only the
-        // purchased mountain. Each column begins at its actual terrain surface.
-        // Fully opaque so anywhere not currently lit by the player, a torch,
-        // sunlight, or a glowing block is completely black — unlit terrain, mined
-        // tunnels, and ores stay hidden, which is what makes torches necessary.
-        // Opacity also avoids the faint vertical seams a semi-transparent fill
-        // produced where the per-column rectangles overlap. Every light source
-        // carves this layer each frame, so areas go dark again once the source
-        // (e.g. the player) moves away.
-        lightCtx.globalCompositeOperation = "source-over";
-        lightCtx.globalAlpha = 1;
-        lightCtx.fillStyle = "rgb(4,9,15)";
-        for (let x = firstX; x <= lastX; x++) {
-          const sx = worldToScreenX(x * TILE);
-          const sy = worldToScreenY(terrainSurfaceYAt(x) * TILE);
-          lightCtx.fillRect(sx, sy, tileSize + 1, screenH - sy + tileSize);
-        }
+        // Build a per-tile light level = max of every source, then render it as
+        // one bilinearly upscaled darkness image (1 texel per tile). Unlike the
+        // old per-tile destination-out rectangles, a single interpolated image
+        // has no tile-rect boundaries, so it is free of the flickering seams
+        // those rectangles produced at fractional camera offsets.
+        const light = lightLevelBuffer(cols * rows);
+        const bufIndex = (tx, ty) => (ty - firstY) * cols + (tx - firstX);
+        const addLight = (tx, ty, v) => {
+          if (tx < firstX || tx > lastX || ty < firstY || ty > lastY) return;
+          const i = bufIndex(tx, ty);
+          if (v > light[i]) light[i] = v;
+        };
 
-        lightCtx.globalCompositeOperation = "destination-out";
-        lightCtx.fillStyle = "#000";
-
-        // Direct sunlight remains bright through open shafts, then loses 22%
-        // for every solid block it crosses. Surface blocks are visible, shallow
-        // soil fades naturally, and a five-block roof fully absorbs direct sun.
-        for (let x = firstX; x <= lastX; x++) {
-          const startY = Math.max(firstY, terrainSurfaceYAt(x));
-          for (let y = startY; y <= lastY; y++) {
-            const sunlight = sunlightMap[index(x, y)];
-            if (sunlight <= 0.01) continue;
-            cutTileLight(x, y, Math.pow(sunlight, 0.82) * 0.96, tileSize);
+        // Base layer: full daylight above the surface; sunlight (already
+        // attenuated per solid block) below it. Everything else starts dark.
+        for (let ty = firstY; ty <= lastY; ty++) {
+          for (let tx = firstX; tx <= lastX; tx++) {
+            const i = bufIndex(tx, ty);
+            if (ty < terrainSurfaceYAt(tx)) {
+              light[i] = 1;
+            } else {
+              const sun = sunlightMap[index(tx, ty)];
+              light[i] = sun > 0.01 ? Math.pow(sun, 0.82) * 0.96 : 0;
+            }
           }
         }
 
-        // Block-aware player light. The weighted field is intentionally drawn
-        // tile-by-tile at half resolution, which softens its edges while keeping
-        // walls, openings, and tunnels visible in the final light shape.
+        // Block-aware player light.
         for (let localY = 0; localY < PLAYER_LIGHT_DIAMETER; localY++) {
           const worldY = playerLightOriginY + localY;
-          if (worldY < firstY || worldY > lastY) continue;
           for (let localX = 0; localX < PLAYER_LIGHT_DIAMETER; localX++) {
-            const worldX = playerLightOriginX + localX;
-            if (worldX < firstX || worldX > lastX) continue;
             const intensity = playerLightField[localY * PLAYER_LIGHT_DIAMETER + localX];
-            if (intensity <= 0.015 || worldY < terrainSurfaceYAt(worldX)) continue;
-            cutTileLight(worldX, worldY, Math.pow(intensity, 0.5), tileSize);
+            if (intensity > 0.015) addLight(playerLightOriginX + localX, worldY, Math.pow(intensity, 0.5));
           }
         }
 
-        // Safety illumination for the player's immediate surroundings. The
-        // weighted field remains the real ten-block light model; this small
-        // pass only guarantees the player can never be covered by a stale fog
-        // or offscreen-canvas state after tab switching or device suspension.
+        // Safety ring so the player is never boxed into black after a tab switch.
         const playerTileX = Math.floor((player.x + player.w * 0.5) / TILE);
         const playerTileY = Math.floor((player.y + player.h * 0.5) / TILE);
-        for (let safetyY = playerTileY - 1; safetyY <= playerTileY + 1; safetyY++) {
-          for (let safetyX = playerTileX - 1; safetyX <= playerTileX + 1; safetyX++) {
-            if (
-              safetyX < firstX ||
-              safetyX > lastX ||
-              safetyY < firstY ||
-              safetyY > lastY ||
-              safetyX < 0 ||
-              safetyX >= WORLD_W ||
-              safetyY < 0 ||
-              safetyY >= WORLD_H
-            ) {
-              continue;
-            }
-            const safetyType = tileAt(safetyX, safetyY);
-            const safetyStrength =
-              safetyType === AIR || safetyType === GAS || safetyType === LAVA
-                ? 0.94
-                : 0.76;
-            cutTileLight(safetyX, safetyY, safetyStrength, tileSize);
-            discovered[index(safetyX, safetyY)] = 1;
+        for (let sy = playerTileY - 1; sy <= playerTileY + 1; sy++) {
+          for (let sx = playerTileX - 1; sx <= playerTileX + 1; sx++) {
+            if (sx < 0 || sx >= WORLD_W || sy < 0 || sy >= WORLD_H) continue;
+            const t = tileAt(sx, sy);
+            addLight(sx, sy, t === AIR || t === GAS || t === LAVA ? 0.94 : 0.76);
           }
         }
 
-        // Persistent torches are queried from an expanded chunk range. A torch
-        // may be completely off-screen and still illuminate visible tiles if
-        // its eight-block light radius reaches the camera. Its cached weighted
-        // field is rebuilt only when nearby terrain changes.
+        // Persistent torches (their cached weighted field reaches around corners).
         const nearbyTorches = torchesNearVisibleBounds(firstX, lastX, firstY, lastY);
         for (const torch of nearbyTorches) {
           const source = computeTorchLightField(torch.x, torch.y);
           for (let localY = 0; localY < TORCH_LIGHT_DIAMETER; localY++) {
             const worldY = source.originY + localY;
-            if (worldY < firstY || worldY > lastY) continue;
             for (let localX = 0; localX < TORCH_LIGHT_DIAMETER; localX++) {
-              const worldX = source.originX + localX;
-              if (worldX < firstX || worldX > lastX) continue;
               const intensity = source.field[localY * TORCH_LIGHT_DIAMETER + localX];
-              if (intensity <= 0.015 || worldY < terrainSurfaceYAt(worldX)) continue;
-              cutTileLight(worldX, worldY, Math.pow(intensity, 0.5) * 0.96, tileSize);
+              if (intensity > 0.015) addLight(source.originX + localX, worldY, Math.pow(intensity, 0.5) * 0.96);
             }
           }
         }
 
-        // Special blocks retain their soft colored-source-style halos. These are
-        // supplemental sources; player and sunlight geometry are block-aware.
-        lightCtx.globalAlpha = 1;
+        // Glowing blocks (glowstone, lava, prismstone…) as soft radial sources.
         for (const cell of specialVisualCells) {
           if (!cellVisible(cell.x, cell.y, 10) || tileAt(cell.x, cell.y) !== cell.type) continue;
           const radius = lightSourceRadius(cell.type);
           if (!radius || (cell.type !== LAVA && !cellIsExposed(cell.x, cell.y))) continue;
-          cutLight(
-            worldToScreenX((cell.x + 0.5) * TILE),
-            worldToScreenY((cell.y + 0.5) * TILE),
-            radius * TILE * camera.zoom,
-            0.88
-          );
+          const r = Math.ceil(radius);
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist > radius) continue;
+              const falloff = 1 - dist / radius;
+              const glow = 0.88 * falloff * falloff;
+              if (glow > 0.015) addLight(cell.x + dx, cell.y + dy, glow);
+            }
+          }
         }
 
-        lightCtx.globalCompositeOperation = "source-over";
-        lightCtx.globalAlpha = 1;
-        lightCtx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(lightCanvas, 0, 0, screenW, screenH);
+        // Rasterize darkness (1 - light) into the small texture and blit it
+        // upscaled with bilinear smoothing. Each texel maps to one tile, so the
+        // interpolation is between tile centres — a smooth, seam-free light.
+        if (darkTexCanvas.width !== cols || darkTexCanvas.height !== rows) {
+          darkTexCanvas.width = cols;
+          darkTexCanvas.height = rows;
+        }
+        const img = darkTexCtx.createImageData(cols, rows);
+        const data = img.data;
+        for (let i = 0; i < cols * rows; i++) {
+          const level = light[i] > 1 ? 1 : light[i];
+          const p = i * 4;
+          data[p] = 4;
+          data[p + 1] = 9;
+          data[p + 2] = 15;
+          data[p + 3] = (1 - level) * 255;
+        }
+        darkTexCtx.putImageData(img, 0, 0);
+
+        const prevSmoothing = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(
+          darkTexCanvas,
+          0, 0, cols, rows,
+          worldToScreenX(firstX * TILE), worldToScreenY(firstY * TILE),
+          cols * TILE * camera.zoom, rows * TILE * camera.zoom
+        );
+        ctx.imageSmoothingEnabled = prevSmoothing;
 
         // No permanent exploration fog: visibility is fully dynamic. A tile is
-        // only visible while a current light source (player, torch, sunlight, or
-        // a glowing block) is carving the ambient darkness above. Areas the
-        // player has already walked past go dark again, so torches are needed to
-        // keep a dug-out space lit. (The `discovered` array is still tracked for
-        // save compatibility but no longer forces tiles to stay revealed.)
+        // only lit while a current source (player, torch, sunlight, or a glowing
+        // block) reaches it, so areas the player has walked past go dark again
+        // and torches are needed to keep a dug-out space lit.
       }
 
       function updateCamera(dt) {
