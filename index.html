@@ -754,6 +754,24 @@
       transform: scale(0.94);
     }
 
+    #trashStone {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, 0.72);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 20px;
+      font-weight: 900;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    }
+
+    #trashStone:active {
+      transform: scale(0.94);
+    }
+
     #itemDetails {
       min-height: 82px;
       margin: 0 0 12px;
@@ -1274,6 +1292,7 @@
           <p id="inventoryPackName">Basic Backpack</p>
         </div>
         <div class="inventory-header-actions">
+          <button id="trashStone" aria-label="Delete all stone" title="Delete all stone in your backpack">🪨</button>
           <button id="trashToggle" aria-label="Toggle drop item mode" title="Drop items">🗑︎</button>
           <button class="close-button" aria-label="Close">×</button>
         </div>
@@ -1749,6 +1768,7 @@
       const inventoryValue = document.getElementById("inventoryValue");
       const itemDetails = document.getElementById("itemDetails");
       const trashToggle = document.getElementById("trashToggle");
+      const trashStone = document.getElementById("trashStone");
       const luckHud = document.getElementById("luckHud");
       const sellItemCount = document.getElementById("sellItemCount");
       const sellFavoriteCount = document.getElementById("sellFavoriteCount");
@@ -5558,19 +5578,23 @@
       }
 
       function drawCaveBackground() {
-        if (!currentMountain) return;
         const visibleW = screenW / camera.zoom;
-        const firstX = Math.max(currentMountain.startX, Math.floor(camera.x / TILE) - 1);
-        const lastX = Math.min(currentMountain.endX, Math.ceil((camera.x + visibleW) / TILE) + 1);
+        const firstX = Math.max(0, Math.floor(camera.x / TILE) - 1);
+        const lastX = Math.min(WORLD_W - 1, Math.ceil((camera.x + visibleW) / TILE) + 1);
         const size = TILE * camera.zoom;
         for (let x = firstX; x <= lastX; x++) {
+          // Mountains show the cave backdrop from their generated surface down.
+          // Everywhere else it begins 4 blocks below the flat surface, behind the
+          // grass and dirt where the stone layer starts.
+          const inMountain = currentMountain && x >= currentMountain.startX && x <= currentMountain.endX;
+          const caveTop = inMountain ? mountainSurfaceY[x] : GROUND_Y + 4;
           const sx = worldToScreenX(x * TILE);
-          const sy = worldToScreenY(mountainSurfaceY[x] * TILE);
+          const sy = worldToScreenY(caveTop * TILE);
           ctx.fillStyle = (x & 1) ? "#27353d" : "#2b3942";
           ctx.fillRect(sx, sy, size + 1, screenH - sy + size);
           if (camera.zoom > 0.65) {
             ctx.fillStyle = "rgba(145,166,174,0.08)";
-            for (let y = mountainSurfaceY[x] + 2; y < Math.min(WORLD_H, mountainSurfaceY[x] + 70); y += 5) {
+            for (let y = caveTop + 2; y < Math.min(WORLD_H, caveTop + 70); y += 5) {
               if (((x * 17 + y * 11) & 7) !== 0) continue;
               ctx.fillRect(sx + ((x + y) % 17) * camera.zoom, worldToScreenY(y * TILE) + 8 * camera.zoom, 4 * camera.zoom, 3 * camera.zoom);
             }
@@ -6742,6 +6766,25 @@
         updateTrashToggle();
         renderInventory();
         showToast(trashMode ? "Drop mode enabled" : "Drop mode disabled");
+      });
+
+      function deleteAllStone() {
+        // Stone is low-value filler that quickly eats backpack weight, so this
+        // clears it in one tap. Favorited stone (rare, but possible) is spared,
+        // matching how drop and sell protect favorites.
+        const stoneItems = inventoryEntries.filter(item => item.type === STONE && !item.favorite);
+        if (!stoneItems.length) {
+          showToast("No stone to delete");
+          return;
+        }
+        for (const item of stoneItems) removeInventoryItemObject(item);
+        renderInventory();
+        showToast("Deleted " + stoneItems.length + " stone");
+      }
+
+      trashStone.addEventListener("click", event => {
+        event.stopPropagation();
+        deleteAllStone();
       });
 
       function inventoryRowFromPoint(clientX, clientY) {
