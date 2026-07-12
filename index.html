@@ -2143,7 +2143,8 @@
       let desktopModeJustToggled = false; // prevents immediate action after mode switch
       let mobileControlsVisible = true;
       let playerInShop = false; // tracks if player is inside equipment shop
-      let shopInteriorY = GROUND_Y - 30; // y-coordinate of shop interior
+      let shopInteriorStartX = -30; // shop interior positioned to the left, out of view
+      let shopInteriorY = GROUND_Y - 5; // y-coordinate of shop interior
       let shopExitX = null; // where player was before entering shop
 
       // Lightweight synthesized audio avoids network requests and large sound
@@ -3985,20 +3986,20 @@
         }
 
         if (name === "equipment") {
-          // Enter shop interior instead of opening modal
+          // Enter shop interior to the left
           playerInShop = true;
           shopExitX = player.x;
 
           // Create shop interior floor
-          for (let x = 0; x < 28; x++) {
-            for (let y = shopInteriorY - 9; y <= shopInteriorY; y++) {
-              if (y >= 0 && y < WORLD_H && x >= 0 && x < WORLD_W) {
+          for (let x = shopInteriorStartX; x < shopInteriorStartX + 28; x++) {
+            for (let y = shopInteriorY - 5; y <= shopInteriorY; y++) {
+              if (y >= 0 && y < WORLD_H) {
                 setTile(x, y, AIR);
               }
             }
           }
 
-          player.x = 10 * TILE;
+          player.x = (shopInteriorStartX + 10) * TILE;
           player.y = (shopInteriorY - 2) * TILE;
           camera.zoom = 2.0;
           input.mine = false;
@@ -4136,8 +4137,8 @@
         const playerTileX = (player.x + player.w * 0.5) / TILE;
         const playerTileY = (player.y + player.h * 0.5) / TILE;
 
-        // Pickaxes section (left side, x < 12)
-        if (playerTileX < 12 && Math.abs(playerTileY - shopInteriorY) < 3) {
+        // Pickaxes section (left side)
+        if (playerTileX < shopInteriorStartX + 12 && Math.abs(playerTileY - shopInteriorY) < 3) {
           renderPickaxeShop();
           if (activeModal !== "pickaxe") {
             activeModal = "pickaxe";
@@ -4146,8 +4147,8 @@
           return;
         }
 
-        // Backpacks section (right side, x > 16)
-        if (playerTileX > 16 && Math.abs(playerTileY - shopInteriorY) < 3) {
+        // Backpacks section (right side)
+        if (playerTileX > shopInteriorStartX + 16 && Math.abs(playerTileY - shopInteriorY) < 3) {
           renderBackpackShop();
           if (activeModal !== "backpack") {
             activeModal = "backpack";
@@ -4156,8 +4157,8 @@
           return;
         }
 
-        // Exit zone (near entrance, y > shopInteriorY + 4)
-        if (playerTileY > shopInteriorY + 4 && Math.abs(playerTileX - 10) < 4) {
+        // Exit zone (near entrance)
+        if (playerTileY > shopInteriorY + 3 && Math.abs(playerTileX - (shopInteriorStartX + 10)) < 4) {
           if (input.jump && player.jumpWasDown === false) {
             closeModal();
             exitEquipmentShop();
@@ -4172,10 +4173,10 @@
       function drawShopInterior(ctx) {
         if (!playerInShop) return;
 
-        const interiorHeight = 9;
+        const interiorHeight = 5;
         const interiorWidth = 28;
-        const startX = 0;
-        const endX = interiorWidth * TILE;
+        const startX = shopInteriorStartX * TILE;
+        const endX = (shopInteriorStartX + interiorWidth) * TILE;
         const startY = (shopInteriorY - interiorHeight) * TILE;
         const endY = shopInteriorY * TILE;
 
@@ -4185,7 +4186,7 @@
           worldToScreenX(startX),
           worldToScreenY(endY),
           (endX - startX) * camera.zoom,
-          (shopInteriorY - (shopInteriorY - interiorHeight)) * TILE * camera.zoom
+          interiorHeight * TILE * camera.zoom
         );
 
         // Wooden walls (left)
@@ -4211,14 +4212,14 @@
         ctx.textAlign = "center";
         ctx.fillText(
           "PICKAXES",
-          worldToScreenX(6 * TILE),
+          worldToScreenX((shopInteriorStartX + 6) * TILE),
           worldToScreenY((shopInteriorY - 2) * TILE)
         );
 
         // Backpack display sign (right)
         ctx.fillText(
           "BACKPACKS",
-          worldToScreenX(20 * TILE),
+          worldToScreenX((shopInteriorStartX + 20) * TILE),
           worldToScreenY((shopInteriorY - 2) * TILE)
         );
 
@@ -4227,8 +4228,8 @@
         ctx.fillStyle = "#FFD700";
         ctx.fillText(
           "JUMP to EXIT",
-          worldToScreenX(14 * TILE),
-          worldToScreenY((shopInteriorY + 5) * TILE)
+          worldToScreenX((shopInteriorStartX + 14) * TILE),
+          worldToScreenY((shopInteriorY + 2) * TILE)
         );
       }
 
