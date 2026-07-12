@@ -384,6 +384,40 @@
       display: grid;
     }
 
+    .modal.confirm-modal {
+      display: grid;
+    }
+
+    .modal.confirm-modal h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+      color: white;
+    }
+
+    .modal.confirm-modal p {
+      margin: 0;
+      color: #d9f3f5;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .modal.confirm-modal button {
+      padding: 10px 14px;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+
+    .modal.confirm-modal button:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
     .panel {
       width: min(1040px, 97vw);
       max-height: 93vh;
@@ -3121,11 +3155,91 @@
         }
       }
 
+      function calculateProgressScore() {
+        // Returns a numeric score representing player progress. Higher = more progress.
+        // Weighted by: mountain tier (primary), then pickaxes, backpacks, and total cash.
+        const mountainTier = (currentMountain?.level || 0) * 10000000;
+        const pickaxeBonus = ownedPickaxeLevel * 100000;
+        const backpackBonus = ownedBackpackLevel * 50000;
+        const cashBonus = Math.min(displayCash / 100000, 10000000);
+        const inventoryBonus = inventoryEntries.reduce((sum, e) => sum + e.value, 0) / 10000;
+        return mountainTier + pickaxeBonus + backpackBonus + cashBonus + inventoryBonus;
+      }
+
+      function getProgressFromSaveData(saveDataJson) {
+        // Extracts and calculates progress from a serialized save object.
+        try {
+          const save = JSON.parse(saveDataJson);
+          const mountainTier = (save.currentMountain?.level || 0) * 10000000;
+          const pickaxeBonus = (save.progression?.ownedPickaxeLevel || 1) * 100000;
+          const backpackBonus = (save.progression?.ownedBackpackLevel || 1) * 50000;
+          const cashBonus = Math.min((save.progression?.displayCash || 0) / 100000, 10000000);
+          const inventoryBonus = (save.inventory?.entries || [])
+            .reduce((sum, e) => sum + (e.value || 0), 0) / 10000;
+          return mountainTier + pickaxeBonus + backpackBonus + cashBonus + inventoryBonus;
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      async function getExistingCloudProgress() {
+        // Fetches the existing cloud save and returns its progress score.
+        if (!supabaseClient || !cloudUser) return 0;
+        try {
+          const { data, error } = await supabaseClient
+            .from("player_saves")
+            .select("save_data")
+            .eq("user_id", cloudUser.id)
+            .maybeSingle();
+          if (error || !data || !data.save_data) return 0;
+          return getProgressFromSaveData(data.save_data);
+        } catch (e) {
+          return 0;
+        }
+      }
+
       async function saveCloudProgress(showMessage = true) {
         if (!supabaseClient || !cloudUser || cloudBusy) {
           if (showMessage) showToast("Sign in before saving to the cloud");
           return false;
         }
+
+        // Check for progress conflict before saving
+        const localProgress = calculateProgressScore();
+        const cloudProgress = await getExistingCloudProgress();
+
+        if (cloudProgress > 0 && localProgress < cloudProgress) {
+          const confirmed = await new Promise(resolve => {
+            const modal = document.createElement("div");
+            modal.className = "modal confirm-modal";
+            modal.innerHTML = `
+              <div class="panel" style="max-width: 380px;">
+                <h2>Older Save Detected</h2>
+                <p>This save has less progress than your current cloud save. Continuing will overwrite the newer cloud save and may permanently remove progress. Are you sure you want to continue?</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px;">
+                  <button class="cancel-btn" style="grid-column: 1;">Cancel</button>
+                  <button class="confirm-btn" style="grid-column: 2; background: #c83333; border-color: #ff8b82;">Overwrite Cloud Save</button>
+                </div>
+              </div>
+            `;
+            modal.addEventListener("click", (e) => {
+              if (e.target.classList.contains("cancel-btn")) {
+                modal.remove();
+                resolve(false);
+              } else if (e.target.classList.contains("confirm-btn")) {
+                modal.remove();
+                resolve(true);
+              } else if (e.target === modal) {
+                modal.remove();
+                resolve(false);
+              }
+            });
+            document.body.appendChild(modal);
+          });
+
+          if (!confirmed) return false;
+        }
+
         cloudBusy = true;
         updateCloudUI("Saving progress to the cloud…");
         try {
@@ -3161,7 +3275,7 @@
           showToast("Sign in before loading a cloud save");
           return false;
         }
-        if (!window.confirm("Replace the current game with your cloud save?")) return false;
+
         cloudBusy = true;
         updateCloudUI("Loading cloud progress…");
         try {
@@ -3172,10 +3286,51 @@
             .maybeSingle();
           if (error) throw error;
           if (!data || !data.save_data) {
+            cloudBusy = false;
             updateCloudUI("No cloud save exists yet. Use Save to Cloud first.");
             showToast("No cloud save found");
             return false;
           }
+
+          // Check for progress conflict before loading
+          const cloudProgress = getProgressFromSaveData(data.save_data);
+          const localProgress = calculateProgressScore();
+
+          if (localProgress > 0 && cloudProgress < localProgress) {
+            cloudBusy = false;
+            const confirmed = await new Promise(resolve => {
+              const modal = document.createElement("div");
+              modal.className = "modal confirm-modal";
+              modal.innerHTML = `
+                <div class="panel" style="max-width: 380px;">
+                  <h2>Older Cloud Save Detected</h2>
+                  <p>This cloud save has less progress than your current game. Loading it may replace your current progress with an older save. Are you sure you want to continue?</p>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 16px;">
+                    <button class="cancel-btn" style="grid-column: 1;">Cancel</button>
+                    <button class="confirm-btn" style="grid-column: 2; background: #c83333; border-color: #ff8b82;">Load Older Save</button>
+                  </div>
+                </div>
+              `;
+              modal.addEventListener("click", (e) => {
+                if (e.target.classList.contains("cancel-btn")) {
+                  modal.remove();
+                  resolve(false);
+                } else if (e.target.classList.contains("confirm-btn")) {
+                  modal.remove();
+                  resolve(true);
+                } else if (e.target === modal) {
+                  modal.remove();
+                  resolve(false);
+                }
+              });
+              document.body.appendChild(modal);
+            });
+
+            if (!confirmed) return false;
+          }
+
+          cloudBusy = true;
+          updateCloudUI("Loading cloud progress…");
           restoreGameState(data.save_data);
           cloudLastSavedAt = data.updated_at || null;
           saveLocalProgress(false);
