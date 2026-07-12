@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mine a Mountain — Block & Ore Preview</title>
+<style>
+  html, body { margin: 0; background: #0f171b; color: #e7f2f4; font-family: system-ui, Arial, sans-serif; }
+  header { padding: 16px 20px 4px; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  p { margin: 0 0 10px; color: #9fb6bb; font-size: 13px; }
+  button {
+    background: #2a6b62; color: #fff; border: 2px solid #57c9b8; border-radius: 10px;
+    font-weight: 800; font-size: 14px; padding: 8px 16px; cursor: pointer;
+  }
+  button:active { transform: scale(0.97); }
+  #wrap { padding: 12px 20px 40px; }
+  canvas { display: block; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mine a Mountain — Block &amp; Ore Preview</h1>
+  <p>Rendered with the game's exact <code>paintTile</code> art. Click to save a PNG.</p>
+  <button id="download">Download PNG</button>
+</header>
+<div id="wrap"><canvas id="sheet"></canvas></div>
+<script>
+(() => {
+  "use strict";
+  const TILE = 28;
+
+  // ---- Block type ids (from index.html) ----
+  const GRASS=1, DIRT=2, STONE=3;
+
+  // ---- Block table (copied verbatim from index.html BLOCKS) ----
+  const BLOCKS = [
+    { name: "Air", hardness: 0, value: 0, color: "transparent", style: "air" },
+    { name: "Grass", hardness: 1, value: 1, color: "#69bd42", style: "grass" },
+    { name: "Dirt", hardness: 1, value: 1, color: "#955b35", style: "dirt" },
+    { name: "Stone", hardness: 1, value: 2, color: "#757c83", style: "stone" },
+    { name: "Gravel", hardness: 1, value: 5, color: "#918e88", style: "material", tier: 1 },
+    { name: "Clay", hardness: 2, value: 12, color: "#ad6b63", style: "material", tier: 1 },
+    { name: "Coal", hardness: 3, value: 25, color: "#292d31", style: "ore", tier: 1 },
+    { name: "Copper", hardness: 4, value: 55, color: "#c57648", style: "ore", tier: 2 },
+    { name: "Tin", hardness: 5, value: 85, color: "#c9d0d0", style: "ore", tier: 2 },
+    { name: "Amber", hardness: 6, value: 150, color: "#e69b36", style: "gem", tier: 2 },
+    { name: "Iron", hardness: 7, value: 450, color: "#afb5b8", style: "ore", tier: 3 },
+    { name: "Quartz", hardness: 8, value: 850, color: "#f4ece4", style: "gem", tier: 3 },
+    { name: "Sulfur", hardness: 9, value: 1500, color: "#e8d84a", style: "ore", tier: 3 },
+    { name: "Lithium", hardness: 10, value: 7500, color: "#eaded5", style: "ore", tier: 4 },
+    { name: "Nickel", hardness: 11, value: 14000, color: "#93a095", style: "ore", tier: 4 },
+    { name: "Geode", hardness: 12, value: 25000, color: "#8e5bab", style: "geode", tier: 4 },
+    { name: "Cobalt", hardness: 13, value: 120000, color: "#3868bd", style: "ore", tier: 5 },
+    { name: "Silver", hardness: 14, value: 250000, color: "#dce6e9", style: "ore", tier: 5 },
+    { name: "Glowstone", hardness: 15, value: 500000, color: "#ffe56a", style: "glow", tier: 5 },
+    { name: "Gold", hardness: 16, value: 3000000, color: "#e5b432", style: "ore", tier: 6 },
+    { name: "Sapphire", hardness: 17, value: 7000000, color: "#3467e6", style: "gem", tier: 6 },
+    { name: "Fossil Block", hardness: 18, value: 12000000, color: "#b9a47e", style: "fossil", tier: 6 },
+    { name: "Ruby", hardness: 19, value: 75000000, color: "#d13e4f", style: "gem", tier: 7 },
+    { name: "Emerald", hardness: 20, value: 150000000, color: "#31b66c", style: "gem", tier: 7 },
+    { name: "Obsidian", hardness: 21, value: 90000000, color: "#292437", style: "obsidian", tier: 7 },
+    { name: "Diamond", hardness: 22, value: 2000000000, color: "#a8f1f5", style: "gem", tier: 8 },
+    { name: "Titanium", hardness: 23, value: 4000000000, color: "#8c9bab", style: "ore", tier: 8 },
+    { name: "Prismstone", hardness: 24, value: 6000000000, color: "#b06be7", style: "prism", tier: 8 },
+    { name: "Platinum", hardness: 25, value: 40000000000, color: "#d9ddcf", style: "ore", tier: 9 },
+    { name: "Radium", hardness: 27, value: 100000000000, color: "#7ff04a", style: "radium", tier: 9, hazard: true },
+    { name: "TNT Block", hardness: 7, value: 0, color: "#d9473f", style: "tnt", tier: 3, hazard: true },
+    { name: "Lava Pocket", hardness: Infinity, value: 0, color: "#f36b25", style: "lava", tier: 4, hazard: true },
+    { name: "Gas Pocket", hardness: 13, value: 0, color: "#b8d78f", style: "gas", tier: 5, hazard: true },
+    { name: "Unstable Crystal", hardness: 30, value: 1000000000000, color: "#e16ff1", style: "unstable", tier: 10, hazard: true }
+  ];
+
+  // ---- paintTile: copied verbatim from index.html ----
+  function paintTile(target, type, sx, sy, x, y) {
+    const block = BLOCKS[type];
+    if (type === GRASS) {
+      target.fillStyle = "#59ad38"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#80d24f"; target.fillRect(sx, sy, TILE, 7);
+      target.fillStyle = "#357a26"; target.fillRect(sx, sy + 7, TILE, 3);
+    } else if (type === DIRT) {
+      target.fillStyle = "#955b35"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#714126"; target.fillRect(sx + 4 + ((x * 11 + y * 7) % 18), sy + 8 + ((x * 5 + y * 13) % 14), 4, 3);
+    } else if (type === STONE) {
+      target.fillStyle = "#757c83"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#596067"; target.fillRect(sx + 4 + ((x * 7 + y * 3) % 17), sy + 7 + ((x * 3 + y * 9) % 15), 6, 3);
+    } else if (block.style === "ore") {
+      target.fillStyle = "#686f75"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = block.color;
+      target.fillRect(sx + 4 + ((x * 7 + y * 5) % 8), sy + 5, 7, 5);
+      target.fillRect(sx + 16, sy + 13 + ((x + y) % 5), 7, 6);
+      target.fillRect(sx + 7, sy + 21, 5, 4);
+    } else if (block.style === "gem" || block.style === "prism" || block.style === "unstable") {
+      target.fillStyle = block.style === "unstable" ? "#392941" : "#4e535a";
+      target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = block.color;
+      target.beginPath();
+      target.moveTo(sx + 14, sy + 3); target.lineTo(sx + 23, sy + 13);
+      target.lineTo(sx + 14, sy + 25); target.lineTo(sx + 5, sy + 13);
+      target.closePath(); target.fill();
+      target.fillStyle = "rgba(255,255,255,0.55)"; target.fillRect(sx + 11, sy + 7, 4, 7);
+    } else if (block.style === "geode") {
+      target.fillStyle = "#5c5a63"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#382f40"; target.beginPath(); target.arc(sx + 14, sy + 14, 10, 0, Math.PI * 2); target.fill();
+      target.fillStyle = block.color; target.beginPath(); target.arc(sx + 14, sy + 14, 6, 0, Math.PI * 2); target.fill();
+    } else if (block.style === "fossil") {
+      target.fillStyle = block.color; target.fillRect(sx, sy, TILE, TILE);
+      target.strokeStyle = "#6f6046"; target.lineWidth = 3;
+      target.beginPath(); target.moveTo(sx + 6, sy + 19); target.lineTo(sx + 20, sy + 9); target.stroke();
+      target.fillStyle = "#e6d7ad"; target.beginPath();
+      target.arc(sx + 6, sy + 20, 4, 0, Math.PI * 2); target.arc(sx + 21, sy + 8, 4, 0, Math.PI * 2); target.fill();
+    } else if (block.style === "tnt") {
+      target.fillStyle = block.color; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#f1d7bc"; target.fillRect(sx, sy + 9, TILE, 10);
+      target.fillStyle = "#3d2520"; target.font = "900 9px Arial"; target.textAlign = "center"; target.textBaseline = "middle";
+      target.fillText("TNT", sx + 14, sy + 14);
+    } else if (block.style === "lava") {
+      target.fillStyle = "#e8491e"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "#ffb42f"; target.fillRect(sx + 2, sy + 5 + ((x + y) % 5), 14, 5); target.fillRect(sx + 12, sy + 18, 13, 5);
+    } else if (block.style === "gas") {
+      target.fillStyle = "rgba(148,182,112,0.78)"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "rgba(225,245,194,0.68)"; target.beginPath();
+      target.arc(sx + 9, sy + 10, 6, 0, Math.PI * 2); target.arc(sx + 18, sy + 17, 7, 0, Math.PI * 2); target.fill();
+    } else if (block.style === "glow" || block.style === "radium") {
+      target.fillStyle = block.style === "radium" ? "#41513b" : "#766d3a"; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = block.color; target.fillRect(sx + 5, sy + 5, 8, 8); target.fillRect(sx + 16, sy + 13, 7, 9);
+      target.fillStyle = "rgba(255,255,255,0.58)"; target.fillRect(sx + 7, sy + 6, 3, 3);
+    } else if (block.style === "obsidian") {
+      target.fillStyle = block.color; target.fillRect(sx, sy, TILE, TILE);
+      target.strokeStyle = "#574468"; target.lineWidth = 2; target.beginPath();
+      target.moveTo(sx + 4, sy + 22); target.lineTo(sx + 11, sy + 8); target.lineTo(sx + 18, sy + 18); target.lineTo(sx + 24, sy + 5); target.stroke();
+    } else {
+      target.fillStyle = block.color; target.fillRect(sx, sy, TILE, TILE);
+      target.fillStyle = "rgba(40,35,31,0.28)"; target.fillRect(sx + 4 + ((x * 5 + y * 7) % 13), sy + 7 + ((x * 9 + y * 3) % 12), 5, 4);
+    }
+  }
+
+  function compactValue(v) {
+    if (v <= 0) return "—";
+    const units = [[1e12,"T"],[1e9,"B"],[1e6,"M"],[1e3,"K"]];
+    for (const [n, s] of units) if (v >= n) return "$" + (v / n).toFixed(v / n >= 100 ? 0 : 1).replace(/\.0$/, "") + s;
+    return "$" + v;
+  }
+
+  // ---- Layout ----
+  const COLS = 6;
+  const SCALE = 3;                 // tile drawn at 28*3 = 84px
+  const TILEPX = TILE * SCALE;
+  const CELL_W = 170, CELL_H = 150;
+  const PAD = 20, TOP = 20;
+  const items = BLOCKS.map((b, i) => ({ b, i })).filter(o => o.b.style !== "air");
+  const rows = Math.ceil(items.length / COLS);
+
+  const sheet = document.getElementById("sheet");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = PAD * 2 + COLS * CELL_W;
+  const H = TOP + PAD + rows * CELL_H;
+  sheet.width = W * dpr; sheet.height = H * dpr;
+  sheet.style.width = W + "px"; sheet.style.height = H + "px";
+  const g = sheet.getContext("2d");
+  g.scale(dpr, dpr);
+
+  // background (cave-ish)
+  g.fillStyle = "#141f24"; g.fillRect(0, 0, W, H);
+
+  // offscreen tile canvas rendered once per block, then scaled up crisply
+  const tileCanvas = document.createElement("canvas");
+  tileCanvas.width = TILE; tileCanvas.height = TILE;
+  const tg = tileCanvas.getContext("2d");
+
+  items.forEach((o, n) => {
+    const col = n % COLS, row = Math.floor(n / COLS);
+    const cx = PAD + col * CELL_W;
+    const cy = TOP + PAD + row * CELL_H;
+
+    // render tile art
+    tg.clearRect(0, 0, TILE, TILE);
+    paintTile(tg, o.i, 0, 0, o.i + 3, 5);
+
+    const artX = cx + (CELL_W - TILEPX) / 2;
+    const artY = cy;
+    // subtle frame
+    g.fillStyle = "rgba(0,0,0,0.25)";
+    g.fillRect(artX - 4, artY - 4, TILEPX + 8, TILEPX + 8);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(tileCanvas, artX, artY, TILEPX, TILEPX);
+
+    // labels
+    g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.fillStyle = o.b.hazard ? "#ff9d84" : "#eaf5f7";
+    g.font = "800 15px system-ui, Arial";
+    g.fillText(o.b.name, cx + CELL_W / 2, artY + TILEPX + 22);
+    g.fillStyle = "#9fb6bb";
+    g.font = "600 12px system-ui, Arial";
+    const hard = o.b.hardness === Infinity ? "∞" : o.b.hardness;
+    g.fillText("Pwr " + hard + "  •  Tier " + (o.b.tier ?? "—") + "  •  " + compactValue(o.b.value),
+      cx + CELL_W / 2, artY + TILEPX + 40);
+  });
+
+  // title inside the image
+  g.textAlign = "left"; g.fillStyle = "#e7f2f4"; g.font = "800 16px system-ui, Arial";
+  g.fillText("Mine a Mountain — Blocks & Ores  (Pwr = pickaxe power to mine)", PAD, 16);
+
+  document.getElementById("download").addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.download = "mine-a-mountain-blocks.png";
+    a.href = sheet.toDataURL("image/png");
+    a.click();
+  });
+})();
+</script>
+</body>
+</html>
