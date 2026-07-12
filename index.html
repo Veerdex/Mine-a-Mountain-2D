@@ -1172,25 +1172,6 @@
       }
     }
 
-    @media (orientation: portrait) {
-      #rotate {
-        display: grid;
-      }
-
-      #joystick,
-      .action,
-      #hud,
-      #shopPrompt,
-      #toast,
-      #inventoryButton,
-      #surfaceButton,
-      #soundButton,
-      #controlsToggleButton,
-      #cloudButton,
-      .modal {
-        display: none !important;
-      }
-    }
   </style>
 </head>
 
@@ -6883,8 +6864,18 @@
         torchButton.classList.toggle("pressed", input.torch);
       }
 
+      function isTextInputTarget(target) {
+        if (!target) return false;
+        const tag = target.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
+      }
+
       window.addEventListener("keydown", event => {
         if (event.code === "Escape" && activeModal) { closeModal(); return; }
+        // When typing in a text field (e.g. the login email/password), let the
+        // field handle every key. Otherwise game bindings like WASD would eat
+        // characters (the "a" key) and shortcuts would fire while typing.
+        if (isTextInputTarget(event.target)) return;
         if (event.code === "KeyB" && !activeModal) { openModal("inventory"); return; }
         if (event.code === "KeyR" && !activeModal) { returnToSurface(); return; }
         if (event.code === "KeyE" && !activeModal) {
