@@ -2122,6 +2122,8 @@
       let mousePlacePointerId = null;
       let desktopPlacementMode = "build";
       let desktopPreviewMode = "mine";
+      let desktopActiveMode = "mine"; // tracks current active mode (mining vs placement)
+      let desktopModeJustToggled = false; // prevents immediate action after mode switch
       let mobileControlsVisible = true;
 
       // Lightweight synthesized audio avoids network requests and large sound
@@ -7283,23 +7285,62 @@
         if (desktopControlsActive()) {
           if (event.button === 2) {
             event.preventDefault();
-            setDesktopPreviewMode("place");
-            mousePlacePointerId = event.pointerId;
-            canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
-            setDesktopPlacementPressed(true);
+
+            // If we're currently mining, switch to placement mode
+            if (desktopActiveMode === "mine") {
+              desktopActiveMode = "build";
+              setDesktopPreviewMode("place");
+              updateDesktopPlacementUI();
+              desktopModeJustToggled = true;
+              mousePlacePointerId = event.pointerId;
+              canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
+              return;
+            }
+
+            // If we just toggled to placement, start placing; otherwise just toggle mode
+            if (desktopModeJustToggled && (desktopActiveMode === "build" || desktopActiveMode === "torch")) {
+              setDesktopPlacementPressed(true);
+              desktopModeJustToggled = false;
+              return;
+            }
+
+            // If we're in placement and not just toggled, switch build/torch and toggle flag
+            if (desktopActiveMode === "build" || desktopActiveMode === "torch") {
+              desktopPlacementMode = desktopPlacementMode === "build" ? "torch" : "build";
+              updateDesktopPlacementUI();
+              desktopModeJustToggled = true;
+              mousePlacePointerId = event.pointerId;
+              canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
+              return;
+            }
+
             return;
           }
           if (event.button === 0) {
-            setDesktopPreviewMode("mine");
+            event.preventDefault();
+
+            // If we're in placement mode, switch back to mining preview
+            if (desktopActiveMode === "build" || desktopActiveMode === "torch") {
+              desktopActiveMode = "mine";
+              setDesktopPreviewMode("mine");
+              desktopModeJustToggled = true;
+              mouseMinePointerId = event.pointerId;
+              canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
+              return;
+            }
+
+            // If we just toggled to mining, start mining; otherwise just toggle
+            if (desktopModeJustToggled && desktopActiveMode === "mine") {
+              mouseMineDown = true;
+              input.mine = true;
+              mineButton.classList.add("pressed");
+              desktopModeJustToggled = false;
+            } else {
+              desktopModeJustToggled = true;
+            }
+
             mouseMinePointerId = event.pointerId;
             canvas.setPointerCapture && canvas.setPointerCapture(event.pointerId);
-
-            // Desktop collection is hover-only. Left click always mines, even
-            // when the cursor is directly over a dropped item.
-            mouseMineDown = true;
-            input.mine = true;
-            mineButton.classList.add("pressed");
-            event.preventDefault();
             return;
           }
           return;
@@ -7356,10 +7397,12 @@
           mouseMineDown = false;
           input.mine = false;
           mineButton.classList.remove("pressed");
+          desktopModeJustToggled = false;
         }
         if (event.pointerId === mousePlacePointerId) {
           mousePlacePointerId = null;
           setDesktopPlacementPressed(false);
+          desktopModeJustToggled = false;
         }
 
         if (
