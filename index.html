@@ -1348,7 +1348,7 @@
       <div class="panel-header">
         <div>
           <h1>Cloud Save</h1>
-          <p>Local autosave works immediately. Sign in to sync the same progress across devices.</p>
+          <p>Local autosave works immediately. Create a username and password to sync the same progress across devices. No email required.</p>
         </div>
         <button class="close-button" aria-label="Close">×</button>
       </div>
@@ -1358,7 +1358,7 @@
           <h2>Account</h2>
           <div id="cloudStatusBox">Checking cloud configuration…</div>
           <div class="cloud-fields">
-            <input id="cloudEmail" type="email" autocomplete="email" placeholder="Email address" />
+            <input id="cloudUsername" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20" placeholder="Username (3-20: letters, numbers, _)" />
             <input id="cloudPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Password (6+ characters)" />
           </div>
           <div class="cloud-actions">
@@ -1724,7 +1724,7 @@
       const cloudButtonLabel = document.getElementById("cloudButtonLabel");
       const cloudButtonStatus = document.getElementById("cloudButtonStatus");
       const cloudStatusBox = document.getElementById("cloudStatusBox");
-      const cloudEmail = document.getElementById("cloudEmail");
+      const cloudUsername = document.getElementById("cloudUsername");
       const cloudPassword = document.getElementById("cloudPassword");
       const cloudSignIn = document.getElementById("cloudSignIn");
       const cloudSignUp = document.getElementById("cloudSignUp");
@@ -2745,7 +2745,7 @@
       function updateCloudUI(message) {
         if (message) setCloudStatus(message);
         const signedIn = !!cloudUser;
-        cloudAccountLabel.textContent = signedIn ? (cloudUser.email || cloudUser.id) : "Not signed in";
+        cloudAccountLabel.textContent = signedIn ? displayUsername(cloudUser) : "Not signed in";
         cloudSignOut.disabled = !signedIn || cloudBusy;
         cloudSaveNow.disabled = !signedIn || cloudBusy;
         cloudLoadNow.disabled = !signedIn || cloudBusy;
@@ -2800,31 +2800,88 @@
         }
       }
 
+      // Username-only auth. Supabase Auth is email-based, so we map each
+      // username to an internal, non-deliverable email (username@DOMAIN). This
+      // keeps sessions, JWTs, and the player_saves RLS working unchanged, and
+      // the unique-email constraint enforces unique usernames for free.
+      // Requires "Confirm email" to be OFF in Supabase Auth so no mail is sent
+      // and duplicate sign-ups return a real error we can detect.
+      const USERNAME_EMAIL_DOMAIN = "mineamountain.app";
+
+      function normalizeUsername(raw) {
+        return String(raw || "").trim().toLowerCase();
+      }
+
+      function isValidUsername(name) {
+        return /^[a-z0-9_]{3,20}$/.test(name);
+      }
+
+      function usernameToEmail(name) {
+        return normalizeUsername(name) + "@" + USERNAME_EMAIL_DOMAIN;
+      }
+
+      function displayUsername(user) {
+        if (!user) return "";
+        const meta = user.user_metadata || {};
+        if (meta.username) return meta.username;
+        return user.email ? user.email.split("@")[0] : user.id;
+      }
+
       function authCredentials() {
         return {
-          email: cloudEmail.value.trim(),
+          username: normalizeUsername(cloudUsername.value),
           password: cloudPassword.value
         };
       }
 
+      // Supabase reports an existing account differently across versions and
+      // settings, so check several signals rather than a single error string.
+      function isDuplicateAccount(error, data) {
+        if (error) {
+          const code = error.code || "";
+          const msg = (error.message || "").toLowerCase();
+          if (code === "user_already_exists" || error.status === 422) return true;
+          if (msg.includes("already registered") || msg.includes("already exists")) return true;
+        }
+        // Enumeration protection (if confirmation is on): signUp fake-succeeds
+        // for an existing user but returns an empty identities array.
+        if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          return true;
+        }
+        return false;
+      }
+
       async function signUpCloudAccount() {
         if (!supabaseClient || cloudBusy) return;
-        const { email, password } = authCredentials();
-        if (!email || password.length < 6) {
-          showToast("Enter an email and a password of at least 6 characters");
+        const { username, password } = authCredentials();
+        if (!isValidUsername(username)) {
+          showToast("Username must be 3-20 characters: letters, numbers, or _");
+          return;
+        }
+        if (password.length < 6) {
+          showToast("Password must be at least 6 characters");
           return;
         }
         cloudBusy = true;
         updateCloudUI("Creating account…");
         try {
-          const { data, error } = await supabaseClient.auth.signUp({ email, password });
+          const { data, error } = await supabaseClient.auth.signUp({
+            email: usernameToEmail(username),
+            password,
+            options: { data: { username } }
+          });
+          if (isDuplicateAccount(error, data)) {
+            updateCloudUI("That username is already taken. Choose another.");
+            return;
+          }
           if (error) throw error;
           cloudUser = data.session ? data.session.user : null;
           if (cloudUser) {
-            updateCloudUI("Account created and signed in.");
+            updateCloudUI("Account created. You are signed in.");
             await saveCloudProgress(false);
           } else {
-            updateCloudUI("Account created. Check your email to confirm it, then sign in.");
+            // No session means "Confirm email" is still enabled in Supabase.
+            updateCloudUI("Account created, but email confirmation is enabled in Supabase. Disable it under Authentication → Providers → Email.");
           }
         } catch (error) {
           updateCloudUI("Account creation failed: " + error.message);
@@ -2836,16 +2893,26 @@
 
       async function signInCloudAccount() {
         if (!supabaseClient || cloudBusy) return;
-        const { email, password } = authCredentials();
-        if (!email || !password) {
-          showToast("Enter your email and password");
+        const { username, password } = authCredentials();
+        if (!username || !password) {
+          showToast("Enter your username and password");
           return;
         }
         cloudBusy = true;
         updateCloudUI("Signing in…");
         try {
-          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-          if (error) throw error;
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: usernameToEmail(username),
+            password
+          });
+          if (error) {
+            const msg = (error.message || "").toLowerCase();
+            if (error.status === 400 || msg.includes("invalid login")) {
+              updateCloudUI("Wrong username or password.");
+              return;
+            }
+            throw error;
+          }
           cloudUser = data.user;
           updateCloudUI("Signed in. Choose Load Cloud Save or Save to Cloud.");
         } catch (error) {
@@ -6872,7 +6939,7 @@
 
       window.addEventListener("keydown", event => {
         if (event.code === "Escape" && activeModal) { closeModal(); return; }
-        // When typing in a text field (e.g. the login email/password), let the
+        // When typing in a text field (e.g. the login username/password), let the
         // field handle every key. Otherwise game bindings like WASD would eat
         // characters (the "a" key) and shortcuts would fire while typing.
         if (isTextInputTarget(event.target)) return;
