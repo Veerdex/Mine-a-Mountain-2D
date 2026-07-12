@@ -5237,7 +5237,10 @@
           const localY = Math.floor(current.cell / PLAYER_LIGHT_DIAMETER);
           const worldX = playerLightOriginX + localX;
           const worldY = playerLightOriginY + localY;
-          let intensity = clamp(1 - current.cost / (PLAYER_LIGHT_RADIUS + 0.5), 0, 1);
+          // Gentle power falloff instead of linear: light stays bright across
+          // most of its reach and only tapers near the edge, so the glow fills
+          // the full 10-block (air) / 4-block (solid) radius like Terraria.
+          let intensity = clamp(1 - Math.pow(current.cost / (PLAYER_LIGHT_RADIUS + 0.5), 1.5), 0, 1);
 
           // The eight tiles touching the player must always receive direct local
           // illumination. This prevents black diagonal seams beside the player,
@@ -5365,7 +5368,7 @@
           const localY = Math.floor(current.cell / TORCH_LIGHT_DIAMETER);
           const worldX = originX + localX;
           const worldY = originY + localY;
-          const intensity = clamp(1 - current.cost / (TORCH_LIGHT_RADIUS + 0.5), 0, 1);
+          const intensity = clamp(1 - Math.pow(current.cost / (TORCH_LIGHT_RADIUS + 0.5), 1.5), 0, 1);
           field[current.cell] = intensity;
 
           if (intensity > 0.025 && worldX >= 0 && worldX < WORLD_W &&
@@ -5637,7 +5640,7 @@
             if (worldX < firstX || worldX > lastX) continue;
             const intensity = playerLightField[localY * PLAYER_LIGHT_DIAMETER + localX];
             if (intensity <= 0.015 || worldY < terrainSurfaceYAt(worldX)) continue;
-            cutTileLight(worldX, worldY, Math.pow(intensity, 0.72), tileSize);
+            cutTileLight(worldX, worldY, Math.pow(intensity, 0.5), tileSize);
           }
         }
 
@@ -5686,7 +5689,7 @@
               if (worldX < firstX || worldX > lastX) continue;
               const intensity = source.field[localY * TORCH_LIGHT_DIAMETER + localX];
               if (intensity <= 0.015 || worldY < terrainSurfaceYAt(worldX)) continue;
-              cutTileLight(worldX, worldY, Math.pow(intensity, 0.72) * 0.96, tileSize);
+              cutTileLight(worldX, worldY, Math.pow(intensity, 0.5) * 0.96, tileSize);
             }
           }
         }
