@@ -4841,7 +4841,7 @@
         if (!Number.isFinite(block.hardness) || pickaxe.power < block.hardness) {
           mining.progress = 0;
           mining.blockedReason = Number.isFinite(block.hardness)
-            ? "NEED POWER " + block.hardness
+            ? "POWER " + block.hardness
             : "CANNOT MINE";
         }
 
