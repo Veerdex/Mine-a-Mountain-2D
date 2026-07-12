@@ -5946,9 +5946,10 @@
           target.fillRect(sx + 4 + ((x * 5 + y * 7) % 13), sy + 7 + ((x * 9 + y * 3) % 12), 5, 4);
         }
 
-        target.strokeStyle = "rgba(0,0,0,0.11)";
-        target.lineWidth = 1;
-        target.strokeRect(sx + 0.5, sy + 0.5, TILE - 1, TILE - 1);
+        // No per-tile outline: it drew a dark border around every solid block,
+        // which read as a grid of vertical/horizontal lines across the terrain
+        // (mined-out air tiles have no block, so they showed no lines). Blocks
+        // now render seamlessly.
       }
 
       function buildChunk(chunkX, chunkY) {
