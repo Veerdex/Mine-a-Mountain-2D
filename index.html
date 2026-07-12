@@ -1447,6 +1447,32 @@
     </div>
   </div>
 
+  <div id="equipmentModal" class="modal" role="dialog" aria-modal="true" aria-label="Equipment shop">
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <h1>Equipment Shop</h1>
+          <p>Purchase upgrades to your mining equipment and storage</p>
+        </div>
+        <button class="close-button" aria-label="Close">×</button>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 15px 0;">
+        <div>
+          <h2 style="margin: 0 0 10px 0; font-size: 16px;">Pickaxes</h2>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #aaa;">Three pickaxes per tier. Power unlocks harder ores.</p>
+          <div id="equipmentPickaxeOptions" class="upgrade-grid"></div>
+          <div class="test-note">Pickaxe upgrades must be purchased sequentially.</div>
+        </div>
+        <div>
+          <h2 style="margin: 0 0 10px 0; font-size: 16px;">Backpacks</h2>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #aaa;">Three backpacks per tier. Larger packs hold more weight.</p>
+          <div id="equipmentBackpackOptions" class="upgrade-grid"></div>
+          <div class="test-note">Backpack upgrades must be purchased sequentially.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="inventoryModal" class="modal" role="dialog" aria-modal="true" aria-label="Backpack inventory">
     <div class="panel">
       <div class="panel-header">
@@ -1687,30 +1713,18 @@
           window: "#87d7e2"
         },
         {
-          id: "pickaxe",
-          label: "PICKAXES",
-          prompt: "Tap the Mining Shop",
+          id: "equipment",
+          label: "EQUIPMENT SHOP",
+          prompt: "Tap to enter the Equipment Shop",
           x: 8 * TILE,
           y: (GROUND_Y - 5) * TILE,
-          w: 6 * TILE,
+          w: 13 * TILE,
           h: 5 * TILE,
-          wall: "#344d63",
-          roof: "#263c51",
+          wall: "#3d5a73",
+          roof: "#2a3f54",
           sign: "#f19b49",
-          window: "#9ed7f0"
-        },
-        {
-          id: "backpack",
-          label: "BACKPACKS",
-          prompt: "Tap the Backpack Shop",
-          x: 15 * TILE,
-          y: (GROUND_Y - 5) * TILE,
-          w: 6 * TILE,
-          h: 5 * TILE,
-          wall: "#4b6844",
-          roof: "#344f36",
-          sign: "#dfc36d",
-          window: "#a9e0c0"
+          window: "#9ed7f0",
+          isUnified: true
         },
         {
           id: "sell",
@@ -1972,6 +1986,8 @@
       const mountainOptions = document.getElementById("mountainOptions");
       const pickaxeOptions = document.getElementById("pickaxeOptions");
       const backpackOptions = document.getElementById("backpackOptions");
+      const equipmentPickaxeOptions = document.getElementById("equipmentPickaxeOptions");
+      const equipmentBackpackOptions = document.getElementById("equipmentBackpackOptions");
       const inventoryItems = document.getElementById("inventoryItems");
       const inventoryPackName = document.getElementById("inventoryPackName");
       const capacityText = document.getElementById("capacityText");
@@ -1999,6 +2015,7 @@
         mountain: document.getElementById("mountainModal"),
         pickaxe: document.getElementById("pickaxeModal"),
         backpack: document.getElementById("backpackShopModal"),
+        equipment: document.getElementById("equipmentModal"),
         sell: document.getElementById("sellModal"),
         luck: document.getElementById("luckModal"),
         inventory: document.getElementById("inventoryModal"),
@@ -3974,6 +3991,7 @@
 
         if (name === "pickaxe") renderPickaxeShop();
         if (name === "backpack") renderBackpackShop();
+        if (name === "equipment") renderEquipmentShop();
         if (name === "sell") renderSellShop();
         if (name === "luck") renderLuckPlot();
         if (name === "inventory") {
@@ -4072,6 +4090,56 @@
         }
 
         backpackOptions.appendChild(fragment);
+      }
+
+      function renderEquipmentShop() {
+        // Render pickaxes
+        const pickFragment = document.createDocumentFragment();
+        equipmentPickaxeOptions.textContent = "";
+        for (const pickaxe of PICKAXES) {
+          const sequentiallyAvailable = pickaxe.level <= ownedPickaxeLevel + 1;
+          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const card = document.createElement("button");
+          card.className = "upgrade-card";
+          if (pickaxe.level === equippedPickaxeLevel) card.classList.add("equipped");
+          if (!available) card.classList.add("locked");
+          card.style.setProperty("--item-color", pickaxe.color);
+          card.innerHTML =
+            '<div class="tool-preview"><div class="tool-handle"></div><div class="tool-head"></div></div>' +
+            '<div><span class="tier-label">Mountain Tier ' + pickaxe.tier + ' • Pick ' + (((pickaxe.level - 1) % 3) + 1) + '/3</span>' +
+            '<h2>' + pickaxe.name + '</h2>' +
+            '<span class="detail-label">Unlock band: ' + pickaxe.unlock + '</span>' +
+            '<div class="upgrade-stats"><span>Power ' + pickaxe.power + '</span><span>Speed ' + pickaxe.speed.toFixed(2) + '×</span>' +
+            '<span>Reach ' + pickaxe.reach.toFixed(2) + ' tiles</span><span>Level ' + pickaxe.level + '/30</span></div>' +
+            '<span class="upgrade-action">' + upgradeActionText(pickaxe.level, ownedPickaxeLevel, pickaxe.price, equippedPickaxeLevel) + '</span></div>';
+          card.addEventListener("click", () => selectPickaxe(pickaxe.level));
+          pickFragment.appendChild(card);
+        }
+        equipmentPickaxeOptions.appendChild(pickFragment);
+
+        // Render backpacks
+        const backFragment = document.createDocumentFragment();
+        equipmentBackpackOptions.textContent = "";
+        for (const backpack of BACKPACKS) {
+          const sequentiallyAvailable = backpack.level <= ownedBackpackLevel + 1;
+          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const card = document.createElement("button");
+          card.className = "upgrade-card";
+          if (backpack.level === equippedBackpackLevel) card.classList.add("equipped");
+          if (!available) card.classList.add("locked");
+          card.style.setProperty("--item-color", backpack.color);
+          card.innerHTML =
+            '<div class="pack-preview"><div class="pack-strap"></div><div class="pack-body"></div><div class="pack-flap"></div><div class="pack-pocket"></div></div>' +
+            '<div><span class="tier-label">Mountain Tier ' + backpack.tier + ' • Pack ' + (((backpack.level - 1) % 3) + 1) + '/3</span>' +
+            '<h2>' + backpack.name + '</h2>' +
+            '<span class="detail-label">Carries up to ' + formatCompact(backpack.capacity) + ' total weight.</span>' +
+            '<div class="upgrade-stats"><span>Capacity ' + formatCompact(backpack.capacity) + '</span><span>Level ' + backpack.level + '/30</span>' +
+            '<span>Current load ' + formatCompact(inventoryWeight) + '</span><span>Tier ' + backpack.tier + '</span></div>' +
+            '<span class="upgrade-action">' + upgradeActionText(backpack.level, ownedBackpackLevel, backpack.price, equippedBackpackLevel) + '</span></div>';
+          card.addEventListener("click", () => selectBackpack(backpack.level));
+          backFragment.appendChild(card);
+        }
+        equipmentBackpackOptions.appendChild(backFragment);
       }
 
       function selectPickaxe(level) {
@@ -7286,11 +7354,17 @@
       }
 
       function pickupDropAtWorldPoint(worldX, worldY) {
+        const playerCenterX = player.x + player.w * 0.5;
+        const playerCenterY = player.y + player.h * 0.5;
+        const maxReachDistance = 10 * TILE; // 10 blocks reach limit
+
         let closest = null;
         let closestDistance = Infinity;
         const hitRadius = Math.max(14, 22 / camera.zoom);
         for (const drop of worldDrops) {
           if (drop.state === "flying") continue;
+          const playerDistance = Math.hypot(drop.x - playerCenterX, drop.y - playerCenterY);
+          if (playerDistance > maxReachDistance) continue;
           const distance = Math.hypot(drop.x - worldX, drop.y - worldY);
           if (distance <= hitRadius && distance < closestDistance) {
             closest = drop;
