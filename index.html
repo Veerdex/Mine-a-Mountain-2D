@@ -3791,7 +3791,8 @@
           ...tier,
           startX: MOUNTAIN_START_X,
           endX: MOUNTAIN_START_X + tier.width - 1,
-          topY: GROUND_Y
+          topY: GROUND_Y,
+          generationId: Math.floor(Math.random() * 1000000)
         };
 
         for (let localX = 0; localX < tier.width; localX++) {
@@ -3896,8 +3897,8 @@
         const caveScale = 8 + Math.max(0, (tier.level - 1) * 1); // Smaller scale = smaller caves
         const airScale = 12 + Math.max(0, (tier.level - 1) * 1.5); // Air pockets less common
 
-        const caveSeed = 42 + tier.level * 1000;
-        const airSeed = 314 + tier.level * 1000;
+        const caveSeed = 42 + tier.level * 1000 + currentMountain.generationId;
+        const airSeed = 314 + tier.level * 1000 + currentMountain.generationId;
 
         for (let y = 0; y < WORLD_H; y++) {
           for (let x = 0; x < WORLD_W; x++) {
