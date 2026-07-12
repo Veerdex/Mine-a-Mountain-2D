@@ -2142,6 +2142,9 @@
       let desktopActiveMode = "mine"; // tracks current active mode (mining vs placement)
       let desktopModeJustToggled = false; // prevents immediate action after mode switch
       let mobileControlsVisible = true;
+      let playerInShop = false; // tracks if player is inside equipment shop
+      let shopInteriorY = GROUND_Y - 30; // y-coordinate of shop interior
+      let shopExitX = null; // where player was before entering shop
 
       // Lightweight synthesized audio avoids network requests and large sound
       // files. Audio is unlocked by the first touch/key interaction for iOS.
@@ -3980,6 +3983,32 @@
           showToast("Finishing item pickup first...");
           return;
         }
+
+        if (name === "equipment") {
+          // Enter shop interior instead of opening modal
+          playerInShop = true;
+          shopExitX = player.x;
+
+          // Create shop interior floor
+          for (let x = 0; x < 28; x++) {
+            for (let y = shopInteriorY - 9; y <= shopInteriorY; y++) {
+              if (y >= 0 && y < WORLD_H && x >= 0 && x < WORLD_W) {
+                setTile(x, y, AIR);
+              }
+            }
+          }
+
+          player.x = 10 * TILE;
+          player.y = (shopInteriorY - 2) * TILE;
+          camera.zoom = 2.0;
+          input.mine = false;
+          input.jump = false;
+          input.build = false;
+          input.torch = false;
+          resetJoystick();
+          return;
+        }
+
         closeModal();
         activeModal = name;
         MODALS[name].classList.add("open");
@@ -3991,7 +4020,6 @@
 
         if (name === "pickaxe") renderPickaxeShop();
         if (name === "backpack") renderBackpackShop();
-        if (name === "equipment") renderEquipmentShop();
         if (name === "sell") renderSellShop();
         if (name === "luck") renderLuckPlot();
         if (name === "inventory") {
@@ -4090,6 +4118,118 @@
         }
 
         backpackOptions.appendChild(fragment);
+      }
+
+      function exitEquipmentShop() {
+        playerInShop = false;
+        if (shopExitX !== null) {
+          player.x = shopExitX;
+          player.y = (GROUND_Y - 1) * TILE - player.h;
+        }
+        camera.zoom = 0.88;
+        showToast("Left the Equipment Shop");
+      }
+
+      function checkShopInteractions() {
+        if (!playerInShop) return;
+
+        const playerTileX = (player.x + player.w * 0.5) / TILE;
+        const playerTileY = (player.y + player.h * 0.5) / TILE;
+
+        // Pickaxes section (left side, x < 12)
+        if (playerTileX < 12 && Math.abs(playerTileY - shopInteriorY) < 3) {
+          renderPickaxeShop();
+          if (activeModal !== "pickaxe") {
+            activeModal = "pickaxe";
+            MODALS["pickaxe"].classList.add("open");
+          }
+          return;
+        }
+
+        // Backpacks section (right side, x > 16)
+        if (playerTileX > 16 && Math.abs(playerTileY - shopInteriorY) < 3) {
+          renderBackpackShop();
+          if (activeModal !== "backpack") {
+            activeModal = "backpack";
+            MODALS["backpack"].classList.add("open");
+          }
+          return;
+        }
+
+        // Exit zone (near entrance, y > shopInteriorY + 4)
+        if (playerTileY > shopInteriorY + 4 && Math.abs(playerTileX - 10) < 4) {
+          if (input.jump && player.jumpWasDown === false) {
+            closeModal();
+            exitEquipmentShop();
+          }
+          return;
+        }
+
+        // Close modal if not near any section
+        closeModal();
+      }
+
+      function drawShopInterior(ctx) {
+        if (!playerInShop) return;
+
+        const interiorHeight = 9;
+        const interiorWidth = 28;
+        const startX = 0;
+        const endX = interiorWidth * TILE;
+        const startY = (shopInteriorY - interiorHeight) * TILE;
+        const endY = shopInteriorY * TILE;
+
+        // Wooden floor
+        ctx.fillStyle = "#8B4513";
+        ctx.fillRect(
+          worldToScreenX(startX),
+          worldToScreenY(endY),
+          (endX - startX) * camera.zoom,
+          (shopInteriorY - (shopInteriorY - interiorHeight)) * TILE * camera.zoom
+        );
+
+        // Wooden walls (left)
+        ctx.fillStyle = "#654321";
+        ctx.fillRect(
+          worldToScreenX(startX),
+          worldToScreenY(endY),
+          2 * TILE * camera.zoom,
+          interiorHeight * TILE * camera.zoom
+        );
+
+        // Wooden walls (right)
+        ctx.fillRect(
+          worldToScreenX(endX - 2 * TILE),
+          worldToScreenY(endY),
+          2 * TILE * camera.zoom,
+          interiorHeight * TILE * camera.zoom
+        );
+
+        // Pickaxe display sign (left)
+        ctx.fillStyle = "#D4A574";
+        ctx.font = "bold " + Math.floor(24 * camera.zoom) + "px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "PICKAXES",
+          worldToScreenX(6 * TILE),
+          worldToScreenY((shopInteriorY - 2) * TILE)
+        );
+
+        // Backpack display sign (right)
+        ctx.fillText(
+          "BACKPACKS",
+          worldToScreenX(20 * TILE),
+          worldToScreenY((shopInteriorY - 2) * TILE)
+        );
+
+        // Exit sign
+        ctx.font = Math.floor(16 * camera.zoom) + "px Arial";
+        ctx.fillStyle = "#FFD700";
+        ctx.fillText(
+          "JUMP to EXIT",
+          worldToScreenX(14 * TILE),
+          worldToScreenY((shopInteriorY + 5) * TILE)
+        );
       }
 
       function renderEquipmentShop() {
@@ -6515,7 +6655,10 @@
       }
 
       function update(dt) {
-        if (!activeModal) {
+        if (playerInShop) {
+          checkShopInteractions();
+          updateMovement(dt);
+        } else if (!activeModal) {
           updateMovement(dt);
           updateBuilding(dt);
           updateTorchPlacement(dt);
@@ -7288,6 +7431,7 @@
         drawMiningTarget();
         drawAimIndicator();
         drawPlayer();
+        drawShopInterior(ctx);
         drawLightingAndFog();
 
         if (camera.revealTimer > 0 && currentMountain) {
