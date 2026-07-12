@@ -1636,7 +1636,7 @@
       const AIR_ACCEL = 950;
       const FRICTION = 2100;
       const GRAVITY = 1500;
-      const JUMP_SPEED = 560;
+      const JUMP_SPEED = 775;
       const MAX_FALL_SPEED = 900;
 
       const BUILD_REACH_TILES = 5;
@@ -2394,8 +2394,15 @@
       }
 
       function playerNearLuckPlot() {
-        const centerTileX = (player.x + player.w * 0.5) / TILE;
-        return Math.abs(centerTileX - clamp(centerTileX, LUCK_PLOT_START_X, LUCK_PLOT_START_X + LUCK_PLOT_SLOTS)) <= 3.1;
+        const centerX = player.x + player.w * 0.5;
+        const centerY = player.y + player.h * 0.5;
+        const plotLeft = LUCK_PLOT_START_X * TILE;
+        const plotRight = (LUCK_PLOT_START_X + LUCK_PLOT_SLOTS) * TILE;
+        const plotTop = (GROUND_Y - 2.5) * TILE;
+        const plotBottom = (GROUND_Y + 1) * TILE;
+        const nearestX = clamp(centerX, plotLeft, plotRight);
+        const nearestY = clamp(centerY, plotTop, plotBottom);
+        return Math.hypot(centerX - nearestX, centerY - nearestY) <= TILE * 3.1;
       }
 
       function interactOrTogglePlacementMode() {
@@ -5004,6 +5011,25 @@
         activateEnvironmentAround(x, y);
       }
 
+      function destroyTileWithDrops(x, y) {
+        if (x < 0 || x >= WORLD_W || y < 0 || y >= WORLD_H || tileProtectedByShop(x, y)) return;
+        const type = tileAt(x, y);
+        if (type === AIR) return;
+
+        const depositId = depositAt[index(x, y)];
+        if (depositId) {
+          const deposit = depositData.get(depositId);
+          if (deposit) {
+            collectDeposit(deposit, x, y);
+          }
+        } else if (type !== LAVA) {
+          createSingleBlockDrop(type, x, y);
+        }
+
+        setTile(x, y, AIR);
+        activateEnvironmentAround(x, y);
+      }
+
       function scheduleTNT(x, y, delay) {
         tntFuses.push({ x, y, timer: delay === undefined ? 3 : delay, total: delay === undefined ? 3 : delay });
       }
@@ -5058,7 +5084,7 @@
             if (type === OBSIDIAN) continue;
             if (type === TNT) {
               scheduleTNT(tx, ty, 0.22 + Math.random() * 0.18);
-              destroyTile(tx, ty);
+              destroyTileWithDrops(tx, ty);
               continue;
             }
             if (type === GAS) {
@@ -5066,7 +5092,7 @@
               releaseGas(tx, ty, true);
               continue;
             }
-            destroyTile(tx, ty);
+            destroyTileWithDrops(tx, ty);
           }
         }
 
