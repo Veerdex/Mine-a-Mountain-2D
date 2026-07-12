@@ -6267,11 +6267,18 @@
         // has no tile-rect boundaries, so it is free of the flickering seams
         // those rectangles produced at fractional camera offsets.
         const light = lightLevelBuffer(cols * rows);
+        const torchLight = new Float32Array(cols * rows); // Track torch intensity separately for yellow tint
         const bufIndex = (tx, ty) => (ty - firstY) * cols + (tx - firstX);
-        const addLight = (tx, ty, v) => {
+
+        const playerDepth = Math.max(0, Math.floor((player.y + player.h * 0.5) / TILE) - GROUND_Y);
+        const depthMultiplier = 1 - Math.min(playerDepth / 50, 1) * 0.25; // Player light: 1.0 at surface, 0.75 at 50+ blocks
+        const torchDepthMultiplier = 1 - Math.min(playerDepth / 50, 1) * 0.5; // Torch light: 1.0 at surface, 0.5 at 50+ blocks
+
+        const addLight = (tx, ty, v, fromTorch = false) => {
           if (tx < firstX || tx > lastX || ty < firstY || ty > lastY) return;
           const i = bufIndex(tx, ty);
           if (v > light[i]) light[i] = v;
+          if (fromTorch && v > torchLight[i]) torchLight[i] = v;
         };
 
         // Base layer: full daylight above the surface; sunlight (already
@@ -6288,12 +6295,12 @@
           }
         }
 
-        // Block-aware player light.
+        // Block-aware player light (weakens with depth).
         for (let localY = 0; localY < PLAYER_LIGHT_DIAMETER; localY++) {
           const worldY = playerLightOriginY + localY;
           for (let localX = 0; localX < PLAYER_LIGHT_DIAMETER; localX++) {
             const intensity = playerLightField[localY * PLAYER_LIGHT_DIAMETER + localX];
-            if (intensity > 0.015) addLight(playerLightOriginX + localX, worldY, Math.pow(intensity, 0.5));
+            if (intensity > 0.015) addLight(playerLightOriginX + localX, worldY, Math.pow(intensity, 0.5) * depthMultiplier, false);
           }
         }
 
@@ -6308,7 +6315,7 @@
           }
         }
 
-        // Persistent torches (their cached weighted field reaches around corners).
+        // Persistent torches (their cached weighted field reaches around corners, but weaken with depth).
         const nearbyTorches = torchesNearVisibleBounds(firstX, lastX, firstY, lastY);
         for (const torch of nearbyTorches) {
           const source = computeTorchLightField(torch.x, torch.y);
@@ -6316,7 +6323,7 @@
             const worldY = source.originY + localY;
             for (let localX = 0; localX < TORCH_LIGHT_DIAMETER; localX++) {
               const intensity = source.field[localY * TORCH_LIGHT_DIAMETER + localX];
-              if (intensity > 0.015) addLight(source.originX + localX, worldY, Math.pow(intensity, 0.5) * 0.96);
+              if (intensity > 0.015) addLight(source.originX + localX, worldY, Math.pow(intensity, 0.5) * 0.96 * torchDepthMultiplier, true);
             }
           }
         }
@@ -6350,9 +6357,12 @@
         for (let i = 0; i < cols * rows; i++) {
           const level = light[i] > 1 ? 1 : light[i];
           const p = i * 4;
-          data[p] = 4;
-          data[p + 1] = 9;
-          data[p + 2] = 15;
+          const torch = torchLight[i];
+          // Yellow tint for torch light: shift blue down and add red/green based on torch intensity
+          const yellowTint = torch * 0.45; // Controls intensity of yellow tint
+          data[p] = 4 + Math.round(yellowTint * 60);     // Red: increase toward yellow
+          data[p + 1] = 9 + Math.round(yellowTint * 50); // Green: increase toward yellow
+          data[p + 2] = Math.max(3, 15 - Math.round(yellowTint * 8)); // Blue: decrease (removing blue makes yellow)
           data[p + 3] = (1 - level) * 255;
         }
         darkTexCtx.putImageData(img, 0, 0);
