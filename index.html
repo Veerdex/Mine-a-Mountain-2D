@@ -672,7 +672,7 @@
 
     #inventoryItems {
       display: grid;
-      grid-template-columns: repeat(2, minmax(230px, 1fr));
+      grid-template-columns: repeat(4, minmax(130px, 1fr));
       gap: 9px;
     }
 
@@ -770,6 +770,135 @@
 
     #trashStone:active {
       transform: scale(0.94);
+    }
+
+    #inventoryCancelFilter, #inventorySortButton {
+      width: auto;
+      padding: 8px 12px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, 0.72);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+      cursor: pointer;
+    }
+
+    #inventorySortButton:hover, #inventoryCancelFilter:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    #inventoryCancelFilter.active {
+      border-color: #ff8b82;
+      background: rgba(255, 82, 82, 0.3);
+    }
+
+    #inventoryFocusModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      place-items: center;
+      z-index: 999;
+    }
+
+    #inventoryFocusModal.show {
+      display: grid;
+    }
+
+    .inventory-focus-panel {
+      background: #0f1619;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .inventory-focus-swatch {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 16px;
+      border: 3px solid rgba(255, 255, 255, 0.42);
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 8px rgba(0, 0, 0, 0.16);
+    }
+
+    .inventory-focus-panel h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+      color: white;
+    }
+
+    .inventory-focus-panel p {
+      margin: 0 0 16px;
+      color: #bde6e9;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .inventory-focus-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .inventory-focus-stat {
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 11px;
+      color: #d9f3f5;
+    }
+
+    .inventory-focus-stat strong {
+      display: block;
+      color: white;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .inventory-focus-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .inventory-focus-actions button {
+      padding: 10px 14px;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+
+    .inventory-focus-actions button:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .inventory-focus-actions button.filter {
+      border-color: #7ff04a;
+      background: rgba(127, 240, 74, 0.2);
+      color: #a8f8a8;
+    }
+
+    .inventory-focus-actions button.filter:hover {
+      background: rgba(127, 240, 74, 0.35);
     }
 
     #itemDetails {
@@ -1293,6 +1422,8 @@
         </div>
         <div class="inventory-header-actions">
           <button id="trashStone" aria-label="Delete all stone" title="Delete all stone in your backpack">🪨</button>
+          <button id="inventoryCancelFilter" aria-label="Cancel filters" title="Cancel block filter" style="display:none">✖ Filter</button>
+          <button id="inventorySortButton" aria-label="Change sort order" title="Sort: Asc by Worth">⬆ Worth</button>
           <button id="trashToggle" aria-label="Toggle drop item mode" title="Drop items">🗑︎</button>
           <button class="close-button" aria-label="Close">×</button>
         </div>
@@ -1311,6 +1442,18 @@
     </div>
   </div>
 
+  <div id="inventoryFocusModal">
+    <div class="inventory-focus-panel">
+      <div class="inventory-focus-swatch" id="focusSwatch"></div>
+      <h2 id="focusBlockName"></h2>
+      <p id="focusBlockGrade"></p>
+      <div class="inventory-focus-stats" id="focusStats"></div>
+      <div class="inventory-focus-actions">
+        <button class="filter" id="focusFilterButton">Filter</button>
+        <button id="focusCloseButton">Close</button>
+      </div>
+    </div>
+  </div>
 
 
   <div id="sellModal" class="modal" role="dialog" aria-modal="true" aria-label="Sell shop">
@@ -1870,6 +2013,8 @@
       let pendingInventoryOpen = false;
       let trashMode = false;
       let selectedInventoryItemId = null;
+      let inventoryFilterType = null;
+      let inventorySortMode = { order: "asc", by: "worth" };
       let inventoryTrashPointerId = null;
       let surfaceCooldown = 0;
       let surfaceCooldownDisplay = -1;
@@ -3722,12 +3867,36 @@
         capacityText.textContent = formatCompact(inventoryWeight) + " / " + formatCompact(backpack.capacity) + " weight";
         capacityFill.style.width = Math.min(100, inventoryWeight / backpack.capacity * 100) + "%";
 
+        document.getElementById("inventoryCancelFilter").style.display =
+          inventoryFilterType !== null ? "grid" : "none";
+        updateSortButtonLabel();
+
         let actualValue = 0;
         const fragment = document.createDocumentFragment();
         inventoryItems.textContent = "";
 
-        const orderedEntries = inventoryEntries.slice().reverse();
-        for (const entry of orderedEntries) {
+        let entries = inventoryEntries.slice();
+        if (inventoryFilterType !== null) {
+          entries = entries.filter(e => e.type === inventoryFilterType);
+        }
+
+        entries.sort((a, b) => {
+          let aVal, bVal;
+          if (inventorySortMode.by === "worth") {
+            aVal = a.value;
+            bVal = b.value;
+          } else if (inventorySortMode.by === "weight") {
+            aVal = a.weight;
+            bVal = b.weight;
+          } else if (inventorySortMode.by === "pwr") {
+            aVal = BLOCKS[a.type].hardness;
+            bVal = BLOCKS[b.type].hardness;
+          }
+          const cmp = aVal - bVal;
+          return inventorySortMode.order === "asc" ? cmp : -cmp;
+        });
+
+        for (const entry of entries) {
           const block = BLOCKS[entry.type];
           actualValue += entry.value;
           const row = document.createElement("div");
@@ -3745,16 +3914,26 @@
           fragment.appendChild(row);
         }
 
-        if (!inventoryEntries.length) {
+        if (!entries.length) {
           const empty = document.createElement("div");
           empty.className = "empty-inventory";
-          empty.textContent = "Your backpack is empty. Mined items remain on the ground until you tap or drag over them.";
+          empty.textContent = inventoryFilterType !== null
+            ? "No items of this type in your backpack."
+            : "Your backpack is empty. Mined items remain on the ground until you tap or drag over them.";
           fragment.appendChild(empty);
         }
 
         inventoryItems.appendChild(fragment);
         inventoryValue.textContent = "Actual rolled value: " + formatMoney(actualValue);
         renderItemDetails(inventoryEntryById(selectedInventoryItemId));
+      }
+
+      function updateSortButtonLabel() {
+        const sortBtn = document.getElementById("inventorySortButton");
+        const orderSymbol = inventorySortMode.order === "asc" ? "⬆" : "⬇";
+        const byLabel = inventorySortMode.by === "worth" ? "Worth" :
+                       inventorySortMode.by === "weight" ? "Weight" : "Pwr";
+        sortBtn.textContent = orderSymbol + " " + byLabel;
       }
 
 
@@ -6889,6 +7068,85 @@
         deleteAllStone();
       });
 
+      document.getElementById("inventoryCancelFilter").addEventListener("click", event => {
+        event.stopPropagation();
+        inventoryFilterType = null;
+        selectedInventoryItemId = null;
+        renderInventory();
+        showToast("Filter cleared");
+      });
+
+      document.getElementById("inventorySortButton").addEventListener("click", event => {
+        event.stopPropagation();
+        const cycles = [
+          { order: "asc", by: "worth" },
+          { order: "desc", by: "worth" },
+          { order: "asc", by: "weight" },
+          { order: "desc", by: "weight" },
+          { order: "asc", by: "pwr" },
+          { order: "desc", by: "pwr" }
+        ];
+        const current = cycles.findIndex(c =>
+          c.order === inventorySortMode.order && c.by === inventorySortMode.by
+        );
+        inventorySortMode = cycles[(current + 1) % cycles.length];
+        renderInventory();
+      });
+
+      let inventoryLongPressTimer = null;
+      let inventoryLongPressRow = null;
+
+      function showFocusModal(entry) {
+        const block = BLOCKS[entry.type];
+        const focusModal = document.getElementById("inventoryFocusModal");
+        document.getElementById("focusSwatch").style.background = block.color;
+        document.getElementById("focusBlockName").textContent = block.name;
+        document.getElementById("focusBlockGrade").textContent = entry.grade + " • " +
+          (entry.units === 1 ? "1 block" : formatCompact(entry.units) + " blocks");
+
+        const statsHtml = `
+          <div class="inventory-focus-stat">
+            <strong>${formatMoney(entry.value)}</strong>
+            Worth
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${formatCompact(entry.weight)}</strong>
+            Weight
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${block.hardness === Infinity ? "∞" : block.hardness}</strong>
+            Power
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${block.tier ?? "—"}</strong>
+            Tier
+          </div>
+        `;
+        document.getElementById("focusStats").innerHTML = statsHtml;
+
+        document.getElementById("focusFilterButton").dataset.entryType = String(entry.type);
+        focusModal.classList.add("show");
+      }
+
+      document.getElementById("focusCloseButton").addEventListener("click", () => {
+        document.getElementById("inventoryFocusModal").classList.remove("show");
+      });
+
+      document.getElementById("focusFilterButton").addEventListener("click", () => {
+        const entryType = Number(document.getElementById("focusFilterButton").dataset.entryType);
+        inventoryFilterType = entryType;
+        document.getElementById("inventoryFocusModal").classList.remove("show");
+        selectedInventoryItemId = null;
+        renderInventory();
+        showToast("Filtered to " + BLOCKS[entryType].name);
+      });
+
+      document.getElementById("inventoryFocusModal").addEventListener("click", event => {
+        if (event.target === event.currentTarget) {
+          document.getElementById("inventoryFocusModal").classList.remove("show");
+        }
+      });
+
       function inventoryRowFromPoint(clientX, clientY) {
         const element = document.elementFromPoint(clientX, clientY);
         return element ? element.closest(".inventory-row[data-item-id]") : null;
@@ -6916,6 +7174,25 @@
       inventoryItems.addEventListener("pointerdown", event => {
         const row = event.target.closest(".inventory-row[data-item-id]");
         if (!row) return;
+
+        if (event.button === 2) {
+          // Right-click (desktop)
+          event.preventDefault();
+          const itemId = Number(row.dataset.itemId);
+          const entry = inventoryEntryById(itemId);
+          if (entry) showFocusModal(entry);
+          return;
+        }
+
+        // Long-press detection (mobile)
+        inventoryLongPressRow = row;
+        inventoryLongPressTimer = setTimeout(() => {
+          const itemId = Number(row.dataset.itemId);
+          const entry = inventoryEntryById(itemId);
+          if (entry) showFocusModal(entry);
+          inventoryLongPressTimer = null;
+        }, 500);
+
         if (trashMode) {
           inventoryTrashPointerId = event.pointerId;
           trashedDuringDrag.clear();
@@ -6924,6 +7201,26 @@
         } else {
           processInventoryRow(row);
         }
+      });
+
+      inventoryItems.addEventListener("pointerup", event => {
+        if (inventoryLongPressTimer) {
+          clearTimeout(inventoryLongPressTimer);
+          inventoryLongPressTimer = null;
+          inventoryLongPressRow = null;
+        }
+      });
+
+      inventoryItems.addEventListener("pointercancel", event => {
+        if (inventoryLongPressTimer) {
+          clearTimeout(inventoryLongPressTimer);
+          inventoryLongPressTimer = null;
+          inventoryLongPressRow = null;
+        }
+      });
+
+      inventoryItems.addEventListener("contextmenu", event => {
+        event.preventDefault();
       });
 
       window.addEventListener("pointermove", event => {
