@@ -1729,15 +1729,15 @@
 
       const MOUNTAIN_TIERS = [
         { level: 1,  price: 0,                 width: 16,  height: 7,  label: "Starter Hill" },
-        { level: 2,  price: 550,               width: 25,  height: 12, label: "Small Mountain" },
-        { level: 3,  price: 35000,             width: 36,  height: 18, label: "Rocky Rise" },
-        { level: 4,  price: 1500000,           width: 49,  height: 25, label: "Mining Ridge" },
-        { level: 5,  price: 87000000,          width: 64,  height: 33, label: "Great Mountain" },
-        { level: 6,  price: 5600000000,        width: 81,  height: 42, label: "Titan Peak" },
-        { level: 7,  price: 274000000000,      width: 100, height: 52, label: "Colossal Range" },
-        { level: 8,  price: 7700000000000,     width: 121, height: 63, label: "Ancient Mountain" },
-        { level: 9,  price: 85000000000000,    width: 144, height: 75, label: "Worldbreaker" },
-        { level: 10, price: 972000000000000,   width: 169, height: 88, label: "Celestial Massif" }
+        { level: 2,  price: 400,               width: 25,  height: 12, label: "Small Mountain" },
+        { level: 3,  price: 23000,             width: 36,  height: 18, label: "Rocky Rise" },
+        { level: 4,  price: 935000,            width: 49,  height: 25, label: "Mining Ridge" },
+        { level: 5,  price: 51000000,          width: 64,  height: 33, label: "Great Mountain" },
+        { level: 6,  price: 3041000000,        width: 81,  height: 42, label: "Titan Peak" },
+        { level: 7,  price: 140000000000,      width: 100, height: 52, label: "Colossal Range" },
+        { level: 8,  price: 3823000000000,     width: 121, height: 63, label: "Ancient Mountain" },
+        { level: 9,  price: 41175000000000,    width: 144, height: 75, label: "Worldbreaker" },
+        { level: 10, price: 459000000000000,   width: 169, height: 88, label: "Celestial Massif" }
       ];
 
       // Thirty mountain-only resources and hazards, plus the three base terrain blocks.
@@ -1802,22 +1802,21 @@
         "Unstable Pickaxe", "Quantum Pickaxe", "Singularity Pickaxe"
       ];
 
-      // Tier-based luck multiplier scaling. Each tier's best ore determines
-      // the max possible value multiplier (1.5 + luck/500). Prices scale
-      // accordingly to prevent easy accumulation at high tiers.
-      // Tier 1-2: no ore reduction, scale by multiplier/1.5
-      // Tier 3+: ore reduced 25%, scale by 1.333 * (multiplier/1.5)
+      // Tier-based luck multiplier scaling with 50% reduction to prevent
+      // inflation from becoming too aggressive. Order: apply 25% ore reduction
+      // first (already in price arrays), then apply 50% of luck scaling.
+      // Formula: 1.0 + (luck_factor - 1.0) * 0.5
       const TIER_LUCK_SCALING = [
-        1.103,  // Tier 1: Amber 150 → 1.655x multiplier
-        1.103,  // Tier 2: Amber 150 → 1.655x multiplier
-        1.434,  // Tier 3: Sulfur 1100 → 1.614x + 25% compensation
-        1.492,  // Tier 4: Geode 18K → 1.683x
-        1.743,  // Tier 5: Glowstone 350K → 1.964x
-        2.244,  // Tier 6: Fossil Block 9M → 2.524x
-        2.735,  // Tier 7: Obsidian 65M → 3.076x
-        3.077,  // Tier 8: Prismstone 4.5B → 3.465x
-        3.391,  // Tier 9: Radium 75B → 3.814x
-        3.891   // Tier 10: Unstable 750B → 4.235x (capped to prevent excess)
+        1.052,  // Tier 1: 50% of 1.103
+        1.052,  // Tier 2: 50% of 1.103
+        1.217,  // Tier 3: 50% of 1.434
+        1.246,  // Tier 4: 50% of 1.492
+        1.372,  // Tier 5: 50% of 1.743
+        1.622,  // Tier 6: 50% of 2.244
+        1.868,  // Tier 7: 50% of 2.735
+        2.039,  // Tier 8: 50% of 3.077
+        2.196,  // Tier 9: 50% of 3.391
+        2.446   // Tier 10: 50% of 3.891
       ];
 
       function roundPrice(value) {
