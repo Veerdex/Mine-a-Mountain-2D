@@ -2114,6 +2114,8 @@
 
       const finePointerQuery = window.matchMedia("(pointer: fine)");
       let mouseAimActive = finePointerQuery.matches;
+      let cursorWorldX = 0;
+      let cursorWorldY = 0;
       let mouseMineDown = false;
       let mousePlaceDown = false;
       let mouseMinePointerId = null;
@@ -2374,6 +2376,8 @@
       function updateMouseAim(clientX, clientY) {
         if (!desktopControlsActive() || activeModal) return;
         const point = worldPointFromClient(clientX, clientY);
+        cursorWorldX = point.x;
+        cursorWorldY = point.y;
         const originX = player.x + player.w * 0.5;
         const originY = player.y + player.h * 0.16;
         const dx = point.x - originX;
@@ -5043,6 +5047,53 @@
         }
       }
 
+      function findBuildTargetCursor() {
+        // On desktop, place platforms at cursor location (max 5 tile reach).
+        const originX = player.x + player.w * 0.5;
+        const originY = player.y + player.h * 0.16;
+        const cursorTileX = Math.floor(cursorWorldX / TILE);
+        const cursorTileY = Math.floor(cursorWorldY / TILE);
+        const maxDistance = BUILD_REACH_TILES * TILE;
+
+        const dx = cursorWorldX - originX;
+        const dy = cursorWorldY - originY;
+        const distance = Math.hypot(dx, dy);
+        if (distance > maxDistance) return null;
+
+        // Search for valid placement tiles near cursor
+        const searchRadius = 2;
+        let best = null;
+
+        for (let ty = cursorTileY - searchRadius; ty <= cursorTileY + searchRadius; ty++) {
+          if (ty < 0 || ty >= WORLD_H) continue;
+          for (let tx = cursorTileX - searchRadius; tx <= cursorTileX + searchRadius; tx++) {
+            if (tx < 0 || tx >= WORLD_W || tileAt(tx, ty) !== AIR || hasPlank(tx, ty)) continue;
+            if (!hasCaveBackgroundWall(tx, ty)) continue;
+
+            const surfaceY = plankSurfaceY(ty);
+            const tileLeft = tx * TILE;
+            const tileRight = tileLeft + TILE;
+            const horizontalOverlap = tileRight > player.x + 2 && tileLeft < player.x + player.w - 2;
+            if (horizontalOverlap && surfaceY > player.y + 3 && surfaceY < player.y + player.h - 2) continue;
+
+            if (!best) best = { x: tx, y: ty };
+            else {
+              // Prefer placement closest to cursor
+              const targetX1 = tx * TILE + TILE * 0.5;
+              const targetY1 = plankSurfaceY(ty);
+              const d1 = Math.hypot(targetX1 - cursorWorldX, targetY1 - cursorWorldY);
+
+              const targetX2 = best.x * TILE + TILE * 0.5;
+              const targetY2 = plankSurfaceY(best.y);
+              const d2 = Math.hypot(targetX2 - cursorWorldX, targetY2 - cursorWorldY);
+
+              if (d1 < d2) best = { x: tx, y: ty };
+            }
+          }
+        }
+        return best;
+      }
+
       function findBuildTarget() {
         const originX = player.x + player.w * 0.5;
         const originY = player.y + player.h * 0.16;
@@ -5095,7 +5146,7 @@
           return;
         }
 
-        const target = findBuildTarget();
+        const target = desktopControlsActive() ? findBuildTargetCursor() : findBuildTarget();
         building.targetX = target ? target.x : -1;
         building.targetY = target ? target.y : -1;
         building.valid = !!target;
@@ -5116,6 +5167,53 @@
 
         addPlank(target.x, target.y);
         mining.scanTimer = 0;
+      }
+
+      function findTorchTargetCursor() {
+        // On desktop, place torches at cursor location (max 5 tile reach).
+        const originX = player.x + player.w * 0.5;
+        const originY = player.y + player.h * 0.16;
+        const cursorTileX = Math.floor(cursorWorldX / TILE);
+        const cursorTileY = Math.floor(cursorWorldY / TILE);
+        const maxDistance = TORCH_REACH_TILES * TILE;
+
+        const dx = cursorWorldX - originX;
+        const dy = cursorWorldY - originY;
+        const distance = Math.hypot(dx, dy);
+        if (distance > maxDistance) return null;
+
+        // Search for valid placement tiles near cursor
+        const searchRadius = 2;
+        let best = null;
+        let bestScore = Infinity;
+
+        for (let ty = cursorTileY - searchRadius; ty <= cursorTileY + searchRadius; ty++) {
+          if (ty < 0 || ty >= WORLD_H) continue;
+          for (let tx = cursorTileX - searchRadius; tx <= cursorTileX + searchRadius; tx++) {
+            if (tx < 0 || tx >= WORLD_W || tileAt(tx, ty) !== AIR || hasTorch(tx, ty)) continue;
+            if (!hasCaveBackgroundWall(tx, ty)) continue;
+            if (tileOverlapsPlayer(tx, ty)) continue;
+
+            const targetX = tx * TILE + TILE * 0.5;
+            const targetY = ty * TILE + TILE * 0.5;
+            const d = Math.hypot(targetX - cursorWorldX, targetY - cursorWorldY);
+
+            const supported =
+              tileAt(tx - 1, ty) !== AIR ||
+              tileAt(tx + 1, ty) !== AIR ||
+              tileAt(tx, ty - 1) !== AIR ||
+              tileAt(tx, ty + 1) !== AIR ||
+              hasPlank(tx, ty) ||
+              hasPlank(tx, ty + 1);
+            const score = d - (supported ? TILE * 0.18 : 0);
+
+            if (score < bestScore) {
+              bestScore = score;
+              best = { x: tx, y: ty };
+            }
+          }
+        }
+        return best;
       }
 
       function findTorchTarget() {
@@ -5177,7 +5275,7 @@
           return;
         }
 
-        const target = findTorchTarget();
+        const target = desktopControlsActive() ? findTorchTargetCursor() : findTorchTarget();
         torchPlacement.targetX = target ? target.x : -1;
         torchPlacement.targetY = target ? target.y : -1;
         torchPlacement.valid = !!target;
