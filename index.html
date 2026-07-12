@@ -1798,7 +1798,12 @@
       const sunlightMap = new Float32Array(WORLD_W * WORLD_H);
       const PLAYER_LIGHT_DIAMETER = PLAYER_LIGHT_RADIUS * 2 + 1;
       const playerLightField = new Float32Array(PLAYER_LIGHT_DIAMETER * PLAYER_LIGHT_DIAMETER);
-      const playerLightCosts = new Float32Array(PLAYER_LIGHT_DIAMETER * PLAYER_LIGHT_DIAMETER);
+      // Float64 so the stored Dijkstra cost exactly matches the value kept in the
+      // heap. With a Float32Array, a fractional cost like 8.1 rounds to
+      // 8.1000003, then the stale-entry check (heapCost !== costs[cell]) wrongly
+      // rejects it — which dropped every diagonal/corner path and left light only
+      // travelling in straight cardinal lines with integer costs.
+      const playerLightCosts = new Float64Array(PLAYER_LIGHT_DIAMETER * PLAYER_LIGHT_DIAMETER);
       const lightCanvas = document.createElement("canvas");
       const lightCtx = lightCanvas.getContext("2d");
       const chunkCache = new Map();
@@ -5305,7 +5310,10 @@
         if (cached && cached.revision === terrainLightRevision) return cached;
 
         const field = new Float32Array(TORCH_LIGHT_DIAMETER * TORCH_LIGHT_DIAMETER);
-        const costs = new Float32Array(TORCH_LIGHT_DIAMETER * TORCH_LIGHT_DIAMETER);
+        // Float64 to match the heap's cost precision (see playerLightCosts): a
+        // Float32 rounding mismatch made the stale-entry check drop diagonal
+        // paths, so torch light only travelled in straight lines.
+        const costs = new Float64Array(TORCH_LIGHT_DIAMETER * TORCH_LIGHT_DIAMETER);
         costs.fill(Infinity);
         const originX = torchX - TORCH_LIGHT_RADIUS;
         const originY = torchY - TORCH_LIGHT_RADIUS;
