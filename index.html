@@ -5613,9 +5613,13 @@
 
         // Ambient underground darkness covers all terrain, not only the
         // purchased mountain. Each column begins at its actual terrain surface.
+        // Kept near-opaque so anywhere not currently lit by the player, a torch,
+        // sunlight, or a glowing block reads as dark — this is what makes torches
+        // necessary. Every light source carves this layer each frame, so areas go
+        // dark again once the source (e.g. the player) moves away.
         lightCtx.globalCompositeOperation = "source-over";
         lightCtx.globalAlpha = 1;
-        lightCtx.fillStyle = "rgba(4,9,15,0.88)";
+        lightCtx.fillStyle = "rgba(4,9,15,0.95)";
         for (let x = firstX; x <= lastX; x++) {
           const sx = worldToScreenX(x * TILE);
           const sy = worldToScreenY(terrainSurfaceYAt(x) * TILE);
@@ -5722,31 +5726,12 @@
         lightCtx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.drawImage(lightCanvas, 0, 0, screenW, screenH);
 
-        // Permanent exploration fog. Sunlit cells and cells reached by the
-        // block-aware player light are marked discovered before this pass.
-        ctx.fillStyle = "rgba(2,6,10,0.94)";
-        for (let y = firstY; y <= lastY; y++) {
-          let runStart = -1;
-          for (let x = firstX; x <= lastX + 1; x++) {
-            const currentlyPlayerLit =
-              x <= lastX && playerLightIntensityAt(x, y) > 0.015;
-            const hidden =
-              x <= lastX &&
-              y >= terrainSurfaceYAt(x) &&
-              !currentlyPlayerLit &&
-              !discovered[index(x, y)];
-            if (hidden && runStart < 0) runStart = x;
-            if ((!hidden || x > lastX) && runStart >= 0) {
-              ctx.fillRect(
-                worldToScreenX(runStart * TILE),
-                worldToScreenY(y * TILE),
-                (x - runStart) * tileSize + 1,
-                tileSize + 1
-              );
-              runStart = -1;
-            }
-          }
-        }
+        // No permanent exploration fog: visibility is fully dynamic. A tile is
+        // only visible while a current light source (player, torch, sunlight, or
+        // a glowing block) is carving the ambient darkness above. Areas the
+        // player has already walked past go dark again, so torches are needed to
+        // keep a dug-out space lit. (The `discovered` array is still tracked for
+        // save compatibility but no longer forces tiles to stay revealed.)
       }
 
       function updateCamera(dt) {
