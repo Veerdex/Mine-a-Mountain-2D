@@ -3896,10 +3896,6 @@
         const caveScale = 8 + Math.max(0, (tier.level - 1) * 1); // Smaller scale = smaller caves
         const airScale = 12 + Math.max(0, (tier.level - 1) * 1.5); // Air pockets less common
 
-        // Base threshold decreases (easier to make caves) as player goes deeper
-        const caveThreshold = 0.60 - Math.max(0, (tier.level - 1) * 0.04);
-        const airThreshold = 0.74 - Math.max(0, (tier.level - 1) * 0.03);
-
         const caveSeed = 42 + tier.level * 1000;
         const airSeed = 314 + tier.level * 1000;
 
@@ -3907,6 +3903,21 @@
           for (let x = 0; x < WORLD_W; x++) {
             if (isProtectedArea(x, y)) continue;
             if (tileAt(x, y) === AIR) continue;
+
+            // Calculate depth from surface
+            const depth = y - GROUND_Y;
+
+            // Caves are 4x sparser at shallow depths, but double in frequency at 100+ blocks deep
+            let caveThreshold = 0.80; // Base: sparse caves
+            if (depth >= 100) {
+              caveThreshold = 0.65; // At 100+ blocks: double the frequency
+            }
+
+            // Air pockets follow similar depth-based pattern but remain rarer
+            let airThreshold = 0.87; // Base: very rare air pockets
+            if (depth >= 100) {
+              airThreshold = 0.76; // Increase air pockets too at depth
+            }
 
             // Generate air pockets first (rarer)
             const airNoise = perlinNoise2D(x, y, airSeed, airScale);
