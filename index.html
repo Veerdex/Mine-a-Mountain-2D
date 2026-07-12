@@ -1365,7 +1365,7 @@
     <span id="pickaxeLabel">Standard Pickaxe</span><span>•</span>
     <span id="packLabel">0 / 75 wt</span><span>•</span>
     <span id="hazardLabel">RAD 0%</span><span>•</span>
-    <span id="luckHud">LUCK 0.00</span>
+    <span id="luckHud">LUCK 0.00</span><span id="autoSaveWarning" style="display:none;">•<span style="color:#ff9d84;">AUTO-SAVE BLOCKED</span></span>
   </div>
 
   <div id="shopPrompt"></div>
@@ -2101,6 +2101,7 @@
       let cloudBusy = false;
       let cloudConfigured = false;
       let cloudLastSavedAt = null;
+      let autoSaveBlocked = false;
       let localSaveTimer = null;
       let cloudSaveTimer = null;
       let sunlightRevision = -1;
@@ -3289,6 +3290,8 @@
             }, { onConflict: "user_id" });
           if (error) throw error;
           cloudLastSavedAt = savedAt;
+          autoSaveBlocked = false;
+          document.getElementById("autoSaveWarning").style.display = "none";
           saveLocalProgress(false);
           updateCloudUI("Cloud save completed.");
           if (showMessage) showToast("Progress saved to cloud");
@@ -3386,8 +3389,21 @@
         if (localSaveTimer) clearInterval(localSaveTimer);
         if (cloudSaveTimer) clearInterval(cloudSaveTimer);
         localSaveTimer = setInterval(() => saveLocalProgress(false), 45000);
-        cloudSaveTimer = setInterval(() => {
-          if (cloudUser && !cloudBusy) saveCloudProgress(false);
+        cloudSaveTimer = setInterval(async () => {
+          if (!cloudUser || cloudBusy) return;
+
+          // Check if auto-save is blocked due to progress being behind
+          const localProgress = calculateProgressScore();
+          const cloudProgress = await getExistingCloudProgress();
+
+          if (cloudProgress > 0 && localProgress < cloudProgress) {
+            autoSaveBlocked = true;
+            document.getElementById("autoSaveWarning").style.display = "";
+          } else {
+            autoSaveBlocked = false;
+            document.getElementById("autoSaveWarning").style.display = "none";
+            saveCloudProgress(false);
+          }
         }, 120000);
       }
 
