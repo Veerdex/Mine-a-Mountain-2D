@@ -1,10 +1,9 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v2";
+const CACHE_NAME = "mountain-tycoon-pwa-v3";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./supabase-config.js",
   "./icons/favicon-32.png",
   "./icons/apple-touch-icon.png",
   "./icons/icon-192.png",
@@ -44,8 +43,17 @@ self.addEventListener("fetch", event => {
 
   const url = new URL(request.url);
 
-  // Leave Supabase and every other external API untouched.
+  // Do not interfere with Supabase or other external APIs.
   if (url.origin !== self.location.origin) return;
+
+  // Configuration must always come from the network. An old cached placeholder
+  // would otherwise keep the app stuck in "SETUP NEEDED" after deployment.
+  if (url.pathname.endsWith("/supabase-config.js")) {
+    event.respondWith(
+      fetch(request, { cache: "no-store" })
+    );
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(

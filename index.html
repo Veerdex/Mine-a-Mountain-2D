@@ -2362,7 +2362,7 @@
 
   <div id="rotate">Rotate your phone to landscape.</div>
 
-  <script src="./supabase-config.js"></script>
+  <script src="./supabase-config.js?v=3"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     (() => {
@@ -4194,17 +4194,96 @@
         }
       }
 
+      function normalizedSupabaseConfig() {
+        const source = window.SUPABASE_CONFIG || {};
+
+        const url = String(
+          source.url ??
+          source.supabaseUrl ??
+          window.SUPABASE_URL ??
+          ""
+        )
+          .trim()
+          .replace(/\/+$/, "");
+
+        const publishableKey = String(
+          source.publishableKey ??
+          source.anonKey ??
+          source.key ??
+          window.SUPABASE_PUBLISHABLE_KEY ??
+          window.SUPABASE_ANON_KEY ??
+          ""
+        ).trim();
+
+        return { url, publishableKey };
+      }
+
+      function supabaseConfigurationProblem() {
+        const hasConfigObject =
+          !!window.SUPABASE_CONFIG ||
+          !!window.SUPABASE_URL ||
+          !!window.SUPABASE_PUBLISHABLE_KEY ||
+          !!window.SUPABASE_ANON_KEY;
+
+        if (!hasConfigObject) {
+          return (
+            "supabase-config.js did not load. Make sure it is deployed in " +
+            "the same folder as index.html, then reload the app."
+          );
+        }
+
+        const config = normalizedSupabaseConfig();
+
+        if (
+          !config.url ||
+          config.url.includes("YOUR_")
+        ) {
+          return (
+            "The Supabase Project URL is still missing or contains the " +
+            "placeholder value."
+          );
+        }
+
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(config.url);
+        } catch {
+          return "The Supabase Project URL is not a valid URL.";
+        }
+
+        if (
+          parsedUrl.protocol !== "https:" ||
+          !parsedUrl.hostname
+        ) {
+          return "The Supabase Project URL must be a valid HTTPS URL.";
+        }
+
+        if (
+          !config.publishableKey ||
+          config.publishableKey.includes("YOUR_")
+        ) {
+          return (
+            "The Supabase publishable/anon key is still missing or contains " +
+            "the placeholder value."
+          );
+        }
+
+        if (config.publishableKey.length < 20) {
+          return "The Supabase publishable/anon key appears to be incomplete.";
+        }
+
+        if (!window.supabase) {
+          return (
+            "The Supabase JavaScript library did not load. Check the network " +
+            "connection or browser content blocking, then reload."
+          );
+        }
+
+        return "";
+      }
+
       function cloudConfigIsValid() {
-        const config = window.SUPABASE_CONFIG;
-        return !!(
-          config &&
-          typeof config.url === "string" &&
-          /^https:\/\/.+\.supabase\.co$/i.test(config.url) &&
-          typeof config.publishableKey === "string" &&
-          config.publishableKey.length > 20 &&
-          !config.url.includes("YOUR_") &&
-          !config.publishableKey.includes("YOUR_")
-        );
+        return supabaseConfigurationProblem() === "";
       }
 
       function setCloudStatus(message) {
@@ -4557,14 +4636,17 @@
       }
 
       async function initializeSupabase() {
-        cloudConfigured = cloudConfigIsValid() && !!window.supabase;
+        const configurationProblem =
+          supabaseConfigurationProblem();
+        cloudConfigured = configurationProblem === "";
+
         if (!cloudConfigured) {
-          updateCloudUI("Supabase is not configured yet. Add your Project URL and publishable key to supabase-config.js.");
+          updateCloudUI(configurationProblem);
           return;
         }
 
         try {
-          const config = window.SUPABASE_CONFIG;
+          const config = normalizedSupabaseConfig();
           supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
             auth: {
               persistSession: true,
