@@ -775,6 +775,16 @@
       white-space: nowrap;
     }
 
+    .refinery-ore-description {
+      display: block;
+      margin-bottom: 3px;
+      color: #fff0a8;
+      font-size: 9px;
+      font-weight: 950;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
     .refinery-slot-status {
       color: #bde6e9;
       font-size: 10px;
@@ -813,10 +823,39 @@
     .refinery-result-value {
       display: block;
       margin-top: 8px;
-      color: #79ee91;
-      font-size: 12px;
-      font-weight: 950;
+      color: #d8f5e0;
+      font-size: 11px;
+      font-weight: 900;
       text-align: center;
+    }
+
+    .refinery-value-change {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      align-items: center;
+      margin-top: 4px;
+      font-size: 13px;
+      font-weight: 1000;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .refinery-value-change.gain {
+      color: #79ee91;
+    }
+
+    .refinery-value-change.loss {
+      color: #ff786e;
+    }
+
+    .refinery-value-change.neutral {
+      color: #c7eaed;
+    }
+
+    .refinery-value-change .arrow {
+      font-size: 15px;
+      line-height: 1;
     }
 
     .refinery-job-dropdown {
@@ -2411,6 +2450,18 @@
       const GAS = 32;
       const UNSTABLE = 33;
 
+      // Appended instead of inserted so block IDs in older saves remain valid.
+      const VOID_OPAL = 34;
+      const AETHERIUM = 35;
+      const NEUTRONITE = 36;
+      const CHRONOCRYSTAL = 37;
+
+      // Appended so every block ID used by older saves stays unchanged.
+      const FRACTURED_STONE = 38;
+      const ACID = 39;
+      const RESONANCE_CRYSTAL = 40;
+      const VOID_FISSURE = 41;
+
       const MOVE_SPEED = 250;
       const SHOP_MOVE_SPEED_MULTIPLIER = 2;
       const GROUND_ACCEL = 1900;
@@ -2426,9 +2477,11 @@
       const PLATFORM_DROP_TIME = 0.28;
       const TORCH_REACH_TILES = 5;
       const TORCH_REPEAT_INTERVAL = 0.24;
-      const TORCH_LIGHT_RADIUS = 8;
+      // A torch follows the player's block-light behavior, but its final
+      // radius is always one tile smaller. The player's maximum block-light
+      // radius is 10, so the torch field must support up to 9 tiles.
+      const TORCH_LIGHT_RADIUS = 9;
       const TORCH_LIGHT_DIAMETER = TORCH_LIGHT_RADIUS * 2 + 1;
-      const TORCH_DEPTH_DIM_LEVEL = 0;
       const MAX_LIGHT_BRIGHTNESS_DIM_PERCENT = 60;
       const MAX_LIGHT_RADIUS_DIM_PERCENT = 90;
 
@@ -2447,7 +2500,18 @@
       const LUCK_PLOT_SLOTS = 20;
       const MOUNTAIN_START_X = 55;
       const FOREST_AMBIENCE_MAX_VOLUME = 0.62;
-      const FOREST_AMBIENCE_SILENT_DEPTH = 15;
+      const FOREST_AMBIENCE_SILENT_DEPTH = 20;
+      const FOREST_AMBIENCE_FADE_CURVE = 9;
+      const WORLD_DROP_MIN_VEIN_SCALE = 0.35;
+      const PLACED_OBJECT_BREAK_TIME = 0.2;
+
+      const GRAVEL_STUN_DURATION = 0.35;
+      const FRACTURED_STONE_WARNING_TIME = 0.8;
+      const ACID_CORROSION_RATE = 45;
+      const ACID_RECOVERY_RATE = 15;
+      const RESONANCE_WARNING_TIME = 1.2;
+      const VOID_FISSURE_CHARGE_TIME = 2.0;
+
       const REFINERY_MAX_BONUS = 1.25;
       const REFINERY_MAX_EPSILON = 0.0005;
       const REFINERY_VALUE_COST_RATE = 0.18;
@@ -2513,23 +2577,20 @@
         },
       ];
 
-      const MOUNTAIN_TIERS = [
-        { level: 1,  price: 0,                 width: 16,  height: 7,  label: "Starter Hill" },
-        { level: 2,  price: 240,               width: 25,  height: 12, label: "Small Mountain" },
-        { level: 3,  price: 14000,             width: 36,  height: 18, label: "Rocky Rise" },
-        { level: 4,  price: 560000,            width: 49,  height: 25, label: "Mining Ridge" },
-        { level: 5,  price: 31000000,          width: 64,  height: 33, label: "Great Mountain" },
-        { level: 6,  price: 1825000000,        width: 81,  height: 42, label: "Titan Peak" },
-        { level: 7,  price: 84000000000,       width: 100, height: 52, label: "Colossal Range" },
-        { level: 8,  price: 2294000000000,     width: 121, height: 63, label: "Ancient Mountain" },
-        { level: 9,  price: 24705000000000,    width: 144, height: 75, label: "Worldbreaker" },
-        { level: 10, price: 275400000000000,   width: 169, height: 88, label: "Celestial Massif" }
-      ].map(tier => ({
-        ...tier,
-        price: tier.price === 0 ? 0 : Math.round(tier.price * 1.2)
-      }));
+      const MOUNTAIN_TIER_DEFINITIONS = [
+        { level: 1,  width: 16,  height: 7,  label: "Starter Hill" },
+        { level: 2,  width: 25,  height: 12, label: "Small Mountain" },
+        { level: 3,  width: 36,  height: 18, label: "Rocky Rise" },
+        { level: 4,  width: 49,  height: 25, label: "Mining Ridge" },
+        { level: 5,  width: 64,  height: 33, label: "Great Mountain" },
+        { level: 6,  width: 81,  height: 42, label: "Titan Peak" },
+        { level: 7,  width: 100, height: 52, label: "Colossal Range" },
+        { level: 8,  width: 121, height: 63, label: "Ancient Mountain" },
+        { level: 9,  width: 144, height: 75, label: "Worldbreaker" },
+        { level: 10, width: 169, height: 88, label: "Celestial Massif" }
+      ];
 
-      // Thirty mountain-only resources and hazards, plus the three base terrain blocks.
+      // Thirty-eight mountain-only resources and hazards, plus the three base terrain blocks.
       // Core values scale from early-game dollars to late-game trillions.
       const BLOCKS = [
         { name: "Air", weight: 0, hardness: 0, value: 0, breakTime: 0, color: "transparent", style: "air" },
@@ -2575,7 +2636,22 @@
         { name: "TNT Block", weight: 0, hardness: 7, value: 0, breakTime: 0.42, color: "#d9473f", style: "tnt", tier: 3, spawnRate: 0.7, clumpMin: 1, clumpMax: 3, hazard: true, collectible: false },
         { name: "Lava Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#f36b25", style: "lava", tier: 4, spawnRate: 0.5, clumpMin: 4, clumpMax: 11, hazard: true, collectible: false },
         { name: "Gas Pocket", weight: 0, hardness: 13, value: 0, breakTime: 0.34, color: "#b8d78f", style: "gas", tier: 5, spawnRate: 0.6, clumpMin: 2, clumpMax: 7, hazard: true, collectible: false },
-        { name: "Unstable Crystal", weight: 20, hardness: 30, value: 750000000000, breakTime: 4.0, color: "#e16ff1", style: "unstable", tier: 10, spawnRate: 0.3, clumpMin: 1, clumpMax: 3, hazard: true }
+        { name: "Unstable Crystal", weight: 20, hardness: 30, value: 750000000000, breakTime: 4.0, color: "#e16ff1", style: "unstable", tier: 10, spawnRate: 0.3, clumpMin: 1, clumpMax: 3, hazard: true },
+
+        // Progression-gap resources. They are appended to preserve old save IDs.
+        { name: "Void Opal", weight: 5, hardness: 21, value: 240000000, breakTime: 2.32, color: "#9b7cff", style: "void", tier: 7, spawnRate: 0.85, clumpMin: 1, clumpMax: 3 },
+        { name: "Aetherium", weight: 2, hardness: 26, value: 50000000000, breakTime: 3.32, color: "#76ffe0", style: "aether", tier: 9, spawnRate: 0.48, clumpMin: 1, clumpMax: 3 },
+        { name: "Neutronite", weight: 300, hardness: 28, value: 160000000000, breakTime: 3.68, color: "#a7baff", style: "neutron", tier: 10, spawnRate: 0.26, clumpMin: 1, clumpMax: 2 },
+        { name: "Chronocrystal", weight: 8, hardness: 29, value: 350000000000, breakTime: 3.82, color: "#ff8fe8", style: "chrono", tier: 10, spawnRate: 0.20, clumpMin: 1, clumpMax: 2 },
+
+        // One escalating danger block per tier:
+        // 1 Gravel, 2 Fractured Stone, 3 TNT, 4 Lava, 5 Gas,
+        // 6 Acid, 7 Resonance Crystal, 8 Void Fissure,
+        // 9 Radium, 10 Unstable Crystal.
+        { name: "Fractured Stone", weight: 0, hardness: 4, value: 0, breakTime: 0.54, color: "#8b8179", style: "fractured", tier: 2, spawnRate: 0.85, clumpMin: 1, clumpMax: 3, hazard: true, collectible: false, deposit: false },
+        { name: "Acid Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#78e94f", style: "acid", tier: 6, spawnRate: 0.48, clumpMin: 3, clumpMax: 8, hazard: true, collectible: false, deposit: false },
+        { name: "Resonance Crystal", weight: 0, hardness: 19, value: 0, breakTime: 1.15, color: "#52ddff", style: "resonance", tier: 7, spawnRate: 0.42, clumpMin: 1, clumpMax: 4, hazard: true, collectible: false, deposit: false },
+        { name: "Void Fissure", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#a15cff", style: "fissure", tier: 8, spawnRate: 0.32, clumpMin: 1, clumpMax: 2, hazard: true, collectible: false, deposit: false }
       ];
 
       const PICKAXE_NAMES = [
@@ -2585,10 +2661,10 @@
         "Lithium Pickaxe", "Nickel Pickaxe", "Geode Cracker",
         "Cobalt Pickaxe", "Silver Pickaxe", "Glowstone Drill",
         "Gold Pickaxe", "Sapphire Pickaxe", "Fossil Hammer",
-        "Ruby Pickaxe", "Emerald Pickaxe", "Obsidian Breaker",
+        "Ruby Pickaxe", "Emerald Pickaxe", "Void Opal Breaker",
         "Diamond Pickaxe", "Titanium Pickaxe", "Prism Bore",
-        "Platinum Pickaxe", "Atomic Pickaxe", "Radium Drill",
-        "Unstable Pickaxe", "Quantum Pickaxe", "Singularity Pickaxe"
+        "Platinum Pickaxe", "Aetherium Pickaxe", "Radium Drill",
+        "Neutron Pickaxe", "Chrono Pickaxe", "Singularity Pickaxe"
       ];
 
       // Tier-based luck multiplier scaling with 50% reduction to prevent
@@ -2609,36 +2685,97 @@
       ];
 
       function roundPrice(value) {
-        if (value < 100) return Math.round(value);
-        if (value < 10000) return Math.round(value / 10) * 10;
-        if (value < 1000000) return Math.round(value / 100) * 100;
-        if (value < 1000000000) return Math.round(value / 10000) * 10000;
-        if (value < 1000000000000) return Math.round(value / 1000000) * 1000000;
-        return Math.round(value / 1000000000) * 1000000000;
+        const numericValue = Number(value);
+
+        if (!Number.isFinite(numericValue) || numericValue <= 0) {
+          return 0;
+        }
+
+        // Round to the nearest value where the third significant digit is
+        // either 0 or 5, and every following digit is zero.
+        //
+        // Example:
+        // 5,834,917 -> nearest 50,000 -> 5,850,000
+        const magnitude = Math.pow(
+          10,
+          Math.floor(Math.log10(numericValue))
+        );
+        const roundingIncrement = Math.max(
+          1,
+          magnitude / 20
+        );
+
+        return (
+          Math.round(numericValue / roundingIncrement) *
+          roundingIncrement
+        );
       }
 
-      const PICKAXE_BASE_PRICES = [
-        0, 45, 132,
-        300, 900, 2700,
-        9000, 27000, 81000,
-        240000, 720000, 2160000,
-        6000000, 18000000, 51000000,
-        165000000, 495000000, 1440000000,
-        4500000000, 13500000000, 39000000000,
-        120000000000, 360000000000, 1080000000000,
-        3240000000000, 9000000000000, 27000000000000,
-        84000000000000, 255000000000000, 750000000000000
-      ].map((price, index) => {
-        if (price === 0) return 0;
-        const tier = Math.ceil((index + 1) / 3) - 1;
-        return roundPrice(price * TIER_LUCK_SCALING[tier]);
-      });
+      const EQUIPMENT_LEVEL_COUNT = 30;
+      const PICKAXE_PRICE_MULTIPLIER_MIN = 10;
+      const PICKAXE_PRICE_MULTIPLIER_MAX = 100;
+      const BACKPACK_PRICE_FACTOR = 0.85;
+      const FLASHLIGHT_PRICE_FACTOR = 0.75;
 
-      const PICKAXE_PRICES = PICKAXE_BASE_PRICES.map(
-        price =>
-          price === 0
-            ? 0
-            : roundPrice(price * 1.2 * 0.85)
+      function equipmentPriceMultiplier(level) {
+        const progress = clamp(
+          (level - 1) / (EQUIPMENT_LEVEL_COUNT - 1),
+          0,
+          1
+        );
+
+        return (
+          PICKAXE_PRICE_MULTIPLIER_MIN +
+          (
+            PICKAXE_PRICE_MULTIPLIER_MAX -
+            PICKAXE_PRICE_MULTIPLIER_MIN
+          ) *
+            progress
+        );
+      }
+
+      function bestResourceForEquipmentLevel(level) {
+        const mountainTier = Math.ceil(level / 3);
+        let best = BLOCKS[GRAVEL];
+
+        for (const block of BLOCKS) {
+          if (
+            !block ||
+            !block.tier ||
+            block.tier > mountainTier ||
+            block.collectible === false ||
+            !Number.isFinite(block.hardness) ||
+            block.hardness > level ||
+            block.value <= best.value
+          ) {
+            continue;
+          }
+
+          best = block;
+        }
+
+        return best;
+      }
+
+      function equipmentPriceForLevel(level, priceFactor = 1) {
+        const tierIndex = Math.ceil(level / 3) - 1;
+        const bestResource = bestResourceForEquipmentLevel(level);
+        const luckAdjustedResourceValue =
+          bestResource.value * TIER_LUCK_SCALING[tierIndex];
+
+        return roundPrice(
+          luckAdjustedResourceValue *
+            equipmentPriceMultiplier(level) *
+            priceFactor
+        );
+      }
+
+      // Pickaxe prices rise from 10× the luck-adjusted best resource at
+      // level 1 to 100× at level 30. Starter equipment remains pre-owned,
+      // so the level-1 price is only a balance reference.
+      const PICKAXE_PRICES = Array.from(
+        { length: EQUIPMENT_LEVEL_COUNT },
+        (_, index) => equipmentPriceForLevel(index + 1)
       );
 
       const PICKAXE_UNLOCKS = [
@@ -2648,10 +2785,10 @@
         "Lithium, nickel, and geodes",
         "Cobalt, silver, glowstone, and gas",
         "Gold, sapphire, and fossils",
-        "Ruby, emerald, and obsidian",
+        "Ruby, emerald, obsidian, and void opal",
         "Diamond, titanium, and prismstone",
-        "Platinum and radium",
-        "Unstable crystal"
+        "Platinum, aetherium, and radium",
+        "Neutronite, chronocrystal, and unstable crystal"
       ];
 
       const TIER_COLORS = [
@@ -2672,28 +2809,15 @@
         "Celestial Pack", "Singularity Pack", "Infinite Horizon Pack"
       ];
 
-      const BACKPACK_BASE_PRICES = [
-        0, 30, 96,
-        300, 900, 2700,
-        8400, 25200, 75000,
-        228000, 660000, 2040000,
-        6000000, 18000000, 54000000,
-        162000000, 480000000, 1440000000,
-        4320000000, 12600000000, 39000000000,
-        114000000000, 342000000000, 1020000000000,
-        3000000000000, 9000000000000, 27000000000000,
-        81000000000000, 240000000000000, 720000000000000
-      ].map((price, index) => {
-        if (price === 0) return 0;
-        const tier = Math.ceil((index + 1) / 3) - 1;
-        return roundPrice(price * TIER_LUCK_SCALING[tier]);
-      });
-
-      const BACKPACK_PRICES = BACKPACK_BASE_PRICES.map(
-        price =>
-          price === 0
-            ? 0
-            : roundPrice(price * 1.2 * 0.85)
+      // Backpacks are 15% cheaper than the pickaxe benchmark multiplier.
+      // At a 50× pickaxe multiplier, this produces the requested 42.5×.
+      const BACKPACK_PRICES = Array.from(
+        { length: EQUIPMENT_LEVEL_COUNT },
+        (_, index) =>
+          equipmentPriceForLevel(
+            index + 1,
+            BACKPACK_PRICE_FACTOR
+          )
       );
 
       const FLASHLIGHT_NAMES = [
@@ -2705,14 +2829,59 @@
         "Stellar Core", "Supernova Burst", "Galactic Ray", "Cosmic Flare", "Omnilux Prime"
       ];
 
-      // Flashlight prices intentionally remain based on the pre-increase
-      // backpack price curve.
-      const FLASHLIGHT_PRICES = BACKPACK_BASE_PRICES.map(
-        price =>
-          price === 0
-            ? 0
-            : roundPrice(price * 1.25 * 0.85)
+      // Flashlights are 25% cheaper than the pickaxe benchmark multiplier.
+      // At a 50× pickaxe multiplier, this produces the requested 37.5×.
+      const FLASHLIGHT_PRICES = Array.from(
+        { length: EQUIPMENT_LEVEL_COUNT },
+        (_, index) =>
+          equipmentPriceForLevel(
+            index + 1,
+            FLASHLIGHT_PRICE_FACTOR
+          )
       );
+
+      const MOUNTAIN_PRICE_EQUIPMENT_FACTOR = 1.25;
+
+      function previousTierEquipmentTotal(mountainLevel) {
+        if (mountainLevel <= 1) return 0;
+
+        const firstEquipmentLevel =
+          (mountainLevel - 2) * 3 + 1;
+        const lastEquipmentLevel =
+          firstEquipmentLevel + 2;
+
+        let total = 0;
+
+        for (
+          let equipmentLevel = firstEquipmentLevel;
+          equipmentLevel <= lastEquipmentLevel;
+          equipmentLevel++
+        ) {
+          // Level-one equipment is already owned and therefore does not
+          // contribute to the first paid mountain's progression cost.
+          if (equipmentLevel === 1) continue;
+
+          const index = equipmentLevel - 1;
+          total +=
+            PICKAXE_PRICES[index] +
+            BACKPACK_PRICES[index] +
+            FLASHLIGHT_PRICES[index];
+        }
+
+        return total;
+      }
+
+      const MOUNTAIN_TIERS =
+        MOUNTAIN_TIER_DEFINITIONS.map(tier => ({
+          ...tier,
+          price:
+            tier.level === 1
+              ? 0
+              : roundPrice(
+                  previousTierEquipmentTotal(tier.level) *
+                    MOUNTAIN_PRICE_EQUIPMENT_FACTOR
+                )
+        }));
 
       const FLASHLIGHT_MIN_RANGE = 4;
       const FLASHLIGHT_MAX_RANGE = 15;
@@ -2938,13 +3107,19 @@
       let nextDepositId = 1;
       let radiation = 0;
       let gasExposure = 0;
+      let corrosion = 0;
+      let corrosionToastStep = 0;
+      let playerStunTimer = 0;
+      let gravelHitCooldown = 0;
       let hazardScanTimer = 0;
       let environmentTimer = 0;
+      let acidTimer = 0;
       let fallingTimer = 0;
       let oreRevealTimer = 0;
       let oreRevealX = 0;
       let oreRevealY = 0;
       let dynamicLavaCount = 0;
+      let dynamicAcidCount = 0;
       let hazardHudTimer = 0;
       let nextItemId = 1;
       let nextWorldDropId = 1;
@@ -2969,7 +3144,7 @@
       let playerLightCacheRadius = -1;
       let terrainLightRevision = 1;
 
-      const SAVE_FORMAT_VERSION = 2;
+      const SAVE_FORMAT_VERSION = 3;
       const LOCAL_SAVE_KEY = "mountain-tycoon-save-v1";
       let supabaseClient = null;
       let cloudUser = null;
@@ -3040,11 +3215,19 @@
 
       const specialVisualCells = [];
       const activeLava = new Set();
+      const activeAcid = new Set();
       const fallingBlocks = new Set();
       const tntFuses = [];
       const explosions = [];
       const gasClouds = [];
       const electricStrikes = [];
+
+      const caveInWarnings = [];
+      const caveInBursts = [];
+      const resonanceEvents = [];
+      const resonanceBursts = [];
+      const voidFissures = [];
+      const voidCollapses = [];
 
       const input = { stickX: 0, stickY: 0, jump: false, mine: false, build: false, torch: false };
       const aim = { x: 1, y: 0 };
@@ -3648,14 +3831,29 @@
         if (!forestAmbienceAudio) return;
 
         const depth = currentForestDepth();
-        const surfaceAmount = clamp(
+        const linearSurfaceAmount = clamp(
           1 - depth / FOREST_AMBIENCE_SILENT_DEPTH,
           0,
           1
         );
+
+        // Browser audio volume is linear in amplitude, while perceived
+        // loudness is closer to logarithmic. This concave logarithmic curve
+        // keeps the forest audible farther underground, then reaches exactly
+        // zero at the configured silent depth.
+        const perceivedSurfaceAmount =
+          linearSurfaceAmount <= 0
+            ? 0
+            : Math.log1p(
+                FOREST_AMBIENCE_FADE_CURVE *
+                  linearSurfaceAmount
+              ) /
+              Math.log1p(FOREST_AMBIENCE_FADE_CURVE);
+
         const targetVolume = audioMuted
           ? 0
-          : FOREST_AMBIENCE_MAX_VOLUME * surfaceAmount;
+          : FOREST_AMBIENCE_MAX_VOLUME *
+            perceivedSurfaceAmount;
 
         if (immediate) {
           forestAmbienceCurrentVolume = targetVolume;
@@ -3731,7 +3929,12 @@
           block.style === "gem" ||
           block.style === "glow" ||
           block.style === "geode" ||
-          block.style === "prism";
+          block.style === "prism" ||
+          block.style === "unstable" ||
+          block.style === "void" ||
+          block.style === "aether" ||
+          block.style === "neutron" ||
+          block.style === "chrono";
         const base = valuable ? 740 : 560;
 
         playTone(base, base * 1.28, 0.075, "sine", 0.052, 0);
@@ -3899,6 +4102,8 @@
             pendingMultiplier: job.pendingMultiplier,
             pendingValue: job.pendingValue,
             pendingGrade: job.pendingGrade,
+            cycleStartValue: job.cycleStartValue,
+            resultValueChange: job.resultValueChange,
             completionSoundPlayed: !!job.completionSoundPlayed
           })),
           plotSlots: plotSlots.map(cloneSaveItem),
@@ -3919,9 +4124,18 @@
           torches: Array.from(torches),
           discovered: encodeRLE(discovered),
           activeLava: Array.from(activeLava),
+          activeAcid: Array.from(activeAcid),
           fallingBlocks: Array.from(fallingBlocks),
           tntFuses: tntFuses.map(fuse => ({ ...fuse })),
-          hazards: { radiation, gasExposure },
+          caveInWarnings: caveInWarnings.map(event => ({ ...event })),
+          resonanceEvents: resonanceEvents.map(event => ({ ...event })),
+          voidFissures: voidFissures.map(event => ({ ...event })),
+          hazards: {
+            radiation,
+            gasExposure,
+            corrosion,
+            playerStunTimer
+          },
           counters: {
             nextDepositId,
             nextItemId,
@@ -3940,7 +4154,10 @@
         specialVisualCells.length = 0;
         dynamicLavaCount = 0;
         activeLava.clear();
+        activeAcid.clear();
         fallingBlocks.clear();
+        dynamicAcidCount = 0;
+
         for (let cellIndex = 0; cellIndex < world.length; cellIndex++) {
           const type = world[cellIndex];
           if (type === AIR) continue;
@@ -3950,6 +4167,10 @@
           if (type === LAVA) {
             activeLava.add(cellIndex);
             dynamicLavaCount++;
+          }
+          if (type === ACID) {
+            activeAcid.add(cellIndex);
+            dynamicAcidCount++;
           }
           if (type === GRAVEL && y + 1 < WORLD_H && tileAt(x, y + 1) === AIR) {
             fallingBlocks.add(cellIndex);
@@ -4021,6 +4242,12 @@
               pendingMultiplier: Number(raw.pendingMultiplier) || null,
               pendingValue: Number(raw.pendingValue) || null,
               pendingGrade: typeof raw.pendingGrade === "string" ? raw.pendingGrade : null,
+              cycleStartValue: Number.isFinite(Number(raw.cycleStartValue))
+                ? Number(raw.cycleStartValue)
+                : null,
+              resultValueChange: Number.isFinite(Number(raw.resultValueChange))
+                ? Number(raw.resultValueChange)
+                : null,
               completionSoundPlayed: !!raw.completionSoundPlayed
             });
           }
@@ -4037,14 +4264,15 @@
         if (Array.isArray(save.worldDrops)) {
           for (const raw of save.worldDrops.slice(-200)) {
             if (!raw || !raw.item) continue;
+            const restoredItem = cloneSaveItem(raw.item);
             worldDrops.push({
               id: Number(raw.id) || nextWorldDropId++,
-              item: cloneSaveItem(raw.item),
+              item: restoredItem,
               x: Number(raw.x) || 0,
               y: Number(raw.y) || 0,
               vx: Number(raw.vx) || 0,
               vy: Number(raw.vy) || 0,
-              radius: Number(raw.radius) || 7,
+              radius: worldDropRadiusForItem(restoredItem),
               state: "ground",
               age: Number(raw.age) || 0,
               flightTime: 0,
@@ -4078,6 +4306,10 @@
           activeLava.clear();
           for (const value of save.activeLava) activeLava.add(Number(value));
         }
+        if (Array.isArray(save.activeAcid)) {
+          activeAcid.clear();
+          for (const value of save.activeAcid) activeAcid.add(Number(value));
+        }
         if (Array.isArray(save.fallingBlocks)) {
           fallingBlocks.clear();
           for (const value of save.fallingBlocks) fallingBlocks.add(Number(value));
@@ -4085,6 +4317,27 @@
         tntFuses.length = 0;
         if (Array.isArray(save.tntFuses)) {
           for (const fuse of save.tntFuses) tntFuses.push({ ...fuse });
+        }
+
+        caveInWarnings.length = 0;
+        if (Array.isArray(save.caveInWarnings)) {
+          for (const event of save.caveInWarnings) {
+            caveInWarnings.push({ ...event });
+          }
+        }
+
+        resonanceEvents.length = 0;
+        if (Array.isArray(save.resonanceEvents)) {
+          for (const event of save.resonanceEvents) {
+            resonanceEvents.push({ ...event });
+          }
+        }
+
+        voidFissures.length = 0;
+        if (Array.isArray(save.voidFissures)) {
+          for (const event of save.voidFissures) {
+            voidFissures.push({ ...event });
+          }
         }
 
         const progression = save.progression || {};
@@ -4121,6 +4374,12 @@
         const hazards = save.hazards || {};
         radiation = clamp(Number(hazards.radiation) || 0, 0, 100);
         gasExposure = clamp(Number(hazards.gasExposure) || 0, 0, 100);
+        corrosion = clamp(Number(hazards.corrosion) || 0, 0, 100);
+        playerStunTimer = Math.max(
+          0,
+          Number(hazards.playerStunTimer) || 0
+        );
+        corrosionToastStep = Math.floor(corrosion / 20);
 
         const counters = save.counters || {};
         const maxInventoryId = inventoryEntries.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
@@ -4153,6 +4412,9 @@
         explosions.length = 0;
         gasClouds.length = 0;
         electricStrikes.length = 0;
+        caveInBursts.length = 0;
+        resonanceBursts.length = 0;
+        voidCollapses.length = 0;
         clearMiningTarget();
         chunkCache.clear();
         sunlightRevision = -1;
@@ -5095,15 +5357,27 @@
         nextDepositId = 1;
         specialVisualCells.length = 0;
         activeLava.clear();
+        activeAcid.clear();
         fallingBlocks.clear();
         tntFuses.length = 0;
         explosions.length = 0;
         gasClouds.length = 0;
         electricStrikes.length = 0;
+        caveInWarnings.length = 0;
+        caveInBursts.length = 0;
+        resonanceEvents.length = 0;
+        resonanceBursts.length = 0;
+        voidFissures.length = 0;
+        voidCollapses.length = 0;
         radiation = 0;
         gasExposure = 0;
+        corrosion = 0;
+        corrosionToastStep = 0;
+        playerStunTimer = 0;
+        gravelHitCooldown = 0;
         oreRevealTimer = 0;
         dynamicLavaCount = 0;
+        dynamicAcidCount = 0;
         worldDrops.length = 0;
         pickupParticles.length = 0;
         planks.clear();
@@ -5177,7 +5451,7 @@
         if (!item) return false;
         const block = BLOCKS[item.type];
         return item.type >= COAL && block.value > 0 && block.collectible !== false &&
-          ["ore", "gem", "glow", "geode", "prism", "obsidian", "radium", "unstable"].includes(block.style);
+          ["ore", "gem", "glow", "geode", "prism", "obsidian", "radium", "unstable", "void", "aether", "neutron", "chrono"].includes(block.style);
       }
 
       function rollValueMultiplierWithMax(maximum) {
@@ -5317,8 +5591,17 @@
       }
 
       function addSpecialVisualCell(x, y, type) {
-        if (type === GLOWSTONE || type === PRISMSTONE || type === RADIUM ||
-            type === LAVA || type === UNSTABLE || type === GAS) {
+        if (
+          type === GLOWSTONE ||
+          type === PRISMSTONE ||
+          type === RADIUM ||
+          type === LAVA ||
+          type === ACID ||
+          type === RESONANCE_CRYSTAL ||
+          type === VOID_FISSURE ||
+          type === UNSTABLE ||
+          type === GAS
+        ) {
           specialVisualCells.push({ x, y, type });
         }
       }
@@ -5919,7 +6202,11 @@
             "prism",
             "obsidian",
             "radium",
-            "unstable"
+            "unstable",
+            "void",
+            "aether",
+            "neutron",
+            "chrono"
           ].includes(block.style)
         );
       }
@@ -6002,6 +6289,8 @@
         job.pendingMultiplier = result.pendingMultiplier;
         job.pendingValue = result.pendingValue;
         job.pendingGrade = result.pendingGrade;
+        job.cycleStartValue = Number(item.value) || 0;
+        job.resultValueChange = null;
         job.completionSoundPlayed = false;
 
         openRefineryJobId = null;
@@ -6055,6 +6344,8 @@
           pendingMultiplier: null,
           pendingValue: null,
           pendingGrade: null,
+          cycleStartValue: Number(item.value) || 0,
+          resultValueChange: null,
           completionSoundPlayed: false
         };
 
@@ -6085,6 +6376,11 @@
           currentMultiplier,
           Number(job.pendingMultiplier) || currentMultiplier
         );
+        const previousValue = Number.isFinite(
+          Number(job.cycleStartValue)
+        )
+          ? Number(job.cycleStartValue)
+          : Number(item.value) || 0;
         const nextValue = Math.max(
           Number(item.value) || 0,
           Number(job.pendingValue) || Number(item.value) || 0
@@ -6101,6 +6397,7 @@
 
         job.state = "completed";
         job.endsAt = Date.now();
+        job.resultValueChange = nextValue - previousValue;
         job.pendingMultiplier = null;
         job.pendingValue = null;
         job.pendingGrade = null;
@@ -6269,13 +6566,20 @@
           const name = document.createElement("h3");
           name.textContent = block.name;
 
+          const description = document.createElement("span");
+          description.className = "refinery-ore-description";
+          description.textContent =
+            item.grade || valueGrade(
+              refineryItemMultiplier(item, block)
+            );
+
           const status = document.createElement("div");
           status.className = "refinery-slot-status";
           status.textContent = completed
             ? "COMPLETE • CLICK"
             : "REFINING";
 
-          copy.append(name, status);
+          copy.append(name, description, status);
           main.appendChild(copy);
           slot.appendChild(main);
 
@@ -6284,6 +6588,52 @@
             value.className = "refinery-result-value";
             value.textContent = "Worth " + formatMoney(item.value);
             slot.appendChild(value);
+
+            const valueChange = Number(job.resultValueChange);
+            if (Number.isFinite(valueChange)) {
+              const change = document.createElement("div");
+              const direction =
+                valueChange > 0
+                  ? "gain"
+                  : valueChange < 0
+                    ? "loss"
+                    : "neutral";
+              const arrow =
+                valueChange > 0
+                  ? "▲"
+                  : valueChange < 0
+                    ? "▼"
+                    : "•";
+              const sign =
+                valueChange > 0
+                  ? "+"
+                  : valueChange < 0
+                    ? "-"
+                    : "";
+
+              change.className =
+                "refinery-value-change " + direction;
+
+              const arrowElement =
+                document.createElement("span");
+              arrowElement.className = "arrow";
+              arrowElement.textContent = arrow;
+
+              const amountElement =
+                document.createElement("span");
+              amountElement.textContent =
+                sign + formatMoney(Math.abs(valueChange));
+
+              change.append(arrowElement, amountElement);
+              change.title =
+                valueChange > 0
+                  ? "Ore value gained from this refinement"
+                  : valueChange < 0
+                    ? "Ore value lost from this refinement"
+                    : "No ore value change from this refinement";
+
+              slot.appendChild(change);
+            }
 
             const maxed = refineryJobIsMaxed(job);
             const dropdown = document.createElement("div");
@@ -6399,6 +6749,13 @@
           const name = document.createElement("h3");
           name.textContent = block.name;
 
+          const description = document.createElement("span");
+          description.className = "refinery-ore-description";
+          description.textContent =
+            item.grade || valueGrade(
+              refineryItemMultiplier(item, block)
+            );
+
           const values = document.createElement("div");
           values.className = "refinery-ore-values";
 
@@ -6415,7 +6772,7 @@
                 : "Refine " + formatMoney(cost);
 
           values.append(worth, price);
-          copy.append(name, values);
+          copy.append(name, description, values);
           card.appendChild(copy);
 
           card.addEventListener("click", () => {
@@ -7215,8 +7572,14 @@
 
       function updateMovement(dt) {
         const cinematic = camera.revealTimer > 0;
-        const horizontal = !cinematic && Math.abs(input.stickX) > 0.12 ? input.stickX : 0;
-        const acceleration = player.grounded ? GROUND_ACCEL : AIR_ACCEL;
+        const controlsDisabled =
+          cinematic || playerStunTimer > 0;
+        const horizontal =
+          !controlsDisabled && Math.abs(input.stickX) > 0.12
+            ? input.stickX
+            : 0;
+        const acceleration =
+          player.grounded ? GROUND_ACCEL : AIR_ACCEL;
 
         platformDropTimer = Math.max(0, platformDropTimer - dt);
         if (player.onPlatform && input.stickY > 0.55 && platformDropTimer <= 0) {
@@ -7247,7 +7610,11 @@
 
         // Holding jump automatically jumps again on each landing. Platforms
         // behave exactly like solid ground when approached from above.
-        if (!cinematic && input.jump && player.grounded) {
+        if (
+          !controlsDisabled &&
+          input.jump &&
+          player.grounded
+        ) {
           player.vy = -JUMP_SPEED;
           player.grounded = false;
           player.onPlatform = false;
@@ -7549,6 +7916,22 @@
         }
       }
 
+      function worldDropVeinScale(item) {
+        const veinSize = Math.max(
+          1,
+          Number(item && item.units) || 1
+        );
+
+        return Math.max(
+          WORLD_DROP_MIN_VEIN_SCALE,
+          1 + Math.log2(veinSize / 20)
+        );
+      }
+
+      function worldDropRadiusForItem(item) {
+        return 7 * worldDropVeinScale(item);
+      }
+
       function spawnWorldDrop(item, worldX, worldY, launchX, launchY) {
         worldDrops.push({
           id: nextWorldDropId++,
@@ -7557,7 +7940,7 @@
           y: worldY,
           vx: launchX === undefined ? (Math.random() - 0.5) * 95 : launchX,
           vy: launchY === undefined ? -110 - Math.random() * 65 : launchY,
-          radius: 7,
+          radius: worldDropRadiusForItem(item),
           state: "ground",
           age: 0,
           flightTime: 0,
@@ -7704,12 +8087,412 @@
           if (deposit) {
             collectDeposit(deposit, x, y);
           }
-        } else if (type !== LAVA) {
+        } else if (
+          type !== LAVA &&
+          type !== ACID &&
+          BLOCKS[type].collectible !== false
+        ) {
           createSingleBlockDrop(type, x, y);
         }
 
         setTile(x, y, AIR);
         activateEnvironmentAround(x, y);
+      }
+
+      function tileIsExposed(x, y) {
+        return (
+          tileAt(x + 1, y) === AIR ||
+          tileAt(x - 1, y) === AIR ||
+          tileAt(x, y + 1) === AIR ||
+          tileAt(x, y - 1) === AIR
+        );
+      }
+
+      function scheduleCaveIn(
+        x,
+        y,
+        delay = FRACTURED_STONE_WARNING_TIME
+      ) {
+        const duplicate = caveInWarnings.some(
+          event =>
+            Math.abs(event.x - x) <= 1 &&
+            Math.abs(event.y - y) <= 1
+        );
+        if (duplicate) return;
+
+        caveInWarnings.push({
+          x,
+          y,
+          timer: delay,
+          total: delay
+        });
+      }
+
+      function triggerCaveIn(x, y) {
+        const candidates = [];
+
+        for (let tx = x - 2; tx <= x + 2; tx++) {
+          for (
+            let ty = Math.max(1, y - 1);
+            ty >= Math.max(1, y - 9);
+            ty--
+          ) {
+            const type = tileAt(tx, ty);
+            if (
+              type === AIR ||
+              tileProtectedByShop(tx, ty) ||
+              depositAt[index(tx, ty)] !== 0 ||
+              BLOCKS[type].hazard
+            ) {
+              continue;
+            }
+
+            candidates.push({ x: tx, y: ty });
+          }
+        }
+
+        for (let i = candidates.length - 1; i > 0; i--) {
+          const swapIndex = Math.floor(Math.random() * (i + 1));
+          const value = candidates[i];
+          candidates[i] = candidates[swapIndex];
+          candidates[swapIndex] = value;
+        }
+
+        const collapseCount = Math.min(
+          candidates.length,
+          2 + Math.floor(Math.random() * 4)
+        );
+
+        for (let i = 0; i < collapseCount; i++) {
+          const cell = candidates[i];
+          setTile(cell.x, cell.y, GRAVEL);
+          fallingBlocks.add(index(cell.x, cell.y));
+        }
+
+        caveInBursts.push({
+          x,
+          y,
+          timer: 0.65,
+          total: 0.65
+        });
+
+        playNoise(0.18, 0.08, 540, 0);
+        playTone(95, 55, 0.28, "sawtooth", 0.055, 0);
+      }
+
+      function damageStructuresNearAcid(x, y) {
+        const cells = [
+          [x, y],
+          [x + 1, y],
+          [x - 1, y],
+          [x, y + 1],
+          [x, y - 1]
+        ];
+
+        for (const [tx, ty] of cells) {
+          if (hasTorch(tx, ty) && Math.random() < 0.34) {
+            removeTorch(tx, ty);
+            playNoise(0.06, 0.025, 2400, 0);
+          }
+
+          if (hasPlank(tx, ty) && Math.random() < 0.16) {
+            removePlank(tx, ty);
+            playNoise(0.08, 0.03, 1100, 0);
+          }
+        }
+      }
+
+      function updateAcidFlow() {
+        if (!activeAcid.size) return;
+
+        const candidates = Array.from(activeAcid);
+        let processed = 0;
+
+        for (const cellIndex of candidates) {
+          if (processed++ >= 20) break;
+
+          activeAcid.delete(cellIndex);
+          const x = cellIndex % WORLD_W;
+          const y = Math.floor(cellIndex / WORLD_W);
+
+          if (tileAt(x, y) !== ACID) continue;
+
+          damageStructuresNearAcid(x, y);
+
+          const options = [
+            [0, 1],
+            [Math.random() < 0.5 ? -1 : 1, 0],
+            [Math.random() < 0.5 ? 1 : -1, 0]
+          ];
+
+          let flowed = false;
+
+          if (dynamicAcidCount < 260) {
+            for (const [dx, dy] of options) {
+            const nx = x + dx;
+            const ny = y + dy;
+
+            if (
+              nx < 0 ||
+              nx >= WORLD_W ||
+              ny < 0 ||
+              ny >= WORLD_H ||
+              tileProtectedByShop(nx, ny) ||
+              tileAt(nx, ny) !== AIR
+            ) {
+              continue;
+            }
+
+            if (
+              currentMountain &&
+              (
+                nx < currentMountain.startX - 2 ||
+                nx > currentMountain.endX + 2
+              )
+            ) {
+              continue;
+            }
+
+            setTile(nx, ny, ACID);
+            addSpecialVisualCell(nx, ny, ACID);
+            activeAcid.add(index(nx, ny));
+              dynamicAcidCount++;
+              flowed = true;
+              break;
+            }
+          }
+
+          if (flowed || tileAt(x, y + 1) === AIR) {
+            activeAcid.add(cellIndex);
+          }
+        }
+      }
+
+      function scheduleResonance(
+        x,
+        y,
+        delay = RESONANCE_WARNING_TIME
+      ) {
+        const duplicate = resonanceEvents.some(
+          event => event.x === x && event.y === y
+        );
+        if (duplicate) return;
+
+        resonanceEvents.push({
+          x,
+          y,
+          timer: delay,
+          total: delay
+        });
+      }
+
+      function triggerResonance(x, y) {
+        if (tileAt(x, y) === RESONANCE_CRYSTAL) {
+          setTile(x, y, AIR);
+        }
+
+        resonanceBursts.push({
+          x,
+          y,
+          timer: 0.7,
+          total: 0.7,
+          radius: 5
+        });
+
+        playTone(190, 720, 0.3, "sine", 0.07, 0);
+        playTone(380, 980, 0.22, "triangle", 0.05, 0.08);
+
+        for (let ty = y - 5; ty <= y + 5; ty++) {
+          for (let tx = x - 5; tx <= x + 5; tx++) {
+            const distance = Math.hypot(tx - x, ty - y);
+            if (distance > 5 || distance < 0.1) continue;
+
+            const type = tileAt(tx, ty);
+
+            if (type === RESONANCE_CRYSTAL) {
+              scheduleResonance(
+                tx,
+                ty,
+                0.25 + distance * 0.08
+              );
+            } else if (type === FRACTURED_STONE) {
+              scheduleCaveIn(tx, ty, 0.35 + distance * 0.04);
+            } else if (type === GRAVEL) {
+              fallingBlocks.add(index(tx, ty));
+            }
+          }
+        }
+
+        const playerTileX =
+          (player.x + player.w * 0.5) / TILE;
+        const playerTileY =
+          (player.y + player.h * 0.5) / TILE;
+        const dx = playerTileX - x;
+        const dy = playerTileY - y;
+        const distance = Math.max(0.01, Math.hypot(dx, dy));
+
+        if (distance <= 1.45) {
+          respawnPlayer("Resonance crystal shockwave");
+        } else if (distance <= 5) {
+          const force = 520 * (1 - distance / 5);
+          player.vx += (dx / distance) * force;
+          player.vy += (dy / distance) * force - 110;
+        }
+      }
+
+      function scheduleVoidFissure(
+        x,
+        y,
+        delay = VOID_FISSURE_CHARGE_TIME
+      ) {
+        const duplicate = voidFissures.some(
+          event => event.x === x && event.y === y
+        );
+        if (duplicate) return;
+
+        voidFissures.push({
+          x,
+          y,
+          timer: delay,
+          total: delay
+        });
+
+        playTone(115, 62, 0.45, "sine", 0.04, 0);
+      }
+
+      function collapseVoidFissure(x, y) {
+        voidCollapses.push({
+          x,
+          y,
+          timer: 0.8,
+          total: 0.8,
+          radius: 2.6
+        });
+
+        playNoise(0.26, 0.11, 430, 0);
+        playTone(80, 35, 0.42, "sawtooth", 0.075, 0);
+
+        const radius = 2.6;
+
+        for (
+          let ty = Math.floor(y - radius);
+          ty <= Math.ceil(y + radius);
+          ty++
+        ) {
+          for (
+            let tx = Math.floor(x - radius);
+            tx <= Math.ceil(x + radius);
+            tx++
+          ) {
+            if (
+              Math.hypot(tx - x, ty - y) > radius ||
+              tileProtectedByShop(tx, ty)
+            ) {
+              continue;
+            }
+
+            const type = tileAt(tx, ty);
+            if (type === AIR) continue;
+
+            removeDepositCell(tx, ty);
+            setTile(tx, ty, AIR);
+            activeLava.delete(index(tx, ty));
+            activeAcid.delete(index(tx, ty));
+            removeTorch(tx, ty);
+            removePlank(tx, ty);
+          }
+        }
+
+        for (let i = worldDrops.length - 1; i >= 0; i--) {
+          const drop = worldDrops[i];
+          const dropX = drop.x / TILE;
+          const dropY = drop.y / TILE;
+          if (Math.hypot(dropX - x, dropY - y) <= 4) {
+            if (drop.state === "flying") {
+              pendingPickupWeight = Math.max(
+                0,
+                pendingPickupWeight - drop.item.weight
+              );
+            }
+            worldDrops.splice(i, 1);
+          }
+        }
+
+        const playerTileX =
+          (player.x + player.w * 0.5) / TILE;
+        const playerTileY =
+          (player.y + player.h * 0.5) / TILE;
+
+        if (
+          Math.hypot(playerTileX - x, playerTileY - y) <=
+          radius + 0.8
+        ) {
+          respawnPlayer("Consumed by a void fissure");
+        }
+      }
+
+      function updateVoidFissures(dt) {
+        const playerTileX =
+          (player.x + player.w * 0.5) / TILE;
+        const playerTileY =
+          (player.y + player.h * 0.5) / TILE;
+
+        for (let i = voidFissures.length - 1; i >= 0; i--) {
+          const fissure = voidFissures[i];
+          fissure.timer -= dt;
+
+          const charge = clamp(
+            1 - fissure.timer / Math.max(0.01, fissure.total),
+            0,
+            1
+          );
+          const pullRadius = 7;
+          const dx = fissure.x - playerTileX;
+          const dy = fissure.y - playerTileY;
+          const distance = Math.max(0.25, Math.hypot(dx, dy));
+
+          if (distance <= pullRadius) {
+            const strength =
+              (125 + 560 * charge) *
+              (1 - distance / pullRadius);
+
+            player.vx += (dx / distance) * strength * dt;
+            player.vy += (dy / distance) * strength * dt;
+          }
+
+          for (const drop of worldDrops) {
+            if (drop.state === "flying") continue;
+
+            const dropX = drop.x / TILE;
+            const dropY = drop.y / TILE;
+            const dropDX = fissure.x - dropX;
+            const dropDY = fissure.y - dropY;
+            const dropDistance = Math.max(
+              0.2,
+              Math.hypot(dropDX, dropDY)
+            );
+
+            if (dropDistance > pullRadius + 2) continue;
+
+            const dropStrength =
+              (220 + 820 * charge) *
+              (1 - dropDistance / (pullRadius + 2));
+
+            drop.vx +=
+              (dropDX / dropDistance) *
+              dropStrength *
+              dt;
+            drop.vy +=
+              (dropDY / dropDistance) *
+              dropStrength *
+              dt;
+          }
+
+          if (fissure.timer <= 0) {
+            voidFissures.splice(i, 1);
+            collapseVoidFissure(fissure.x, fissure.y);
+          }
+        }
       }
 
       function scheduleTNT(x, y, delay) {
@@ -7746,6 +8529,9 @@
         player.vy = 0;
         radiation = Math.min(radiation, 25);
         gasExposure = 0;
+        corrosion = 0;
+        corrosionToastStep = 0;
+        playerStunTimer = 0;
         showToast(reason + " — returned to the shops");
       }
 
@@ -7779,6 +8565,20 @@
               releaseGas(tx, ty, true);
               continue;
             }
+            if (type === FRACTURED_STONE) {
+              setTile(tx, ty, AIR);
+              scheduleCaveIn(tx, ty, 0.18);
+              continue;
+            }
+            if (type === RESONANCE_CRYSTAL) {
+              setTile(tx, ty, AIR);
+              scheduleResonance(tx, ty, 0.16);
+              continue;
+            }
+            if (type === VOID_FISSURE) {
+              collapseVoidFissure(tx, ty);
+              continue;
+            }
             destroyTileWithDrops(tx, ty);
           }
         }
@@ -7796,8 +8596,18 @@
           const nx = x + direction[0];
           const ny = y + direction[1];
           const type = tileAt(nx, ny);
-          if (type === LAVA) activeLava.add(index(nx, ny));
-          if (type === GRAVEL) fallingBlocks.add(index(nx, ny));
+          if (type === LAVA) {
+            activeLava.add(index(nx, ny));
+          }
+          if (type === ACID) {
+            activeAcid.add(index(nx, ny));
+          }
+          if (type === VOID_FISSURE && tileIsExposed(nx, ny)) {
+            scheduleVoidFissure(nx, ny);
+          }
+          if (type === GRAVEL) {
+            fallingBlocks.add(index(nx, ny));
+          }
           if (type === GAS) {
             setTile(nx, ny, AIR);
             let ignited = false;
@@ -7824,6 +8634,23 @@
       function mineCompleted(type, x, y) {
         const block = BLOCKS[type];
         playBreakSound(type);
+
+        if (type === FRACTURED_STONE) {
+          setTile(x, y, AIR);
+          scheduleCaveIn(x, y);
+          activateEnvironmentAround(x, y);
+          showToast("Cave-in warning!");
+          playTone(150, 95, 0.24, "square", 0.045, 0);
+          return;
+        }
+
+        if (type === RESONANCE_CRYSTAL) {
+          setTile(x, y, AIR);
+          scheduleResonance(x, y);
+          activateEnvironmentAround(x, y);
+          showToast("Resonance crystal charging!");
+          return;
+        }
 
         if (type === TNT) {
           setTile(x, y, AIR);
@@ -8161,32 +8988,53 @@
           return;
         }
 
-        // Torches and wooden platforms break instantly and never create drops.
-        if (targetStillTorch) {
-          mining.targetType = AIR;
-          mining.active = input.mine && !input.build && !input.torch;
-          mining.blockedReason = "";
-          mining.progress = 0;
-          if (input.mine && !input.build && !input.torch) {
-            removeTorch(mining.targetX, mining.targetY);
-            playBreakSound(COAL);
-            clearMiningTarget();
-            mining.scanTimer = 0;
-          }
-          return;
-        }
+        // Placed torches and wooden platforms always require a fixed
+        // 0.2 seconds of continuous mining, regardless of pickaxe speed.
+        if (targetStillTorch || targetStillPlank) {
+          const activelyMining =
+            input.mine && !input.build && !input.torch;
 
-        if (targetStillPlank) {
           mining.targetType = AIR;
-          mining.active = input.mine && !input.build && !input.torch;
+          mining.active = activelyMining;
           mining.blockedReason = "";
-          mining.progress = 0;
-          if (input.mine && !input.build && !input.torch) {
-            removePlank(mining.targetX, mining.targetY);
-            playBreakSound(STONE);
+
+          if (!activelyMining) {
+            mining.progress = 0;
+            miningSoundTimer = 0;
+            return;
+          }
+
+          miningSoundTimer -= dt;
+          if (miningSoundTimer <= 0) {
+            playMiningSound(
+              targetStillTorch ? COAL : STONE
+            );
+            miningSoundTimer = 0.11;
+          }
+
+          mining.progress +=
+            dt / PLACED_OBJECT_BREAK_TIME;
+
+          if (mining.progress >= 1) {
+            if (targetStillTorch) {
+              removeTorch(
+                mining.targetX,
+                mining.targetY
+              );
+              playBreakSound(COAL);
+            } else {
+              removePlank(
+                mining.targetX,
+                mining.targetY
+              );
+              playBreakSound(STONE);
+            }
+
             clearMiningTarget();
             mining.scanTimer = 0;
+            miningSoundTimer = 0;
           }
+
           return;
         }
 
@@ -8235,10 +9083,10 @@
           : 1;
 
         // Mining one cell collects the entire connected vein, so larger veins
-        // take longer. Logarithmic scaling rewards big finds without making
-        // very large merged veins take an unreasonable amount of time.
+        // take longer. Duration scales linearly using:
+        // 1 + (veinSize - 1) / 2.
         const sizeFactor = deposit
-          ? 1 + Math.log2(veinSize) * 0.65
+          ? 1 + (veinSize - 1) / 2
           : 1;
         const duration =
           block.breakTime * sizeFactor / pickaxe.speed;
@@ -8298,6 +9146,28 @@
           const y = Math.floor(cellIndex / WORLD_W);
           if (tileAt(x, y) !== GRAVEL || y + 1 >= WORLD_H || tileAt(x, y + 1) !== AIR) continue;
 
+          if (tileOverlapsPlayer(x, y + 1)) {
+            if (gravelHitCooldown <= 0) {
+              const gravelCenterX = (x + 0.5) * TILE;
+              const playerCenterX =
+                player.x + player.w * 0.5;
+              const direction =
+                playerCenterX < gravelCenterX ? -1 : 1;
+
+              playerStunTimer = GRAVEL_STUN_DURATION;
+              gravelHitCooldown = 0.6;
+              player.vx = direction * 230;
+              player.vy = Math.max(player.vy, 120);
+              showToast("Hit by falling gravel — stunned");
+              playNoise(0.09, 0.055, 680, 0);
+            }
+
+            // The block remains suspended for this tick instead of moving
+            // inside the player's collision box.
+            fallingBlocks.add(cellIndex);
+            continue;
+          }
+
           const sourceIndex = index(x, y);
           const targetIndex = index(x, y + 1);
           world[targetIndex] = GRAVEL;
@@ -8331,16 +9201,64 @@
 
       function updateHazards(dt) {
         environmentTimer -= dt;
+        acidTimer -= dt;
         fallingTimer -= dt;
         hazardScanTimer -= dt;
+        playerStunTimer = Math.max(0, playerStunTimer - dt);
+        gravelHitCooldown = Math.max(0, gravelHitCooldown - dt);
 
         if (environmentTimer <= 0) {
           environmentTimer = 0.16;
           updateLavaFlow();
         }
+        if (acidTimer <= 0) {
+          acidTimer = 0.32;
+          updateAcidFlow();
+        }
         if (fallingTimer <= 0) {
           fallingTimer = 0.11;
           updateFallingGravel();
+        }
+
+        for (let i = caveInWarnings.length - 1; i >= 0; i--) {
+          const warning = caveInWarnings[i];
+          warning.timer -= dt;
+          if (warning.timer <= 0) {
+            caveInWarnings.splice(i, 1);
+            triggerCaveIn(warning.x, warning.y);
+          }
+        }
+
+        for (let i = caveInBursts.length - 1; i >= 0; i--) {
+          caveInBursts[i].timer -= dt;
+          if (caveInBursts[i].timer <= 0) {
+            caveInBursts.splice(i, 1);
+          }
+        }
+
+        for (let i = resonanceEvents.length - 1; i >= 0; i--) {
+          const event = resonanceEvents[i];
+          event.timer -= dt;
+          if (event.timer <= 0) {
+            resonanceEvents.splice(i, 1);
+            triggerResonance(event.x, event.y);
+          }
+        }
+
+        for (let i = resonanceBursts.length - 1; i >= 0; i--) {
+          resonanceBursts[i].timer -= dt;
+          if (resonanceBursts[i].timer <= 0) {
+            resonanceBursts.splice(i, 1);
+          }
+        }
+
+        updateVoidFissures(dt);
+
+        for (let i = voidCollapses.length - 1; i >= 0; i--) {
+          voidCollapses[i].timer -= dt;
+          if (voidCollapses[i].timer <= 0) {
+            voidCollapses.splice(i, 1);
+          }
         }
 
         for (let i = tntFuses.length - 1; i >= 0; i--) {
@@ -8392,15 +9310,70 @@
           const exposure = exposedRadiumNearPlayer();
           const unshieldedCargo = inventory[RADIUM] > 0 && currentBackpack().level < 25;
           radiation = clamp(radiation + exposure * 3.2 + (unshieldedCargo ? 0.7 : 0) - (exposure === 0 && !unshieldedCargo ? 1.8 : 0), 0, 100);
+
+          // Older saves may contain an already-exposed fissure without a
+          // scheduled charge event.
+          for (const cell of specialVisualCells) {
+            if (
+              cell.type === VOID_FISSURE &&
+              tileAt(cell.x, cell.y) === VOID_FISSURE &&
+              tileIsExposed(cell.x, cell.y)
+            ) {
+              scheduleVoidFissure(cell.x, cell.y);
+            }
+          }
         }
 
         const feetType = tileAt(
           Math.floor((player.x + player.w * 0.5) / TILE),
           Math.floor((player.y + player.h * 0.82) / TILE)
         );
-        if (feetType === LAVA) respawnPlayer("Burned by lava");
-        if (gasExposure >= 100) respawnPlayer("Overcome by gas");
-        if (radiation >= 100) respawnPlayer("Radiation exposure");
+        const centerType = tileAt(
+          Math.floor((player.x + player.w * 0.5) / TILE),
+          Math.floor((player.y + player.h * 0.45) / TILE)
+        );
+        const touchingAcid =
+          feetType === ACID || centerType === ACID;
+
+        corrosion = clamp(
+          corrosion +
+            (
+              touchingAcid
+                ? ACID_CORROSION_RATE
+                : -ACID_RECOVERY_RATE
+            ) *
+              dt,
+          0,
+          100
+        );
+
+        const newCorrosionStep = Math.floor(corrosion / 20);
+        if (
+          touchingAcid &&
+          newCorrosionStep > corrosionToastStep &&
+          corrosion < 100
+        ) {
+          corrosionToastStep = newCorrosionStep;
+          showToast(
+            "Acid corrosion " + Math.round(corrosion) + "%"
+          );
+          playErrorSound();
+        } else if (!touchingAcid && corrosion < 20) {
+          corrosionToastStep = 0;
+        }
+
+        if (feetType === LAVA) {
+          respawnPlayer("Burned by lava");
+        }
+        if (gasExposure >= 100) {
+          respawnPlayer("Overcome by gas");
+        }
+        if (corrosion >= 100) {
+          respawnPlayer("Dissolved by acid");
+        }
+        if (radiation >= 100) {
+          respawnPlayer("Radiation exposure");
+        }
 
         if (oreRevealTimer > 0) oreRevealTimer = Math.max(0, oreRevealTimer - dt);
         hazardHudTimer -= dt;
@@ -8570,11 +9543,11 @@
         const px = Math.floor((player.x + player.w * 0.5) / TILE);
         const py = Math.floor((player.y + player.h * 0.5) / TILE);
         const playerDepth = depthBelowLocalSurface(px, py);
-        const effectivePlayerLightRadius = Math.max(
-          0.5,
-          PLAYER_LIGHT_RADIUS *
-            depthRadiusMultiplier(playerDepth, equippedFlashlightLevel)
-        );
+        const effectivePlayerLightRadius =
+          effectivePlayerBlockLightRadius(
+            playerDepth,
+            equippedFlashlightLevel
+          );
 
         if (
           px === playerLightCacheTileX &&
@@ -8763,6 +9736,27 @@
         return 1 - totalLossPercent / 100;
       }
 
+      function effectivePlayerBlockLightRadius(
+        depthBlocks,
+        lightLevel = equippedFlashlightLevel
+      ) {
+        return Math.max(
+          1,
+          PLAYER_LIGHT_RADIUS *
+            depthRadiusMultiplier(depthBlocks, lightLevel)
+        );
+      }
+
+      function effectiveTorchLightRadius(depthBlocks) {
+        return Math.max(
+          1,
+          effectivePlayerBlockLightRadius(
+            depthBlocks,
+            equippedFlashlightLevel
+          ) - 1
+        );
+      }
+
       function depthSurfaceReferenceY(tileX, tileY) {
         const x = clamp(Math.floor(tileX), 0, WORLD_W - 1);
         const y = clamp(Math.floor(tileY), 0, WORLD_H - 1);
@@ -8806,15 +9800,14 @@
       function computeTorchLightField(torchX, torchY) {
         const key = torchKey(torchX, torchY);
         const torchDepth = depthBelowLocalSurface(torchX, torchY);
-        const effectiveTorchRadius = Math.max(
-          0.5,
-          TORCH_LIGHT_RADIUS *
-            depthRadiusMultiplier(torchDepth, TORCH_DEPTH_DIM_LEVEL)
-        );
+        const torchLightLevel = equippedFlashlightLevel;
+        const effectiveTorchRadius =
+          effectiveTorchLightRadius(torchDepth);
         const cached = torchLightCache.get(key);
         if (
           cached &&
           cached.revision === terrainLightRevision &&
+          cached.lightLevel === torchLightLevel &&
           Math.abs(cached.effectiveRadius - effectiveTorchRadius) < 0.0001
         ) {
           return cached;
@@ -8887,10 +9880,14 @@
           const localY = Math.floor(current.cell / TORCH_LIGHT_DIAMETER);
           const worldX = originX + localX;
           const worldY = originY + localY;
-          const intensity = flashlightBrightnessAt(
-            current.cost,
-            effectiveTorchRadius + 0.25,
-            1.0
+          const intensity = clamp(
+            1 -
+              Math.pow(
+                current.cost / (effectiveTorchRadius + 0.5),
+                1.5
+              ),
+            0,
+            1
           );
           field[current.cell] = intensity;
 
@@ -8924,6 +9921,7 @@
 
         const result = {
           revision: terrainLightRevision,
+          lightLevel: torchLightLevel,
           effectiveRadius: effectiveTorchRadius,
           originX,
           originY,
@@ -9194,15 +10192,14 @@
           }
         }
 
-        // Persistent torches use each torch's own distance below the local
-        // surface. Moving the player no longer changes an existing torch's
-        // brightness.
+        // Persistent torches use their own physical depth, but the exact same
+        // depth attenuation level and brightness equation as the player.
         const nearbyTorches = torchesNearVisibleBounds(firstX, lastX, firstY, lastY);
         for (const torch of nearbyTorches) {
           const torchDepth = depthBelowLocalSurface(torch.x, torch.y);
           const torchBrightnessMultiplier = depthBrightnessMultiplier(
             torchDepth,
-            TORCH_DEPTH_DIM_LEVEL
+            equippedFlashlightLevel
           );
           const source = computeTorchLightField(torch.x, torch.y);
 
@@ -9214,7 +10211,7 @@
                 addLight(
                   source.originX + localX,
                   worldY,
-                  Math.pow(intensity, 0.5) * 0.96 * torchBrightnessMultiplier,
+                  Math.pow(intensity, 0.5) * torchBrightnessMultiplier,
                   true
                 );
               }
@@ -9506,6 +10503,97 @@
           target.fillRect(sx + 4 + ((x * 7 + y * 3) % 17), sy + 7 + ((x * 3 + y * 9) % 15), 6, 3);
         } else if (BLOCK_ART[type]) {
           renderBlockArt(target, block, BLOCK_ART[type], sx, sy, x, y);
+        } else if (block.style === "void") {
+          target.fillStyle = "#151329";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.fillStyle = "#49326f";
+          target.beginPath();
+          target.moveTo(sx + 4, sy + 15);
+          target.lineTo(sx + 12, sy + 4);
+          target.lineTo(sx + 18, sy + 13);
+          target.lineTo(sx + 11, sy + 24);
+          target.closePath();
+          target.fill();
+
+          target.fillStyle = block.color;
+          target.beginPath();
+          target.moveTo(sx + 12, sy + 5);
+          target.lineTo(sx + 24, sy + 10);
+          target.lineTo(sx + 19, sy + 23);
+          target.lineTo(sx + 8, sy + 18);
+          target.closePath();
+          target.fill();
+
+          target.fillStyle = "#9ffcff";
+          target.fillRect(sx + 16, sy + 9, 3, 7);
+          target.fillStyle = "#080712";
+          target.fillRect(sx + 12, sy + 13, 5, 5);
+        } else if (block.style === "aether") {
+          target.fillStyle = "#183d42";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = block.color;
+          target.lineWidth = 3;
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 9, 0, Math.PI * 2);
+          target.stroke();
+
+          target.strokeStyle = "#d9fff8";
+          target.lineWidth = 2;
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 4, 0, Math.PI * 2);
+          target.stroke();
+
+          target.fillStyle = block.color;
+          target.fillRect(sx + 4, sy + 5, 4, 4);
+          target.fillRect(sx + 20, sy + 18, 4, 4);
+        } else if (block.style === "neutron") {
+          target.fillStyle = "#242a39";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = block.color;
+          target.lineWidth = 3;
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 10, 0, Math.PI * 2);
+          target.stroke();
+
+          target.fillStyle = "#080b12";
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 7, 0, Math.PI * 2);
+          target.fill();
+
+          target.fillStyle = "#f4f7ff";
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 2.5, 0, Math.PI * 2);
+          target.fill();
+        } else if (block.style === "chrono") {
+          target.fillStyle = "#3b243f";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = "#ffd4f7";
+          target.lineWidth = 2;
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 10, 0, Math.PI * 2);
+          target.stroke();
+
+          target.fillStyle = block.color;
+          target.beginPath();
+          target.moveTo(sx + 14, sy + 3);
+          target.lineTo(sx + 20, sy + 13);
+          target.lineTo(sx + 15, sy + 25);
+          target.lineTo(sx + 9, sy + 14);
+          target.closePath();
+          target.fill();
+
+          target.strokeStyle = "#ffffff";
+          target.lineWidth = 2;
+          target.beginPath();
+          target.moveTo(sx + 14, sy + 14);
+          target.lineTo(sx + 14, sy + 8);
+          target.moveTo(sx + 14, sy + 14);
+          target.lineTo(sx + 19, sy + 17);
+          target.stroke();
         } else if (block.style === "gem" || block.style === "prism" || block.style === "unstable") {
           target.fillStyle = block.style === "unstable" ? "#392941" : "#4e535a";
           target.fillRect(sx, sy, TILE, TILE);
@@ -9544,6 +10632,76 @@
           target.arc(sx + 6, sy + 20, 4, 0, Math.PI * 2);
           target.arc(sx + 21, sy + 8, 4, 0, Math.PI * 2);
           target.fill();
+        } else if (block.style === "fractured") {
+          target.fillStyle = "#77726f";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = "#3d3734";
+          target.lineWidth = 2;
+          target.beginPath();
+          target.moveTo(sx + 4, sy + 4);
+          target.lineTo(sx + 12, sy + 11);
+          target.lineTo(sx + 8, sy + 18);
+          target.lineTo(sx + 18, sy + 25);
+          target.moveTo(sx + 12, sy + 11);
+          target.lineTo(sx + 23, sy + 7);
+          target.moveTo(sx + 8, sy + 18);
+          target.lineTo(sx + 3, sy + 24);
+          target.stroke();
+
+          target.fillStyle = "rgba(230,215,196,0.35)";
+          target.fillRect(sx + 19, sy + 17, 5, 4);
+        } else if (block.style === "acid") {
+          target.fillStyle = "#284c2b";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.fillStyle = "#78e94f";
+          target.fillRect(sx + 1, sy + 5 + ((x + y) % 4), 16, 6);
+          target.fillRect(sx + 10, sy + 17, 17, 7);
+
+          target.fillStyle = "#d6ff72";
+          target.beginPath();
+          target.arc(sx + 7, sy + 20, 3, 0, Math.PI * 2);
+          target.arc(sx + 21, sy + 8, 2, 0, Math.PI * 2);
+          target.fill();
+        } else if (block.style === "resonance") {
+          target.fillStyle = "#263c4b";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = "#52ddff";
+          target.lineWidth = 2;
+          target.beginPath();
+          target.arc(sx + 14, sy + 14, 10, 0, Math.PI * 2);
+          target.stroke();
+
+          target.fillStyle = "#bdf8ff";
+          target.beginPath();
+          target.moveTo(sx + 14, sy + 3);
+          target.lineTo(sx + 21, sy + 14);
+          target.lineTo(sx + 14, sy + 25);
+          target.lineTo(sx + 7, sy + 14);
+          target.closePath();
+          target.fill();
+
+          target.fillStyle = "#36a9dd";
+          target.fillRect(sx + 12, sy + 8, 4, 12);
+        } else if (block.style === "fissure") {
+          target.fillStyle = "#130d1e";
+          target.fillRect(sx, sy, TILE, TILE);
+
+          target.strokeStyle = "#a15cff";
+          target.lineWidth = 3;
+          target.beginPath();
+          target.moveTo(sx + 15, sy + 2);
+          target.lineTo(sx + 10, sy + 9);
+          target.lineTo(sx + 17, sy + 14);
+          target.lineTo(sx + 9, sy + 21);
+          target.lineTo(sx + 13, sy + 27);
+          target.stroke();
+
+          target.strokeStyle = "#e0b4ff";
+          target.lineWidth = 1;
+          target.strokeRect(sx + 3, sy + 3, TILE - 6, TILE - 6);
         } else if (block.style === "tnt") {
           target.fillStyle = block.color;
           target.fillRect(sx, sy, TILE, TILE);
@@ -9723,8 +10881,23 @@
           if (tileAt(cell.x, cell.y) !== cell.type || !cellVisible(cell.x, cell.y, 2)) continue;
           const sx = worldToScreenX(cell.x * TILE + TILE * 0.5);
           const sy = worldToScreenY(cell.y * TILE + TILE * 0.5);
-          const radius = TILE * camera.zoom * (cell.type === LAVA ? 0.65 : 0.8);
-          ctx.globalAlpha = pulse * (cell.type === GAS ? 0.2 : 0.3);
+          const radius =
+            TILE *
+            camera.zoom *
+            (
+              cell.type === LAVA || cell.type === ACID
+                ? 0.65
+                : 0.8
+            );
+          ctx.globalAlpha =
+            pulse *
+            (
+              cell.type === GAS
+                ? 0.2
+                : cell.type === VOID_FISSURE
+                  ? 0.42
+                  : 0.3
+            );
           ctx.fillStyle = BLOCKS[cell.type].color;
           ctx.beginPath();
           ctx.arc(sx, sy, radius, 0, Math.PI * 2);
@@ -9737,7 +10910,13 @@
           for (let y = oreRevealY - radius; y <= oreRevealY + radius; y++) {
             for (let x = oreRevealX - radius; x <= oreRevealX + radius; x++) {
               const type = tileAt(x, y);
-              if (type < COPPER || type === TNT || type === LAVA || type === GAS) continue;
+              if (
+                type < COPPER ||
+                BLOCKS[type].hazard ||
+                BLOCKS[type].collectible === false
+              ) {
+                continue;
+              }
               if (!cellVisible(x, y, 1)) continue;
               const sx = worldToScreenX(x * TILE);
               const sy = worldToScreenY(y * TILE);
@@ -9747,6 +10926,150 @@
               ctx.strokeRect(sx + 3, sy + 3, size - 6, size - 6);
             }
           }
+        }
+
+        for (const warning of caveInWarnings) {
+          const sx = worldToScreenX((warning.x + 0.5) * TILE);
+          const sy = worldToScreenY((warning.y + 0.5) * TILE);
+          const progress = clamp(
+            1 - warning.timer / Math.max(0.01, warning.total),
+            0,
+            1
+          );
+
+          ctx.strokeStyle =
+            "rgba(255,210,130," + (0.35 + progress * 0.6) + ")";
+          ctx.lineWidth = Math.max(2, 3 * camera.zoom);
+          ctx.beginPath();
+          ctx.arc(
+            sx,
+            sy,
+            (8 + progress * 15) * camera.zoom,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        }
+
+        for (const burst of caveInBursts) {
+          const sx = worldToScreenX((burst.x + 0.5) * TILE);
+          const sy = worldToScreenY((burst.y + 0.5) * TILE);
+          const progress = 1 - burst.timer / burst.total;
+
+          ctx.globalAlpha = Math.max(0, 1 - progress);
+          ctx.fillStyle = "#b39a7b";
+          ctx.beginPath();
+          ctx.arc(
+            sx,
+            sy,
+            (12 + progress * 42) * camera.zoom,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+
+        for (const event of resonanceEvents) {
+          const sx = worldToScreenX((event.x + 0.5) * TILE);
+          const sy = worldToScreenY((event.y + 0.5) * TILE);
+          const progress = clamp(
+            1 - event.timer / Math.max(0.01, event.total),
+            0,
+            1
+          );
+
+          ctx.strokeStyle =
+            "rgba(82,221,255," + (0.4 + progress * 0.55) + ")";
+          ctx.lineWidth = Math.max(2, 3 * camera.zoom);
+          ctx.beginPath();
+          ctx.arc(
+            sx,
+            sy,
+            (7 + progress * 19) * camera.zoom,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        }
+
+        for (const burst of resonanceBursts) {
+          const sx = worldToScreenX((burst.x + 0.5) * TILE);
+          const sy = worldToScreenY((burst.y + 0.5) * TILE);
+          const progress = 1 - burst.timer / burst.total;
+
+          ctx.globalAlpha = Math.max(0, 1 - progress);
+          ctx.strokeStyle = "#8cecff";
+          ctx.lineWidth = Math.max(2, 4 * camera.zoom);
+          ctx.beginPath();
+          ctx.arc(
+            sx,
+            sy,
+            burst.radius * TILE * camera.zoom * progress,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        for (const fissure of voidFissures) {
+          const sx = worldToScreenX((fissure.x + 0.5) * TILE);
+          const sy = worldToScreenY((fissure.y + 0.5) * TILE);
+          const progress = clamp(
+            1 - fissure.timer / Math.max(0.01, fissure.total),
+            0,
+            1
+          );
+
+          ctx.globalAlpha = 0.35 + progress * 0.5;
+          ctx.strokeStyle = "#b878ff";
+          ctx.lineWidth = Math.max(2, 4 * camera.zoom);
+
+          for (let ring = 0; ring < 3; ring++) {
+            ctx.beginPath();
+            ctx.arc(
+              sx,
+              sy,
+              (
+                18 +
+                ring * 11 -
+                progress * 8
+              ) *
+                camera.zoom,
+              0,
+              Math.PI * 2
+            );
+            ctx.stroke();
+          }
+
+          ctx.globalAlpha = 1;
+        }
+
+        for (const collapse of voidCollapses) {
+          const sx = worldToScreenX((collapse.x + 0.5) * TILE);
+          const sy = worldToScreenY((collapse.y + 0.5) * TILE);
+          const progress = 1 - collapse.timer / collapse.total;
+
+          ctx.globalAlpha = Math.max(0, 1 - progress);
+          ctx.fillStyle = "#1a0929";
+          ctx.beginPath();
+          ctx.arc(
+            sx,
+            sy,
+            collapse.radius *
+              TILE *
+              camera.zoom *
+              (0.3 + progress),
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+
+          ctx.strokeStyle = "#c082ff";
+          ctx.lineWidth = Math.max(2, 4 * camera.zoom);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
         }
 
         for (const fuse of tntFuses) {
@@ -10024,7 +11347,11 @@
           if (!cellVisible(drop.x / TILE, drop.y / TILE, 3)) continue;
           const sx = worldToScreenX(drop.x);
           const sy = worldToScreenY(drop.y);
-          const size = Math.max(8, 14 * camera.zoom);
+          const veinScale = worldDropVeinScale(drop.item);
+          const size = Math.max(
+            4,
+            Math.max(8, 14 * camera.zoom) * veinScale
+          );
           const block = BLOCKS[drop.item.type];
 
           ctx.save();
@@ -10486,7 +11813,14 @@
           if (playerDistance > maxReachDistance) continue;
 
           const distance = Math.hypot(drop.x - worldX, drop.y - worldY);
-          if (distance <= hitRadius && distance < closestDistance) {
+          const scaledHitRadius = Math.max(
+            hitRadius,
+            drop.radius * 1.6
+          );
+          if (
+            distance <= scaledHitRadius &&
+            distance < closestDistance
+          ) {
             closest = drop;
             closestDistance = distance;
           }
