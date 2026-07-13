@@ -1121,6 +1121,175 @@
       box-shadow: inset 0 0 0 5px rgba(0, 0, 0, 0.08);
     }
 
+    @keyframes oreModifierSweep {
+      0% { transform: translateX(-135%) rotate(18deg); }
+      55%, 100% { transform: translateX(150%) rotate(18deg); }
+    }
+
+    @keyframes oreModifierTwinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1.12) rotate(180deg); }
+    }
+
+    @keyframes oreModifierRise {
+      0% { transform: translateY(35%) scale(0.8); opacity: 0; }
+      30% { opacity: 0.95; }
+      100% { transform: translateY(-45%) scale(1.08); opacity: 0; }
+    }
+
+    @keyframes oreModifierEmbers {
+      0% { transform: translateY(35%) rotate(0deg); opacity: 0.25; }
+      45% { opacity: 1; }
+      100% { transform: translateY(-40%) rotate(16deg); opacity: 0; }
+    }
+
+    @keyframes oreModifierOrbit {
+      from { transform: rotate(0deg) scale(0.86); }
+      to { transform: rotate(360deg) scale(1.08); }
+    }
+
+    @keyframes oreModifierRainbow {
+      from { transform: rotate(0deg); filter: hue-rotate(0deg); }
+      to { transform: rotate(360deg); filter: hue-rotate(360deg); }
+    }
+
+    .ore-modifier-visual {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+    }
+
+    .ore-modifier-visual::before,
+    .ore-modifier-visual::after {
+      content: "";
+      position: absolute;
+      inset: -35%;
+      z-index: 2;
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .ore-modifier-white::before {
+      width: 34%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.92),
+        transparent
+      );
+      animation: oreModifierSweep 2.35s ease-in-out infinite;
+    }
+
+    .ore-modifier-white::after {
+      inset: 10%;
+      background:
+        radial-gradient(circle at 22% 30%, white 0 5%, transparent 7%),
+        radial-gradient(circle at 76% 68%, white 0 4%, transparent 7%),
+        radial-gradient(circle at 63% 18%, #eaf5ff 0 3%, transparent 6%);
+      animation: oreModifierTwinkle 1.55s ease-in-out infinite;
+    }
+
+    .ore-modifier-aqua::before {
+      inset: 5%;
+      background:
+        radial-gradient(circle at 20% 85%, #9efff5 0 5%, transparent 8%),
+        radial-gradient(circle at 56% 65%, #55f2e5 0 6%, transparent 9%),
+        radial-gradient(circle at 80% 90%, #d5fffb 0 4%, transparent 7%);
+      animation: oreModifierRise 1.65s linear infinite;
+    }
+
+    .ore-modifier-aqua::after {
+      inset: 8%;
+      border: 1px solid rgba(118, 255, 238, 0.72);
+      box-shadow: inset 0 0 12px rgba(74, 255, 229, 0.55);
+      animation: oreModifierTwinkle 2.1s ease-in-out infinite;
+    }
+
+    .ore-modifier-red::before {
+      inset: 4%;
+      background:
+        radial-gradient(circle at 18% 82%, #ffb19f 0 4%, transparent 7%),
+        radial-gradient(circle at 52% 64%, #ff483d 0 6%, transparent 9%),
+        radial-gradient(circle at 82% 88%, #ff7c54 0 4%, transparent 7%);
+      animation: oreModifierEmbers 1.25s linear infinite;
+    }
+
+    .ore-modifier-red::after {
+      inset: 8%;
+      border: 1px solid rgba(255, 83, 67, 0.88);
+      box-shadow: inset 0 0 14px rgba(255, 43, 35, 0.72);
+      animation: oreModifierTwinkle 1.15s ease-in-out infinite;
+    }
+
+    .ore-modifier-gold::before {
+      inset: 2%;
+      background:
+        conic-gradient(
+          from 0deg,
+          transparent 0 10%,
+          rgba(255, 246, 158, 0.95) 12% 15%,
+          transparent 17% 35%,
+          rgba(255, 200, 56, 0.95) 37% 41%,
+          transparent 43% 68%,
+          rgba(255, 234, 111, 0.9) 70% 74%,
+          transparent 76% 100%
+        );
+      animation: oreModifierOrbit 2.4s linear infinite;
+    }
+
+    .ore-modifier-gold::after {
+      inset: 7%;
+      box-shadow:
+        inset 0 0 14px rgba(255, 202, 61, 0.78),
+        0 0 8px rgba(255, 221, 103, 0.55);
+      animation: oreModifierTwinkle 1.2s ease-in-out infinite;
+    }
+
+    .ore-modifier-rainbow::before {
+      inset: -18%;
+      background: conic-gradient(
+        #ff4b4b,
+        #ffcf4a,
+        #62ff7d,
+        #4eefff,
+        #6483ff,
+        #dd62ff,
+        #ff4b4b
+      );
+      opacity: 0.62;
+      mix-blend-mode: screen;
+      animation: oreModifierRainbow 1.85s linear infinite;
+    }
+
+    .ore-modifier-rainbow::after {
+      inset: 9%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow:
+        inset 0 0 12px rgba(255, 255, 255, 0.8),
+        0 0 9px rgba(172, 113, 255, 0.75);
+      animation: oreModifierTwinkle 0.95s ease-in-out infinite;
+    }
+
+    .ore-modifier-name {
+      font-weight: 900;
+      letter-spacing: 0.015em;
+    }
+
+    .ore-modifier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 4px 0;
+      padding: 4px 7px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
+      color: white;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
     .inventory-row h3 {
       margin: 0 0 3px;
       font-size: 14px;
@@ -2248,7 +2417,7 @@
           <button id="trashStone" aria-label="Delete all non-ore blocks" title="Delete every unfavorited filler block in your backpack">🧹</button>
           <button id="inventoryCancelFilter" aria-label="Cancel filters" title="Cancel block filter" style="display:none">✖ Filter</button>
           <button id="inventorySortButton" aria-label="Change sort order" title="Sort: Asc by Worth">⬆ Worth</button>
-          <button id="trashToggle" aria-label="Toggle drop item mode" title="Drop items">🗑︎</button>
+          <button id="trashToggle" aria-label="Toggle trash mode" title="Trash Mode: tap items to delete">🗑︎</button>
           <button class="close-button" aria-label="Close">×</button>
         </div>
       </div>
@@ -2652,6 +2821,153 @@
         { name: "Resonance Crystal", weight: 0, hardness: 19, value: 0, breakTime: 1.15, color: "#52ddff", style: "resonance", tier: 7, spawnRate: 0.42, clumpMin: 1, clumpMax: 4, hazard: true, collectible: false, deposit: false },
         { name: "Void Fissure", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#a15cff", style: "fissure", tier: 8, spawnRate: 0.32, clumpMin: 1, clumpMax: 2, hazard: true, collectible: false, deposit: false }
       ];
+
+      const ORE_MODIFIERS = [
+        {
+          id: "gleaming",
+          name: "Gleaming",
+          multiplier: 1.25,
+          baseChance: 0.05,
+          color: "#ffffff",
+          cssClass: "ore-modifier-white"
+        },
+        {
+          id: "aetheric",
+          name: "Aetheric",
+          multiplier: 1.5,
+          baseChance: 0.01,
+          color: "#74fff0",
+          cssClass: "ore-modifier-aqua"
+        },
+        {
+          id: "crimson",
+          name: "Crimson",
+          multiplier: 2,
+          baseChance: 0.0025,
+          color: "#ff5145",
+          cssClass: "ore-modifier-red"
+        },
+        {
+          id: "gilded",
+          name: "Gilded",
+          multiplier: 5,
+          baseChance: 0.0005,
+          color: "#ffd34f",
+          cssClass: "ore-modifier-gold"
+        },
+        {
+          id: "prismatic",
+          name: "Prismatic",
+          multiplier: 10,
+          baseChance: 0.0001,
+          color: "#d99cff",
+          cssClass: "ore-modifier-rainbow"
+        }
+      ];
+
+      const ORE_MODIFIER_SIZE_EXPONENT =
+        Math.log(5) / Math.log(10);
+
+      function oreModifierById(modifierId) {
+        return ORE_MODIFIERS.find(
+          modifier => modifier.id === modifierId
+        ) || null;
+      }
+
+      function oreModifierMultiplier(source) {
+        const modifier = oreModifierById(
+          source && source.modifierId
+        );
+        return modifier ? modifier.multiplier : 1;
+      }
+
+      function oreModifierClass(source) {
+        const modifier = oreModifierById(
+          source && source.modifierId
+        );
+        return modifier
+          ? " ore-modifier-visual " + modifier.cssClass
+          : "";
+      }
+
+      function oreDisplayName(source, block = null) {
+        const resolvedBlock =
+          block || BLOCKS[source && source.type];
+        const modifier = oreModifierById(
+          source && source.modifierId
+        );
+
+        return (
+          (modifier ? modifier.name + " " : "") +
+          (resolvedBlock ? resolvedBlock.name : "Ore")
+        );
+      }
+
+      function oreModifierBonusValue(item) {
+        const multiplier = oreModifierMultiplier(item);
+        if (multiplier <= 1) return 0;
+        const finalValue = Math.max(
+          0,
+          Number(item && item.value) || 0
+        );
+        return Math.round(
+          finalValue - finalValue / multiplier
+        );
+      }
+
+      function isOreModifierEligibleType(type) {
+        const block = BLOCKS[type];
+
+        return !!(
+          block &&
+          type >= COAL &&
+          block.value > 0 &&
+          block.collectible !== false &&
+          !block.hazard &&
+          block.deposit !== false
+        );
+      }
+
+      function rollOreModifier(veinSize) {
+        const size = Math.max(
+          1,
+          Number(veinSize) || 1
+        );
+        const sizeScale = Math.pow(
+          size,
+          -ORE_MODIFIER_SIZE_EXPONENT
+        );
+        const roll = Math.random();
+        let cumulativeChance = 0;
+
+        // This is one categorical roll. A vein can receive no more than one
+        // modifier, and the chosen modifier is then stored permanently.
+        for (const modifier of ORE_MODIFIERS) {
+          cumulativeChance +=
+            modifier.baseChance * sizeScale;
+
+          if (roll < cumulativeChance) {
+            return modifier.id;
+          }
+        }
+
+        return null;
+      }
+
+      function assignOreModifiersToDeposits() {
+        for (const deposit of depositData.values()) {
+          if (
+            deposit.modifierId ||
+            !isOreModifierEligibleType(deposit.type)
+          ) {
+            continue;
+          }
+
+          deposit.modifierId = rollOreModifier(
+            Math.max(1, deposit.remaining)
+          );
+        }
+      }
 
       const PICKAXE_NAMES = [
         "Standard Pickaxe", "Reinforced Pickaxe", "Prospector Pickaxe",
@@ -3143,7 +3459,7 @@
       let playerLightCacheRadius = -1;
       let terrainLightRevision = 1;
 
-      const SAVE_FORMAT_VERSION = 3;
+      const SAVE_FORMAT_VERSION = 4;
       const LOCAL_SAVE_KEY = "mountain-tycoon-save-v1";
       let supabaseClient = null;
       let cloudUser = null;
@@ -5491,8 +5807,14 @@
         if (Number.isFinite(stored) && stored > 0) return stored;
 
         const bonus = refineryItemBonusMultiplier(item);
-        const base = refineryItemBaseValue(item, block) * bonus;
-        const inferred = base > 0 ? Number(item.value) / base : 1;
+        const modifierMultiplier =
+          oreModifierMultiplier(item);
+        const base =
+          refineryItemBaseValue(item, block) *
+          bonus *
+          modifierMultiplier;
+        const inferred =
+          base > 0 ? Number(item.value) / base : 1;
 
         item.bonusMultiplier = bonus;
         item.valueMultiplier =
@@ -5626,7 +5948,8 @@
           multiplier,
           grade: valueGrade(multiplier),
           note,
-          bonusMultiplier
+          bonusMultiplier,
+          modifierId: null
         };
         depositData.set(id, deposit);
 
@@ -5905,6 +6228,7 @@
         currentMountain.topY = actualTop;
         generateDeposits(tier, mountainArea);
         mergeOverlappingVeins();
+        assignOreModifiersToDeposits();
         generateCaves(tier);
         terrainLightRevision++;
         sunlightRevision = -1;
@@ -6101,6 +6425,11 @@
         document.getElementById("torch").classList.remove("pressed");
         hoveredInventoryItemId = null;
         openRefineryJobId = null;
+        trashMode = false;
+        updateTrashToggle();
+        document
+          .getElementById("inventoryFocusModal")
+          .classList.remove("show");
 
         // Hidden username/password fields can otherwise keep receiving WASD
         // after their modal closes, especially inside an embedded preview.
@@ -6239,7 +6568,10 @@
           refineryItemBonusMultiplier(item);
         const baseValue = refineryItemBaseValue(item, block);
         const pendingValue = Math.round(
-          baseValue * pendingMultiplier * bonusMultiplier
+          baseValue *
+            pendingMultiplier *
+            bonusMultiplier *
+            oreModifierMultiplier(item)
         );
 
         return {
@@ -6511,12 +6843,17 @@
         beginRefineryCycle(job, job.item);
       }
 
-      function createRefineryOreVisual(block) {
+      function createOreSwatch(block, item, className = "block-swatch") {
         const visual = document.createElement("div");
-        visual.className = "block-swatch";
+        visual.className =
+          className + oreModifierClass(item);
         visual.style.background = block.color || "#888";
         visual.setAttribute("aria-hidden", "true");
         return visual;
+      }
+
+      function createRefineryOreVisual(block, item) {
+        return createOreSwatch(block, item);
       }
 
       function renderRefineryQueue() {
@@ -6559,11 +6896,11 @@
 
           const main = document.createElement("div");
           main.className = "refinery-slot-main";
-          main.appendChild(createRefineryOreVisual(block));
+          main.appendChild(createRefineryOreVisual(block, item));
 
           const copy = document.createElement("div");
           const name = document.createElement("h3");
-          name.textContent = block.name;
+          name.textContent = oreDisplayName(item, block);
 
           const description = document.createElement("span");
           description.className = "refinery-ore-description";
@@ -6742,11 +7079,11 @@
           card.className =
             "refinery-ore-card" +
             (maxed || cash < cost || queueFull ? " locked" : "");
-          card.appendChild(createRefineryOreVisual(block));
+          card.appendChild(createRefineryOreVisual(block, item));
 
           const copy = document.createElement("div");
           const name = document.createElement("h3");
-          name.textContent = block.name;
+          name.textContent = oreDisplayName(item, block);
 
           const description = document.createElement("span");
           description.className = "refinery-ore-description";
@@ -7078,8 +7415,14 @@
 
       function updateTrashToggle() {
         trashToggle.classList.toggle("enabled", trashMode);
-        trashToggle.setAttribute("aria-pressed", trashMode ? "true" : "false");
-        trashToggle.title = trashMode ? "Drop mode enabled" : "Drop mode disabled";
+        trashToggle.setAttribute(
+          "aria-pressed",
+          trashMode ? "true" : "false"
+        );
+        trashToggle.title =
+          trashMode
+            ? "Trash Mode enabled — tap items to delete"
+            : "Trash Mode disabled — tap items for stats";
       }
 
       function inventoryEntryById(id) {
@@ -7088,27 +7431,85 @@
 
       function renderItemDetails(entry) {
         if (!entry) {
-          itemDetails.innerHTML = '<p>Tap an item to inspect it. Use the star to protect rare items from selling or dropping.</p>';
+          itemDetails.innerHTML =
+            '<p>Tap an item to open its complete stats. Toggle Trash Mode to delete unfavorited items instead.</p>';
           return;
         }
+
         const block = BLOCKS[entry.type];
-        const tierLabel = block.tier ? "Mountain Tier " + block.tier : "Base terrain";
-        const hardnessLabel = Number.isFinite(block.hardness) ? block.hardness : "Unmineable";
-        const unitsLabel = entry.units === 1 ? "1 block" : formatCompact(entry.units) + "-block clump";
-        const note = entry.note ? '<p><strong>Special:</strong> ' + entry.note + '</p>' : '';
+        const modifier = oreModifierById(entry.modifierId);
+        const modifierMultiplier =
+          oreModifierMultiplier(entry);
+        const unmodifiedValue = Math.round(
+          entry.value / modifierMultiplier
+        );
+        const modifierBonus =
+          Math.max(0, entry.value - unmodifiedValue);
+        const tierLabel =
+          block.tier
+            ? "Mountain Tier " + block.tier
+            : "Base terrain";
+        const hardnessLabel =
+          Number.isFinite(block.hardness)
+            ? block.hardness
+            : "Unmineable";
+        const unitsLabel =
+          entry.units === 1
+            ? "1 block"
+            : formatCompact(entry.units) + "-block clump";
+        const note = entry.note
+          ? '<p><strong>Special:</strong> ' + entry.note + '</p>'
+          : '';
+        const modifierLine = modifier
+          ? '<span class="ore-modifier-badge">' +
+              modifier.name +
+              ' • ' +
+              modifier.multiplier +
+              '× value</span>'
+          : '';
+
         itemDetails.innerHTML =
           '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">' +
-          '<h2>' + entry.grade + ' ' + block.name + '</h2>' +
-          '<button class="favorite-button' + (entry.favorite ? ' active' : '') + '" data-favorite-id="' + entry.id + '" aria-label="Toggle favorite">★</button></div>' +
-          '<p>' + unitsLabel + ' • Collected as one backpack item.</p>' +
+          '<h2>' +
+          entry.grade +
+          ' ' +
+          oreDisplayName(entry, block) +
+          '</h2>' +
+          '<button class="favorite-button' +
+          (entry.favorite ? ' active' : '') +
+          '" data-favorite-id="' +
+          entry.id +
+          '" aria-label="Toggle favorite">★</button></div>' +
+          modifierLine +
+          '<p>' +
+          unitsLabel +
+          ' • Collected as one backpack item.</p>' +
           note +
           '<div class="detail-grid">' +
-          '<span>Weight<br>' + formatCompact(entry.weight) + '</span>' +
-          '<span>Worth<br>' + formatMoney(entry.value) + '</span>' +
-          '<span>Luck<br>' + itemLuck(entry).toFixed(3) + '</span>' +
-          '<span>Hardness<br>' + hardnessLabel + '</span>' +
-          '<span>Source<br>' + tierLabel + '</span>' +
-          '<span>Status<br>' + (entry.favorite ? 'Favorited' : 'Unprotected') + '</span>' +
+          '<span>Weight<br>' +
+          formatCompact(entry.weight) +
+          '</span>' +
+          '<span>Final worth<br>' +
+          formatMoney(entry.value) +
+          '</span>' +
+          '<span>Base worth<br>' +
+          formatMoney(unmodifiedValue) +
+          '</span>' +
+          '<span>Modifier bonus<br>' +
+          (modifier ? "+" + formatMoney(modifierBonus) : "None") +
+          '</span>' +
+          '<span>Luck<br>' +
+          itemLuck(entry).toFixed(3) +
+          '</span>' +
+          '<span>Hardness<br>' +
+          hardnessLabel +
+          '</span>' +
+          '<span>Source<br>' +
+          tierLabel +
+          '</span>' +
+          '<span>Status<br>' +
+          (entry.favorite ? 'Favorited' : 'Unprotected') +
+          '</span>' +
           '</div>';
       }
 
@@ -7198,10 +7599,37 @@
           row.dataset.itemId = String(entry.id);
           const unitLabel = entry.units === 1 ? "1 block" : formatCompact(entry.units) + " blocks";
           row.innerHTML =
-            '<div class="block-swatch" style="background:' + block.color + '"></div>' +
-            '<div><h3>' + block.name + '</h3><div class="inventory-grade">' + entry.grade + '</div>' +
-            '<p>' + unitLabel + ' • ' + formatCompact(entry.weight) + ' wt • ' + formatMoney(entry.value) + '</p></div>' +
-            '<div class="inventory-count">' + (entry.favorite ? '<span class="favorite-star">★</span><br>' : '') + '×1</div>';
+            '<div class="block-swatch' +
+            oreModifierClass(entry) +
+            '" style="background:' +
+            block.color +
+            '"></div>' +
+            '<div><h3 class="ore-modifier-name">' +
+            oreDisplayName(entry, block) +
+            '</h3><div class="inventory-grade">' +
+            entry.grade +
+            (
+              oreModifierById(entry.modifierId)
+                ? ' • ' +
+                  oreModifierById(entry.modifierId).multiplier +
+                  '×'
+                : ''
+            ) +
+            '</div>' +
+            '<p>' +
+            unitLabel +
+            ' • ' +
+            formatCompact(entry.weight) +
+            ' wt • ' +
+            formatMoney(entry.value) +
+            '</p></div>' +
+            '<div class="inventory-count">' +
+            (
+              entry.favorite
+                ? '<span class="favorite-star">★</span><br>'
+                : ''
+            ) +
+            '×1</div>';
           fragment.appendChild(row);
         }
 
@@ -7387,9 +7815,18 @@
           if (item) {
             const block = BLOCKS[item.type];
             button.innerHTML =
-              '<div class="block-swatch" style="background:' + block.color + '"></div>' +
-              '<small>' + (item.favorite ? '★ ' : '') + block.name + '</small>' +
-              '<small class="slot-luck">+' + itemLuck(item).toFixed(3) + '</small>';
+              '<div class="block-swatch' +
+              oreModifierClass(item) +
+              '" style="background:' +
+              block.color +
+              '"></div>' +
+              '<small>' +
+              (item.favorite ? '★ ' : '') +
+              oreDisplayName(item, block) +
+              '</small>' +
+              '<small class="slot-luck">+' +
+              itemLuck(item).toFixed(3) +
+              '</small>';
           } else {
             button.innerHTML = '<div class="block-swatch" style="background:rgba(255,255,255,0.05)"></div><small>Empty</small><small class="slot-luck">+0</small>';
           }
@@ -7405,7 +7842,13 @@
         if (selectedPlotSlot < 0) {
           plotSelectionText.textContent = "Select a plot slot.";
         } else if (selected) {
-          plotSelectionText.textContent = "Slot " + (selectedPlotSlot + 1) + ": " + BLOCKS[selected.type].name + " • Luck +" + itemLuck(selected).toFixed(3);
+          plotSelectionText.textContent =
+            "Slot " +
+            (selectedPlotSlot + 1) +
+            ": " +
+            oreDisplayName(selected) +
+            " • Luck +" +
+            itemLuck(selected).toFixed(3);
         } else {
           plotSelectionText.textContent = "Slot " + (selectedPlotSlot + 1) + " is empty. Choose an ore below.";
         }
@@ -7441,10 +7884,25 @@
             button.className = "plot-candidate";
             button.dataset.plotItemId = String(item.id);
             button.innerHTML =
-              '<div class="block-swatch" style="background:' + block.color + '"></div>' +
-              '<div><strong>' + (item.favorite ? '★ ' : '') + item.grade + ' ' + block.name + '</strong>' +
-              '<small>' + formatMoney(item.value) + ' • ' + formatCompact(item.weight) + ' wt</small></div>' +
-              '<span class="candidate-luck">+' + itemLuck(item).toFixed(3) + '</span>';
+              '<div class="block-swatch' +
+              oreModifierClass(item) +
+              '" style="background:' +
+              block.color +
+              '"></div>' +
+              '<div><strong>' +
+              (item.favorite ? '★ ' : '') +
+              item.grade +
+              ' ' +
+              oreDisplayName(item, block) +
+              '</strong>' +
+              '<small>' +
+              formatMoney(item.value) +
+              ' • ' +
+              formatCompact(item.weight) +
+              ' wt</small></div>' +
+              '<span class="candidate-luck">+' +
+              itemLuck(item).toFixed(3) +
+              '</span>';
             candidateFragment.appendChild(button);
           }
           plotCandidates.appendChild(candidateFragment);
@@ -7472,7 +7930,11 @@
         plotSlots[selectedPlotSlot] = item;
         renderLuckPlot();
         updateHUD();
-        showToast(BLOCKS[item.type].name + " placed • Luck +" + itemLuck(item).toFixed(3));
+        showToast(
+          oreDisplayName(item) +
+            " placed • Luck +" +
+            itemLuck(item).toFixed(3)
+        );
       }
 
       function toggleSelectedPlotFavorite() {
@@ -7855,7 +8317,8 @@
         note,
         valueMultiplier = null,
         bonusMultiplier = 1,
-        refinementCount = 0
+        refinementCount = 0,
+        modifierId = null
       ) {
         return {
           id: nextItemId++,
@@ -7877,6 +8340,10 @@
             0,
             Math.floor(Number(refinementCount) || 0)
           ),
+          modifierId:
+            oreModifierById(modifierId)
+              ? modifierId
+              : null,
           favorite: false
         };
       }
@@ -7971,7 +8438,11 @@
         const block = BLOCKS[type];
         const units = Math.max(1, deposit.remaining);
         return Math.round(
-          block.value * Math.pow(units, 0.85) * deposit.multiplier * deposit.bonusMultiplier
+          block.value *
+            Math.pow(units, 0.85) *
+            deposit.multiplier *
+            deposit.bonusMultiplier *
+            oreModifierMultiplier(deposit)
         );
       }
 
@@ -8025,7 +8496,9 @@
           deposit.grade,
           itemNote,
           deposit.multiplier,
-          deposit.bonusMultiplier
+          deposit.bonusMultiplier,
+          0,
+          deposit.modifierId
         );
         clearDeposit(deposit);
         spawnWorldDrop(item, dropX, dropY);
@@ -8033,9 +8506,22 @@
         const clumpWord = units > 1 ? units + "-block clump" : "single block";
         const specialNote = deposit.note ? " • " + deposit.note : "";
         if (originalType === GEODE) {
-          showToast("Geode dropped " + deposit.grade + " " + rewardBlock.name);
+          showToast(
+            "Geode dropped " +
+              deposit.grade +
+              " " +
+              oreDisplayName(item, rewardBlock)
+          );
         } else if (units > 1 || value >= 1000000 || deposit.note) {
-          showToast(deposit.grade + " " + originalBlock.name + " " + clumpWord + " dropped" + specialNote);
+          showToast(
+            deposit.grade +
+              " " +
+              oreDisplayName(item, rewardBlock) +
+              " " +
+              clumpWord +
+              " dropped" +
+              specialNote
+          );
         }
 
         if (originalType === PRISMSTONE) {
@@ -11151,7 +11637,21 @@
             ctx.fillRect(sx + size * 0.22, sy + size * 0.02, size * 0.56, size * 0.56);
             ctx.strokeStyle = item.favorite ? "#ffd85a" : "rgba(255,255,255,0.85)";
             ctx.lineWidth = Math.max(1, 2 * camera.zoom);
-            ctx.strokeRect(sx + size * 0.18, sy - size * 0.02, size * 0.64, size * 0.64);
+            ctx.strokeRect(
+              sx + size * 0.18,
+              sy - size * 0.02,
+              size * 0.64,
+              size * 0.64
+            );
+
+            drawOreModifierCanvas(
+              item.modifierId,
+              sx + size * 0.5,
+              sy + size * 0.28,
+              size * 0.72,
+              performance.now(),
+              item.id || i
+            );
           }
         }
         const labelX = worldToScreenX((LUCK_PLOT_START_X + LUCK_PLOT_SLOTS * 0.5) * TILE);
@@ -11340,6 +11840,195 @@
         ctx.setLineDash([]);
       }
 
+      function drawOreModifierCanvas(
+        modifierId,
+        centerX,
+        centerY,
+        size,
+        now,
+        seed = 0
+      ) {
+        const modifier = oreModifierById(modifierId);
+        if (!modifier) return;
+
+        const time = (now || performance.now()) / 1000;
+        const phase = time + seed * 0.173;
+        const pulse = 0.55 + Math.sin(phase * 4.2) * 0.22;
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.globalCompositeOperation = "source-over";
+
+        if (modifier.id === "gleaming") {
+          ctx.strokeStyle =
+            "rgba(255,255,255," + (0.5 + pulse * 0.42) + ")";
+          ctx.lineWidth = Math.max(1, size * 0.045);
+
+          for (let i = 0; i < 2; i++) {
+            const angle = phase * 0.7 + i * Math.PI;
+            const x = Math.cos(angle) * size * 0.34;
+            const y = Math.sin(angle * 1.3) * size * 0.3;
+            const arm = size * (0.11 + i * 0.025);
+
+            ctx.beginPath();
+            ctx.moveTo(x - arm, y);
+            ctx.lineTo(x + arm, y);
+            ctx.moveTo(x, y - arm);
+            ctx.lineTo(x, y + arm);
+            ctx.stroke();
+          }
+        } else if (modifier.id === "aetheric") {
+          ctx.strokeStyle =
+            "rgba(116,255,240," + (0.48 + pulse * 0.38) + ")";
+          ctx.fillStyle =
+            "rgba(164,255,247," + (0.38 + pulse * 0.3) + ")";
+          ctx.lineWidth = Math.max(1, size * 0.035);
+
+          for (let i = 0; i < 3; i++) {
+            const rise =
+              ((phase * 0.42 + i / 3) % 1);
+            const x =
+              Math.sin(phase * 1.7 + i * 2.1) *
+              size *
+              0.28;
+            const y = size * (0.38 - rise * 0.8);
+            const radius = size * (0.035 + i * 0.012);
+
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+        } else if (modifier.id === "crimson") {
+          ctx.fillStyle =
+            "rgba(255,74,58," + (0.5 + pulse * 0.38) + ")";
+
+          for (let i = 0; i < 4; i++) {
+            const rise =
+              ((phase * 0.65 + i / 4) % 1);
+            const x =
+              Math.sin(phase * 2.2 + i * 1.7) *
+              size *
+              0.32;
+            const y = size * (0.42 - rise * 0.86);
+            const emberSize =
+              size * (0.025 + (i % 2) * 0.018);
+
+            ctx.beginPath();
+            ctx.arc(
+              x,
+              y,
+              emberSize,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          }
+        } else if (modifier.id === "gilded") {
+          ctx.strokeStyle =
+            "rgba(255,216,73," + (0.62 + pulse * 0.34) + ")";
+          ctx.fillStyle =
+            "rgba(255,242,157," + (0.55 + pulse * 0.35) + ")";
+          ctx.lineWidth = Math.max(1, size * 0.04);
+
+          for (let i = 0; i < 3; i++) {
+            const angle =
+              phase * 1.2 +
+              i * (Math.PI * 2 / 3);
+            const x = Math.cos(angle) * size * 0.38;
+            const y = Math.sin(angle) * size * 0.3;
+            const arm = size * 0.095;
+
+            ctx.beginPath();
+            ctx.moveTo(x - arm, y);
+            ctx.lineTo(x + arm, y);
+            ctx.moveTo(x, y - arm);
+            ctx.lineTo(x, y + arm);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x, y, size * 0.025, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (modifier.id === "prismatic") {
+          const hue = (phase * 95 + seed * 31) % 360;
+
+          ctx.strokeStyle =
+            "hsla(" +
+            hue +
+            ",100%,72%," +
+            (0.62 + pulse * 0.32) +
+            ")";
+          ctx.lineWidth = Math.max(1.5, size * 0.055);
+
+          ctx.beginPath();
+          ctx.arc(
+            0,
+            0,
+            size * (0.36 + pulse * 0.045),
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+
+          for (let i = 0; i < 5; i++) {
+            const angle =
+              phase * 1.5 +
+              i * (Math.PI * 2 / 5);
+            const x = Math.cos(angle) * size * 0.43;
+            const y = Math.sin(angle) * size * 0.43;
+
+            ctx.fillStyle =
+              "hsla(" +
+              ((hue + i * 72) % 360) +
+              ",100%,72%,0.9)";
+            ctx.beginPath();
+            ctx.arc(
+              x,
+              y,
+              size * 0.035,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function drawModifiedVeins(now) {
+        const size = TILE * camera.zoom;
+
+        for (const deposit of depositData.values()) {
+          if (!deposit.modifierId) continue;
+
+          for (const cell of deposit.cells) {
+            if (
+              !cellVisible(cell.x, cell.y, 2) ||
+              depositAt[index(cell.x, cell.y)] !==
+                deposit.id ||
+              tileAt(cell.x, cell.y) !== deposit.type
+            ) {
+              continue;
+            }
+
+            drawOreModifierCanvas(
+              deposit.modifierId,
+              worldToScreenX(
+                (cell.x + 0.5) * TILE
+              ),
+              worldToScreenY(
+                (cell.y + 0.5) * TILE
+              ),
+              size,
+              now,
+              deposit.id + cell.x * 17 + cell.y * 31
+            );
+          }
+        }
+      }
+
       function drawWorldDrops() {
         for (const drop of worldDrops) {
           if (!cellVisible(drop.x / TILE, drop.y / TILE, 3)) continue;
@@ -11359,7 +12048,22 @@
           ctx.fillRect(-size * 0.42, -size * 0.42, size * 0.84, size * 0.84);
           ctx.strokeStyle = dropCanFit(drop) ? "rgba(255,255,255,0.98)" : "rgba(255,68,68,0.98)";
           ctx.lineWidth = Math.max(2, 2.5 * camera.zoom);
-          ctx.strokeRect(-size * 0.52, -size * 0.52, size * 1.04, size * 1.04);
+          ctx.strokeRect(
+            -size * 0.52,
+            -size * 0.52,
+            size * 1.04,
+            size * 1.04
+          );
+
+          drawOreModifierCanvas(
+            drop.item.modifierId,
+            0,
+            0,
+            size * 1.25,
+            performance.now(),
+            drop.id
+          );
+
           if (drop.item.units > 1 && camera.zoom > 0.58) {
             ctx.fillStyle = "white";
             ctx.font = "900 " + Math.max(8, 10 * camera.zoom) + "px Arial";
@@ -11716,6 +12420,7 @@
         for (const shop of SHOPS) drawShop(shop);
         drawLuckPlot();
         drawVisibleTerrain();
+        drawModifiedVeins(now || performance.now());
         drawSpecialEffects(now || performance.now());
         drawPlanks();
         drawTorches(now || performance.now());
@@ -12156,9 +12861,16 @@
         event.stopPropagation();
         trashMode = !trashMode;
         selectedInventoryItemId = null;
+        document
+          .getElementById("inventoryFocusModal")
+          .classList.remove("show");
         updateTrashToggle();
         renderInventory();
-        showToast(trashMode ? "Drop mode enabled" : "Drop mode disabled");
+        showToast(
+          trashMode
+            ? "Trash Mode enabled — tap items to delete"
+            : "Trash Mode disabled — tap items for stats"
+        );
       });
 
       const NON_ORE_INVENTORY_STYLES = new Set([
@@ -12247,158 +12959,215 @@
         renderInventory();
       });
 
-      let inventoryLongPressTimer = null;
-      let inventoryLongPressRow = null;
-
       function showFocusModal(entry) {
         const block = BLOCKS[entry.type];
-        const focusModal = document.getElementById("inventoryFocusModal");
-        document.getElementById("focusSwatch").style.background = block.color;
-        document.getElementById("focusBlockName").textContent = block.name;
-        document.getElementById("focusBlockGrade").textContent = entry.grade + " • " +
-          (entry.units === 1 ? "1 block" : formatCompact(entry.units) + " blocks");
+        const modifier = oreModifierById(entry.modifierId);
+        const modifierMultiplier =
+          oreModifierMultiplier(entry);
+        const unmodifiedValue = Math.round(
+          entry.value / modifierMultiplier
+        );
+        const modifierBonus =
+          Math.max(0, entry.value - unmodifiedValue);
+        const focusModal =
+          document.getElementById("inventoryFocusModal");
+        const focusSwatch =
+          document.getElementById("focusSwatch");
+
+        focusSwatch.className =
+          "inventory-focus-swatch" +
+          oreModifierClass(entry);
+        focusSwatch.style.background = block.color;
+
+        document.getElementById(
+          "focusBlockName"
+        ).textContent = oreDisplayName(entry, block);
+
+        document.getElementById(
+          "focusBlockGrade"
+        ).textContent =
+          entry.grade +
+          " • " +
+          (
+            entry.units === 1
+              ? "1 block"
+              : formatCompact(entry.units) + " blocks"
+          ) +
+          (
+            modifier
+              ? " • " +
+                modifier.name +
+                " " +
+                modifier.multiplier +
+                "×"
+              : ""
+          );
 
         const statsHtml = `
           <div class="inventory-focus-stat">
             <strong>${formatMoney(entry.value)}</strong>
-            Worth
+            Final worth
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${formatMoney(unmodifiedValue)}</strong>
+            Base worth
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${
+              modifier
+                ? "+" + formatMoney(modifierBonus)
+                : "None"
+            }</strong>
+            Modifier bonus
+          </div>
+          <div class="inventory-focus-stat">
+            <strong>${
+              modifier
+                ? modifier.multiplier + "×"
+                : "1×"
+            }</strong>
+            Value modifier
           </div>
           <div class="inventory-focus-stat">
             <strong>${formatCompact(entry.weight)}</strong>
             Weight
           </div>
           <div class="inventory-focus-stat">
-            <strong>${block.hardness === Infinity ? "∞" : block.hardness}</strong>
+            <strong>${
+              block.hardness === Infinity
+                ? "∞"
+                : block.hardness
+            }</strong>
             Power
           </div>
           <div class="inventory-focus-stat">
             <strong>${block.tier ?? "—"}</strong>
             Tier
           </div>
+          <div class="inventory-focus-stat">
+            <strong>${entry.favorite ? "Yes" : "No"}</strong>
+            Favorited
+          </div>
         `;
-        document.getElementById("focusStats").innerHTML = statsHtml;
+        document.getElementById(
+          "focusStats"
+        ).innerHTML = statsHtml;
 
-        document.getElementById("focusFilterButton").dataset.entryType = String(entry.type);
+        document.getElementById(
+          "focusFilterButton"
+        ).dataset.entryType = String(entry.type);
+
         focusModal.classList.add("show");
       }
 
-      document.getElementById("focusCloseButton").addEventListener("click", () => {
-        document.getElementById("inventoryFocusModal").classList.remove("show");
+      document.getElementById(
+        "focusCloseButton"
+      ).addEventListener("click", () => {
+        document
+          .getElementById("inventoryFocusModal")
+          .classList.remove("show");
       });
 
-      document.getElementById("focusFilterButton").addEventListener("click", () => {
-        const entryType = Number(document.getElementById("focusFilterButton").dataset.entryType);
+      document.getElementById(
+        "focusFilterButton"
+      ).addEventListener("click", () => {
+        const entryType = Number(
+          document.getElementById(
+            "focusFilterButton"
+          ).dataset.entryType
+        );
         inventoryFilterType = entryType;
-        document.getElementById("inventoryFocusModal").classList.remove("show");
+        document
+          .getElementById("inventoryFocusModal")
+          .classList.remove("show");
         selectedInventoryItemId = null;
         renderInventory();
-        showToast("Filtered to " + BLOCKS[entryType].name);
+        showToast(
+          "Filtered to " + BLOCKS[entryType].name
+        );
       });
 
-      document.getElementById("inventoryFocusModal").addEventListener("click", event => {
+      document.getElementById(
+        "inventoryFocusModal"
+      ).addEventListener("click", event => {
         if (event.target === event.currentTarget) {
-          document.getElementById("inventoryFocusModal").classList.remove("show");
+          event.currentTarget.classList.remove("show");
         }
       });
-
-      function inventoryRowFromPoint(clientX, clientY) {
-        const element = document.elementFromPoint(clientX, clientY);
-        return element ? element.closest(".inventory-row[data-item-id]") : null;
-      }
 
       function processInventoryRow(row) {
         if (!row) return;
+
         const itemId = Number(row.dataset.itemId);
-        if (!itemId) return;
+        const item = inventoryEntryById(itemId);
+        if (!item) return;
+
         if (trashMode) {
-          const item = inventoryEntryById(itemId);
-          if (item && item.favorite) {
+          if (item.favorite) {
             showToast("Favorited items are protected");
+            playErrorSound();
             return;
           }
-          if (trashedDuringDrag.has(itemId)) return;
-          trashedDuringDrag.add(itemId);
-          dropInventoryItem(itemId);
-        } else {
-          selectedInventoryItemId = itemId;
+
+          const itemName = oreDisplayName(item);
+          if (!removeInventoryItemObject(item)) return;
+
           renderInventory();
-        }
-      }
-
-      inventoryItems.addEventListener("pointermove", event => {
-        const row = event.target.closest(".inventory-row[data-item-id]");
-        hoveredInventoryItemId = row ? Number(row.dataset.itemId) : null;
-      });
-
-      inventoryItems.addEventListener("pointerleave", () => {
-        hoveredInventoryItemId = null;
-      });
-
-      inventoryItems.addEventListener("pointerdown", event => {
-        const row = event.target.closest(".inventory-row[data-item-id]");
-        if (!row) return;
-
-        if (event.button === 2) {
-          // Right-click (desktop)
-          event.preventDefault();
-          const itemId = Number(row.dataset.itemId);
-          const entry = inventoryEntryById(itemId);
-          if (entry) showFocusModal(entry);
+          playNoise(0.05, 0.025, 1250, 0);
+          showToast("Deleted " + itemName);
           return;
         }
 
-        // Long-press detection (mobile)
-        inventoryLongPressRow = row;
-        inventoryLongPressTimer = setTimeout(() => {
-          const itemId = Number(row.dataset.itemId);
-          const entry = inventoryEntryById(itemId);
-          if (entry) showFocusModal(entry);
-          inventoryLongPressTimer = null;
-        }, 500);
-
-        if (trashMode) {
-          inventoryTrashPointerId = event.pointerId;
-          trashedDuringDrag.clear();
-          processInventoryRow(row);
-          event.preventDefault();
-        } else {
-          processInventoryRow(row);
-        }
-      });
-
-      inventoryItems.addEventListener("pointerup", event => {
-        if (inventoryLongPressTimer) {
-          clearTimeout(inventoryLongPressTimer);
-          inventoryLongPressTimer = null;
-          inventoryLongPressRow = null;
-        }
-      });
-
-      inventoryItems.addEventListener("pointercancel", event => {
-        if (inventoryLongPressTimer) {
-          clearTimeout(inventoryLongPressTimer);
-          inventoryLongPressTimer = null;
-          inventoryLongPressRow = null;
-        }
-      });
-
-      inventoryItems.addEventListener("contextmenu", event => {
-        event.preventDefault();
-      });
-
-      window.addEventListener("pointermove", event => {
-        if (!trashMode || event.pointerId !== inventoryTrashPointerId) return;
-        processInventoryRow(inventoryRowFromPoint(event.clientX, event.clientY));
-      });
-
-      function endInventoryTrashDrag(event) {
-        if (event.pointerId === inventoryTrashPointerId) {
-          inventoryTrashPointerId = null;
-          trashedDuringDrag.clear();
-        }
+        selectedInventoryItemId = itemId;
+        renderInventory();
+        showFocusModal(item);
       }
-      window.addEventListener("pointerup", endInventoryTrashDrag);
-      window.addEventListener("pointercancel", endInventoryTrashDrag);
+
+      inventoryItems.addEventListener(
+        "pointermove",
+        event => {
+          const row = event.target.closest(
+            ".inventory-row[data-item-id]"
+          );
+          hoveredInventoryItemId =
+            row ? Number(row.dataset.itemId) : null;
+        }
+      );
+
+      inventoryItems.addEventListener(
+        "pointerleave",
+        () => {
+          hoveredInventoryItemId = null;
+        }
+      );
+
+      inventoryItems.addEventListener("click", event => {
+        const row = event.target.closest(
+          ".inventory-row[data-item-id]"
+        );
+        if (!row) return;
+        processInventoryRow(row);
+      });
+
+      inventoryItems.addEventListener(
+        "contextmenu",
+        event => {
+          const row = event.target.closest(
+            ".inventory-row[data-item-id]"
+          );
+          if (!row) return;
+          event.preventDefault();
+
+          const entry = inventoryEntryById(
+            Number(row.dataset.itemId)
+          );
+          if (!entry || trashMode) return;
+
+          selectedInventoryItemId = entry.id;
+          renderInventory();
+          showFocusModal(entry);
+        }
+      );
 
       // --------------------------------------------------
       // Joystick and action buttons
