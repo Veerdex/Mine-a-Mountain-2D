@@ -31,7 +31,9 @@
   const TILE = 28;
 
   // ---- Block type ids (from index.html) ----
-  const GRASS=1, DIRT=2, STONE=3;
+  const GRASS=1, DIRT=2, STONE=3, GRAVEL=4, CLAY=5, COAL=6, COPPER=7, TIN=8,
+        IRON=10, SULFUR=12, LITHIUM=13, NICKEL=14, COBALT=16, SILVER=17,
+        GOLD=19, TITANIUM=26, PLATINUM=28;
 
   // ---- Block table (copied verbatim from index.html BLOCKS) ----
   const BLOCKS = [
@@ -71,6 +73,63 @@
     { name: "Unstable Crystal", hardness: 30, value: 1000000000000, color: "#e16ff1", style: "unstable", tier: 10, hazard: true }
   ];
 
+  // ---- Per-block detail art (copied from index.html) ----
+  const BLOCK_ART = {
+    [GRAVEL]:   { base: "full",  shape: "circle",  color: "#6b6862", count: 7 },
+    [CLAY]:     { base: "stone", shape: "square",  color: "#b5726a", count: 3 },
+    [COAL]:     { base: "full",  shape: "square",  color: "#575e66", count: 5 },
+    [COPPER]:   { base: "stone", shape: "square",  color: "#c57648", count: 4 },
+    [TIN]:      { base: "stone", shape: "circle",  color: "#dfe6e6", count: 3 },
+    [IRON]:     { base: "full",  shape: "square",  color: "#eef2f3", count: 4 },
+    [SULFUR]:   { base: "full",  shape: "circle",  color: "#b09a26", count: 6 },
+    [LITHIUM]:  { base: "stone", shape: "square",  color: "#eaded5", count: 2 },
+    [NICKEL]:   { base: "full",  shape: "circle",  color: "#6d7871", count: 5 },
+    [COBALT]:   { base: "stone", shape: "square",  color: "#3868bd", count: 5 },
+    [SILVER]:   { base: "full",  shape: "crack",   color: "#ffffff", count: 1 },
+    [GOLD]:     { base: "full",  shape: "square",  color: "#f8dd80", count: 4 },
+    [TITANIUM]: { base: "full",  shape: "vstripe", color: "#6d7c8b", count: 3 },
+    [PLATINUM]: { base: "full",  shape: "hstripe", color: "#b3b8a9", count: 3 }
+  };
+
+  function renderBlockArt(target, block, art, sx, sy, x, y) {
+    target.fillStyle = art.base === "full" ? block.color : "#686f75";
+    target.fillRect(sx, sy, TILE, TILE);
+    target.fillStyle = art.color;
+    if (art.shape === "vstripe" || art.shape === "hstripe") {
+      const gap = TILE / (art.count + 1);
+      const thick = Math.max(2, Math.round(gap * 0.45));
+      for (let i = 1; i <= art.count; i++) {
+        const p = Math.round(i * gap - thick / 2);
+        if (art.shape === "vstripe") target.fillRect(sx + p, sy + 2, thick, TILE - 4);
+        else target.fillRect(sx + 2, sy + p, TILE - 4, thick);
+      }
+    } else if (art.shape === "crack") {
+      target.strokeStyle = art.color;
+      target.lineWidth = 2.5;
+      target.beginPath();
+      target.moveTo(sx + 5, sy + 5); target.lineTo(sx + 12, sy + 12);
+      target.lineTo(sx + 8, sy + 18); target.lineTo(sx + 21, sy + 24);
+      target.stroke();
+      target.beginPath();
+      target.moveTo(sx + 12, sy + 12); target.lineTo(sx + 22, sy + 9);
+      target.stroke();
+    } else {
+      const size = Math.max(3, Math.round(11 - art.count * 0.7));
+      const span = Math.max(1, TILE - size);
+      for (let i = 0; i < art.count; i++) {
+        const px = sx + (x * 13 + y * 7 + i * 29) % span;
+        const py = sy + (x * 5 + y * 11 + i * 17) % span;
+        if (art.shape === "circle") {
+          target.beginPath();
+          target.arc(px + size / 2, py + size / 2, size / 2, 0, Math.PI * 2);
+          target.fill();
+        } else {
+          target.fillRect(px, py, size, size);
+        }
+      }
+    }
+  }
+
   // ---- paintTile: copied verbatim from index.html ----
   function paintTile(target, type, sx, sy, x, y) {
     const block = BLOCKS[type];
@@ -84,12 +143,8 @@
     } else if (type === STONE) {
       target.fillStyle = "#757c83"; target.fillRect(sx, sy, TILE, TILE);
       target.fillStyle = "#596067"; target.fillRect(sx + 4 + ((x * 7 + y * 3) % 17), sy + 7 + ((x * 3 + y * 9) % 15), 6, 3);
-    } else if (block.style === "ore") {
-      target.fillStyle = "#686f75"; target.fillRect(sx, sy, TILE, TILE);
-      target.fillStyle = block.color;
-      target.fillRect(sx + 4 + ((x * 7 + y * 5) % 8), sy + 5, 7, 5);
-      target.fillRect(sx + 16, sy + 13 + ((x + y) % 5), 7, 6);
-      target.fillRect(sx + 7, sy + 21, 5, 4);
+    } else if (BLOCK_ART[type]) {
+      renderBlockArt(target, block, BLOCK_ART[type], sx, sy, x, y);
     } else if (block.style === "gem" || block.style === "prism" || block.style === "unstable") {
       target.fillStyle = block.style === "unstable" ? "#392941" : "#4e535a";
       target.fillRect(sx, sy, TILE, TILE);
