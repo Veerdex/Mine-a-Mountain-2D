@@ -671,6 +671,271 @@
       font-weight: 900;
     }
 
+    .refinery-panel {
+      max-width: 1040px;
+    }
+
+    .refinery-section {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .refinery-active-section {
+      margin-top: 2px;
+      background: rgba(10, 35, 38, 0.32);
+    }
+
+    .refinery-section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .refinery-section-heading h2 {
+      margin: 0 0 2px;
+      font-size: 17px;
+    }
+
+    .refinery-section-heading p {
+      margin: 0;
+      color: #bde6e9;
+      font-size: 10px;
+      font-weight: 750;
+    }
+
+    #refineryQueueCount {
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff0a8;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .refinery-queue {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .refinery-slot {
+      position: relative;
+      min-height: 126px;
+      padding: 9px;
+      overflow: visible;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 13px;
+      background: linear-gradient(145deg, rgba(40, 97, 102, 0.9), rgba(22, 62, 67, 0.94));
+    }
+
+    .refinery-slot.empty {
+      display: grid;
+      place-items: center;
+      border-style: dashed;
+      background: rgba(255, 255, 255, 0.025);
+      color: rgba(207, 238, 241, 0.58);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .refinery-slot.completed {
+      cursor: pointer;
+      border-color: rgba(159, 245, 195, 0.8);
+      box-shadow: 0 0 0 2px rgba(159, 245, 195, 0.12);
+    }
+
+    .refinery-slot-main {
+      display: grid;
+      grid-template-columns: 46px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+
+    .refinery-slot .block-swatch,
+    .refinery-ore-card .block-swatch {
+      width: 42px;
+      height: 42px;
+      margin: 0;
+    }
+
+    .refinery-slot h3,
+    .refinery-ore-card h3 {
+      margin: 0 0 3px;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .refinery-slot-status {
+      color: #bde6e9;
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .refinery-slot.completed .refinery-slot-status {
+      color: #9ff5c3;
+    }
+
+    .refinery-progress {
+      height: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .refinery-progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #8fe3b0, #f3db6a);
+      transition: width 80ms linear;
+    }
+
+    .refinery-time {
+      display: block;
+      margin-top: 5px;
+      color: #fff0a8;
+      font-size: 10px;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .refinery-result-value {
+      display: block;
+      margin-top: 8px;
+      color: #79ee91;
+      font-size: 12px;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .refinery-job-dropdown {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      max-height: 0;
+      margin-top: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: translateY(-4px);
+      transition: max-height 160ms ease, margin-top 160ms ease, opacity 140ms ease, transform 160ms ease;
+    }
+
+    .refinery-slot.dropdown-open .refinery-job-dropdown {
+      max-height: 54px;
+      margin-top: 9px;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .refinery-job-dropdown.single-action {
+      grid-template-columns: 1fr;
+    }
+
+    .refinery-job-dropdown button {
+      min-height: 39px;
+      padding: 5px 7px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 10px;
+      font-weight: 950;
+      line-height: 1.05;
+    }
+
+    .refinery-job-dropdown button small {
+      display: block;
+      margin-top: 2px;
+      color: #fff0a8;
+      font-size: 8px;
+    }
+
+    .refinery-job-dropdown button:disabled {
+      opacity: 0.48;
+    }
+
+    .refinery-ore-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 8px;
+    }
+
+    .refinery-ore-card {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      min-height: 76px;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 13px;
+      background: linear-gradient(145deg, #286166, #163e43);
+      color: white;
+      text-align: left;
+    }
+
+    .refinery-ore-card:active {
+      transform: scale(0.985);
+    }
+
+    .refinery-ore-card.locked {
+      opacity: 0.55;
+    }
+
+    .refinery-ore-values {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2px;
+      color: #c7eaed;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .refinery-ore-values strong {
+      color: #fff0a8;
+      font-size: 11px;
+    }
+
+    .refinery-empty-message {
+      grid-column: 1 / -1;
+      padding: 22px 12px;
+      color: #bde6e9;
+      font-size: 12px;
+      font-weight: 850;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .refinery-queue {
+        grid-template-columns: repeat(5, minmax(100px, 1fr));
+      }
+
+      .refinery-ore-list {
+        grid-template-columns: repeat(3, minmax(145px, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .refinery-queue {
+        grid-template-columns: repeat(2, minmax(130px, 1fr));
+      }
+
+      .refinery-ore-list {
+        grid-template-columns: repeat(2, minmax(135px, 1fr));
+      }
+    }
+
     .tool-preview,
     .pack-preview {
       position: relative;
@@ -1861,15 +2126,35 @@
   </div>
 
   <div id="refineryModal" class="modal" role="dialog" aria-modal="true" aria-label="Ore Refinery">
-    <div class="panel">
+    <div class="panel refinery-panel">
       <div class="panel-header">
         <div>
           <h1>Ore Refinery</h1>
-          <p>Pay to guarantee a higher value multiplier. Cost scales with the ore's current value and rises 35% each time that same item is refined. Luck improves every roll, and the best roll reaches maximum quality.</p>
+          <p>Select an ore to place it into one of five refinery slots. Each refinement takes 10 seconds.</p>
         </div>
         <button class="close-button" aria-label="Close">×</button>
       </div>
-      <div id="refineryList" class="upgrade-grid"></div>
+
+      <section class="refinery-section refinery-active-section">
+        <div class="refinery-section-heading">
+          <div>
+            <h2>Refinery Slots</h2>
+            <p>Completed ores stay here until you take or re-refine them.</p>
+          </div>
+          <strong id="refineryQueueCount">0 / 5</strong>
+        </div>
+        <div id="refineryQueue" class="refinery-queue"></div>
+      </section>
+
+      <section class="refinery-section">
+        <div class="refinery-section-heading">
+          <div>
+            <h2>Backpack Ores</h2>
+            <p>Click an ore to begin refining immediately.</p>
+          </div>
+        </div>
+        <div id="refineryList" class="refinery-ore-list"></div>
+      </section>
     </div>
   </div>
 
@@ -2167,6 +2452,8 @@
       const REFINERY_MAX_EPSILON = 0.0005;
       const REFINERY_VALUE_COST_RATE = 0.18;
       const REFINERY_REPEAT_COST_MULTIPLIER = 1.35;
+      const REFINERY_QUEUE_CAPACITY = 5;
+      const REFINERY_DURATION_MS = 10000;
 
       // Underground mountain resources no longer end at a vertical wall.
       // For every four blocks deeper than the surface, the valid mountain
@@ -2543,6 +2830,9 @@
       const mountainOptions = document.getElementById("mountainOptions");
       const pickaxeOptions = document.getElementById("pickaxeOptions");
       const backpackOptions = document.getElementById("backpackOptions");
+      const refineryQueue = document.getElementById("refineryQueue");
+      const refineryQueueCount = document.getElementById("refineryQueueCount");
+      const refineryList = document.getElementById("refineryList");
       const equipmentPickaxeOptions = document.getElementById("equipmentPickaxeOptions");
       const equipmentBackpackOptions = document.getElementById("equipmentBackpackOptions");
       const inventoryItems = document.getElementById("inventoryItems");
@@ -2591,6 +2881,7 @@
       const inventoryUnits = new Float64Array(BLOCKS.length);
       const inventoryValues = new Float64Array(BLOCKS.length);
       const inventoryEntries = [];
+      const refineryJobs = [];
       const worldDrops = [];
       const pickupParticles = [];
       const sellFlights = [];
@@ -2657,6 +2948,8 @@
       let hazardHudTimer = 0;
       let nextItemId = 1;
       let nextWorldDropId = 1;
+      let nextRefineryJobId = 1;
+      let openRefineryJobId = null;
       let pendingPickupWeight = 0;
       let pendingInventoryOpen = false;
       let trashMode = false;
@@ -2676,7 +2969,7 @@
       let playerLightCacheRadius = -1;
       let terrainLightRevision = 1;
 
-      const SAVE_FORMAT_VERSION = 1;
+      const SAVE_FORMAT_VERSION = 2;
       const LOCAL_SAVE_KEY = "mountain-tycoon-save-v1";
       let supabaseClient = null;
       let cloudUser = null;
@@ -3459,6 +3752,13 @@
         playNoise(0.022, 0.012, 1900, 0);
       }
 
+      function playRefineryCompleteSound() {
+        playTone(520, 780, 0.1, "triangle", 0.065, 0);
+        playTone(780, 1120, 0.13, "sine", 0.055, 0.07);
+        playTone(1120, 1480, 0.15, "sine", 0.04, 0.15);
+        playNoise(0.04, 0.018, 3600, 0.04);
+      }
+
       function playTNTExplosionSound(x, y) {
         const playerTileX = (player.x + player.w * 0.5) / TILE;
         const playerTileY = (player.y + player.h * 0.5) / TILE;
@@ -3590,6 +3890,17 @@
             cells: deposit.cells.map(cell => [cell.x, cell.y])
           })),
           inventoryEntries: inventoryEntries.map(cloneSaveItem),
+          refineryJobs: refineryJobs.map(job => ({
+            id: job.id,
+            item: cloneSaveItem(job.item),
+            state: job.state,
+            startedAt: job.startedAt,
+            endsAt: job.endsAt,
+            pendingMultiplier: job.pendingMultiplier,
+            pendingValue: job.pendingValue,
+            pendingGrade: job.pendingGrade,
+            completionSoundPlayed: !!job.completionSoundPlayed
+          })),
           plotSlots: plotSlots.map(cloneSaveItem),
           worldDrops: worldDrops
             .filter(drop => drop && drop.item)
@@ -3611,7 +3922,12 @@
           fallingBlocks: Array.from(fallingBlocks),
           tntFuses: tntFuses.map(fuse => ({ ...fuse })),
           hazards: { radiation, gasExposure },
-          counters: { nextDepositId, nextItemId, nextWorldDropId },
+          counters: {
+            nextDepositId,
+            nextItemId,
+            nextWorldDropId,
+            nextRefineryJobId
+          },
           preferences: {
             desktopPlacementMode,
             mobileControlsVisible,
@@ -3689,6 +4005,24 @@
             inventoryUnits[item.type] += Number(item.units) || 1;
             inventoryValues[item.type] += Number(item.value) || 0;
             inventoryWeight += Number(item.weight) || 0;
+          }
+        }
+
+        refineryJobs.length = 0;
+        if (Array.isArray(save.refineryJobs)) {
+          for (const raw of save.refineryJobs.slice(0, REFINERY_QUEUE_CAPACITY)) {
+            if (!raw || !raw.item || !Number.isFinite(Number(raw.item.type))) continue;
+            refineryJobs.push({
+              id: Number(raw.id) || nextRefineryJobId++,
+              item: cloneSaveItem(raw.item),
+              state: raw.state === "completed" ? "completed" : "refining",
+              startedAt: Number(raw.startedAt) || Date.now(),
+              endsAt: Number(raw.endsAt) || Date.now() + REFINERY_DURATION_MS,
+              pendingMultiplier: Number(raw.pendingMultiplier) || null,
+              pendingValue: Number(raw.pendingValue) || null,
+              pendingGrade: typeof raw.pendingGrade === "string" ? raw.pendingGrade : null,
+              completionSoundPlayed: !!raw.completionSoundPlayed
+            });
           }
         }
 
@@ -3791,9 +4125,12 @@
         const counters = save.counters || {};
         const maxInventoryId = inventoryEntries.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
         const maxPlotId = plotSlots.reduce((max, item) => Math.max(max, item ? Number(item.id) || 0 : 0), 0);
+        const maxRefineryItemId = refineryJobs.reduce((max, job) => Math.max(max, Number(job.item && job.item.id) || 0), 0);
+        const maxRefineryJobId = refineryJobs.reduce((max, job) => Math.max(max, Number(job.id) || 0), 0);
         nextDepositId = Math.max(Number(counters.nextDepositId) || 1, ...Array.from(depositData.keys(), Number).map(id => id + 1), 1);
-        nextItemId = Math.max(Number(counters.nextItemId) || 1, maxInventoryId + 1, maxPlotId + 1);
+        nextItemId = Math.max(Number(counters.nextItemId) || 1, maxInventoryId + 1, maxPlotId + 1, maxRefineryItemId + 1);
         nextWorldDropId = Math.max(Number(counters.nextWorldDropId) || 1, ...worldDrops.map(drop => drop.id + 1), 1);
+        nextRefineryJobId = Math.max(Number(counters.nextRefineryJobId) || 1, maxRefineryJobId + 1);
 
         const preferences = save.preferences || {};
         if (preferences.desktopPlacementMode === "torch" || preferences.desktopPlacementMode === "build") {
@@ -3826,6 +4163,7 @@
         updateSoundButton();
         updateDesktopPlacementUI();
         renderLuckPlot();
+        updateRefineryJobs(true);
         draw();
       }
 
@@ -5398,6 +5736,7 @@
         document.getElementById("build").classList.remove("pressed");
         document.getElementById("torch").classList.remove("pressed");
         hoveredInventoryItemId = null;
+        openRefineryJobId = null;
 
         // Hidden username/password fields can otherwise keep receiving WASD
         // after their modal closes, especially inside an embedded preview.
@@ -5482,215 +5821,540 @@
         backpackOptions.appendChild(fragment);
       }
 
-      function refineOreItem(item) {
+      function isRefinableItem(item) {
+        if (!item) return false;
         const block = BLOCKS[item.type];
 
-        if (!block || block.value <= 0) {
+        return !!(
+          block &&
+          block.value > 0 &&
+          block.collectible !== false &&
+          [
+            "ore",
+            "gem",
+            "glow",
+            "geode",
+            "prism",
+            "obsidian",
+            "radium",
+            "unstable"
+          ].includes(block.style)
+        );
+      }
+
+      function refineryJobById(jobId) {
+        return refineryJobs.find(
+          job => job.id === Number(jobId)
+        ) || null;
+      }
+
+      function refineryJobIsMaxed(job) {
+        if (!job || !job.item) return true;
+        const block = BLOCKS[job.item.type];
+        if (!block) return true;
+
+        return (
+          refineryItemMultiplier(job.item, block) >=
+          refineryMaximumMultiplier() - REFINERY_MAX_EPSILON
+        );
+      }
+
+      function prepareRefineryResult(item, block) {
+        const currentMultiplier =
+          refineryItemMultiplier(item, block);
+        const maximum = refineryMaximumMultiplier();
+        const pendingMultiplier = rollRefineryImprovement(
+          currentMultiplier,
+          maximum
+        );
+        const bonusMultiplier =
+          refineryItemBonusMultiplier(item);
+        const baseValue = refineryItemBaseValue(item, block);
+        const pendingValue = Math.round(
+          baseValue * pendingMultiplier * bonusMultiplier
+        );
+
+        return {
+          pendingMultiplier,
+          pendingValue,
+          pendingGrade: valueGrade(pendingMultiplier)
+        };
+      }
+
+      function beginRefineryCycle(job, item) {
+        const block = BLOCKS[item.type];
+
+        if (!isRefinableItem(item) || !block) {
           showToast("That item cannot be refined");
           playErrorSound();
-          return;
+          return false;
         }
 
-        const currentMult = refineryItemMultiplier(item, block);
-        const boostedMax = refineryMaximumMultiplier();
-        const maxed =
-          currentMult >= boostedMax - REFINERY_MAX_EPSILON;
-        const refinementCount =
-          refineryItemRefinementCount(item);
-        const cost = refineryCost(item, block);
-
-        if (maxed) {
-          item.valueMultiplier = boostedMax;
+        if (
+          refineryItemMultiplier(item, block) >=
+          refineryMaximumMultiplier() - REFINERY_MAX_EPSILON
+        ) {
           showToast(block.name + " is already at maximum quality");
           playErrorSound();
-          renderRefineryModal();
-          return;
+          return false;
         }
 
+        const cost = refineryCost(item, block);
         if (cash < cost) {
           showToast(
             "Need " + formatMoney(cost - cash) + " more to refine"
           );
           playErrorSound();
-          return;
+          return false;
         }
 
-        const confirmed = window.confirm(
-          "Refine " +
-            block.name +
-            " for " +
-            formatMoney(cost) +
-            "?\n\nCurrent: " +
-            currentMult.toFixed(2) +
-            "x\nMaximum: " +
-            boostedMax.toFixed(2) +
-            "x\nRefined before: " +
-            refinementCount +
-            " time" +
-            (refinementCount === 1 ? "" : "s") +
-            "\n\nRefining is guaranteed to improve this item. " +
-            "Its next refinement will cost more."
-        );
-        if (!confirmed) return;
-
-        const oldValue = Number(item.value) || 0;
-        const newMult = rollRefineryImprovement(
-          currentMult,
-          boostedMax
-        );
-        const bonusMultiplier =
-          refineryItemBonusMultiplier(item);
-        const baseValue = refineryItemBaseValue(item, block);
-        const newValue = Math.round(
-          baseValue * newMult * bonusMultiplier
-        );
+        const result = prepareRefineryResult(item, block);
+        const now = Date.now();
 
         cash -= cost;
         displayCash = cash;
 
-        item.valueMultiplier = newMult;
-        item.bonusMultiplier = bonusMultiplier;
-        item.refinementCount = refinementCount + 1;
-        item.value = newValue;
-        item.grade = valueGrade(newMult);
+        job.state = "refining";
+        job.startedAt = now;
+        job.endsAt = now + REFINERY_DURATION_MS;
+        job.pendingMultiplier = result.pendingMultiplier;
+        job.pendingValue = result.pendingValue;
+        job.pendingGrade = result.pendingGrade;
+        job.completionSoundPlayed = false;
 
-        inventoryValues[item.type] = Math.max(
-          0,
-          inventoryValues[item.type] + newValue - oldValue
-        );
-
+        openRefineryJobId = null;
         updateHUD();
         playPurchaseSound();
-        showToast(
-          block.name +
-            " improved: " +
-            currentMult.toFixed(2) +
-            "x → " +
-            newMult.toFixed(2) +
-            "x • next cost " +
-            formatMoney(refineryCost(item, block))
+        saveLocalProgress(false);
+        renderRefineryModal();
+        return true;
+      }
+
+      function queueOreForRefining(item) {
+        if (refineryJobs.length >= REFINERY_QUEUE_CAPACITY) {
+          showToast("All five refinery slots are occupied");
+          playErrorSound();
+          return false;
+        }
+
+        if (!inventoryEntryById(item && item.id)) return false;
+
+        const block = BLOCKS[item.type];
+        if (!isRefinableItem(item) || !block) {
+          showToast("That item cannot be refined");
+          playErrorSound();
+          return false;
+        }
+
+        if (
+          refineryItemMultiplier(item, block) >=
+          refineryMaximumMultiplier() - REFINERY_MAX_EPSILON
+        ) {
+          showToast(block.name + " is already at maximum quality");
+          playErrorSound();
+          return false;
+        }
+
+        const cost = refineryCost(item, block);
+        if (cash < cost) {
+          showToast(
+            "Need " + formatMoney(cost - cash) + " more to refine"
+          );
+          playErrorSound();
+          return false;
+        }
+
+        const job = {
+          id: nextRefineryJobId++,
+          item,
+          state: "refining",
+          startedAt: 0,
+          endsAt: 0,
+          pendingMultiplier: null,
+          pendingValue: null,
+          pendingGrade: null,
+          completionSoundPlayed: false
+        };
+
+        if (!removeInventoryItemObject(item)) return false;
+        refineryJobs.push(job);
+
+        // Payment was already validated, so this can only fail if state was
+        // corrupted between the validation and queue insertion.
+        if (!beginRefineryCycle(job, item)) {
+          refineryJobs.pop();
+          addInventoryItemObject(item);
+          return false;
+        }
+
+        return true;
+      }
+
+      function completeRefineryJob(job, suppressSound = false) {
+        if (!job || job.state !== "refining") return false;
+
+        const item = job.item;
+        const block = BLOCKS[item.type];
+        if (!block) return false;
+
+        const currentMultiplier =
+          refineryItemMultiplier(item, block);
+        const nextMultiplier = Math.max(
+          currentMultiplier,
+          Number(job.pendingMultiplier) || currentMultiplier
         );
+        const nextValue = Math.max(
+          Number(item.value) || 0,
+          Number(job.pendingValue) || Number(item.value) || 0
+        );
+
+        item.valueMultiplier = nextMultiplier;
+        item.bonusMultiplier =
+          refineryItemBonusMultiplier(item);
+        item.refinementCount =
+          refineryItemRefinementCount(item) + 1;
+        item.value = nextValue;
+        item.grade =
+          job.pendingGrade || valueGrade(nextMultiplier);
+
+        job.state = "completed";
+        job.endsAt = Date.now();
+        job.pendingMultiplier = null;
+        job.pendingValue = null;
+        job.pendingGrade = null;
+
+        // Completion audio acts as a notification while the refinery menu is
+        // not currently visible. Looking directly at the queue is silent.
+        if (
+          !suppressSound &&
+          activeModal !== "refinery" &&
+          !job.completionSoundPlayed
+        ) {
+          playRefineryCompleteSound();
+          job.completionSoundPlayed = true;
+        }
+
+        saveLocalProgress(false);
+        return true;
+      }
+
+      function updateRefineryJobs(suppressSound = false) {
+        const now = Date.now();
+        let completedAny = false;
+
+        for (const job of refineryJobs) {
+          if (
+            job.state === "refining" &&
+            now >= Number(job.endsAt)
+          ) {
+            completedAny =
+              completeRefineryJob(job, suppressSound) ||
+              completedAny;
+          }
+        }
+
+        if (activeModal !== "refinery") return;
+
+        for (const job of refineryJobs) {
+          if (job.state !== "refining") continue;
+
+          const duration = Math.max(
+            1,
+            Number(job.endsAt) - Number(job.startedAt)
+          );
+          const remaining = Math.max(
+            0,
+            Number(job.endsAt) - now
+          );
+          const progress = clamp(
+            1 - remaining / duration,
+            0,
+            1
+          );
+
+          const fill = refineryQueue.querySelector(
+            '[data-refinery-progress="' + job.id + '"]'
+          );
+          const time = refineryQueue.querySelector(
+            '[data-refinery-time="' + job.id + '"]'
+          );
+
+          if (fill) fill.style.width = progress * 100 + "%";
+          if (time) {
+            time.textContent =
+              (remaining / 1000).toFixed(1) + "s";
+          }
+        }
+
+        if (completedAny) renderRefineryModal();
+      }
+
+      function takeRefinedOre(jobId) {
+        const job = refineryJobById(jobId);
+        if (!job || job.state !== "completed") return;
+
+        const item = job.item;
+        const backpack = currentBackpack();
+
+        if (
+          inventoryWeight + item.weight >
+          backpack.capacity + 1e-9
+        ) {
+          showToast("Not enough backpack capacity to take this ore");
+          playErrorSound();
+          return;
+        }
+
+        addInventoryItemObject(item);
+        const jobIndex = refineryJobs.findIndex(
+          entry => entry.id === job.id
+        );
+        if (jobIndex >= 0) refineryJobs.splice(jobIndex, 1);
+
+        if (openRefineryJobId === job.id) {
+          openRefineryJobId = null;
+        }
+
+        playCollectSound(item);
+        saveLocalProgress(false);
         renderRefineryModal();
       }
 
-      function renderRefineryModal() {
-        const container = document.getElementById("refineryList");
-        if (!container) return;
+      function reRefineOre(jobId) {
+        const job = refineryJobById(jobId);
+        if (!job || job.state !== "completed") return;
 
-        container.textContent = "";
+        if (refineryJobIsMaxed(job)) {
+          showToast("This ore is already at maximum quality");
+          playErrorSound();
+          return;
+        }
+
+        beginRefineryCycle(job, job.item);
+      }
+
+      function createRefineryOreVisual(block) {
+        const visual = document.createElement("div");
+        visual.className = "block-swatch";
+        visual.style.background = block.color || "#888";
+        visual.setAttribute("aria-hidden", "true");
+        return visual;
+      }
+
+      function renderRefineryQueue() {
+        refineryQueue.textContent = "";
+        refineryQueueCount.textContent =
+          refineryJobs.length +
+          " / " +
+          REFINERY_QUEUE_CAPACITY;
+
         const fragment = document.createDocumentFragment();
-        const boostedMax = refineryMaximumMultiplier();
-        const luckBoostPercent = Math.round(
-          refineryLuckRollBoost() * 100
-        );
+        const now = Date.now();
+
+        for (
+          let slotIndex = 0;
+          slotIndex < REFINERY_QUEUE_CAPACITY;
+          slotIndex++
+        ) {
+          const job = refineryJobs[slotIndex];
+
+          if (!job) {
+            const empty = document.createElement("div");
+            empty.className = "refinery-slot empty";
+            empty.textContent = "EMPTY SLOT";
+            fragment.appendChild(empty);
+            continue;
+          }
+
+          const item = job.item;
+          const block = BLOCKS[item.type];
+          const slot = document.createElement("div");
+          const completed = job.state === "completed";
+          const dropdownOpen =
+            completed && openRefineryJobId === job.id;
+
+          slot.className =
+            "refinery-slot" +
+            (completed ? " completed" : "") +
+            (dropdownOpen ? " dropdown-open" : "");
+          slot.dataset.refineryJobId = String(job.id);
+
+          const main = document.createElement("div");
+          main.className = "refinery-slot-main";
+          main.appendChild(createRefineryOreVisual(block));
+
+          const copy = document.createElement("div");
+          const name = document.createElement("h3");
+          name.textContent = block.name;
+
+          const status = document.createElement("div");
+          status.className = "refinery-slot-status";
+          status.textContent = completed
+            ? "COMPLETE • CLICK"
+            : "REFINING";
+
+          copy.append(name, status);
+          main.appendChild(copy);
+          slot.appendChild(main);
+
+          if (completed) {
+            const value = document.createElement("span");
+            value.className = "refinery-result-value";
+            value.textContent = "Worth " + formatMoney(item.value);
+            slot.appendChild(value);
+
+            const maxed = refineryJobIsMaxed(job);
+            const dropdown = document.createElement("div");
+            dropdown.className =
+              "refinery-job-dropdown" +
+              (maxed ? " single-action" : "");
+
+            const takeButton = document.createElement("button");
+            takeButton.type = "button";
+            takeButton.textContent = "TAKE";
+            takeButton.addEventListener("click", event => {
+              event.stopPropagation();
+              takeRefinedOre(job.id);
+            });
+            dropdown.appendChild(takeButton);
+
+            if (!maxed) {
+              const cost = refineryCost(item, block);
+              const reRefineButton = document.createElement("button");
+              reRefineButton.type = "button";
+              reRefineButton.innerHTML =
+                "RE-REFINE<small>" +
+                formatMoney(cost) +
+                "</small>";
+              reRefineButton.disabled = cash < cost;
+              reRefineButton.addEventListener("click", event => {
+                event.stopPropagation();
+                reRefineOre(job.id);
+              });
+              dropdown.appendChild(reRefineButton);
+            }
+
+            slot.appendChild(dropdown);
+            slot.addEventListener("click", () => {
+              openRefineryJobId =
+                openRefineryJobId === job.id ? null : job.id;
+              renderRefineryModal();
+            });
+          } else {
+            const duration = Math.max(
+              1,
+              Number(job.endsAt) - Number(job.startedAt)
+            );
+            const remaining = Math.max(
+              0,
+              Number(job.endsAt) - now
+            );
+            const progress = clamp(
+              1 - remaining / duration,
+              0,
+              1
+            );
+
+            const progressTrack = document.createElement("div");
+            progressTrack.className = "refinery-progress";
+
+            const progressFill = document.createElement("div");
+            progressFill.className = "refinery-progress-fill";
+            progressFill.dataset.refineryProgress = String(job.id);
+            progressFill.style.width = progress * 100 + "%";
+
+            progressTrack.appendChild(progressFill);
+            slot.appendChild(progressTrack);
+
+            const time = document.createElement("span");
+            time.className = "refinery-time";
+            time.dataset.refineryTime = String(job.id);
+            time.textContent = (remaining / 1000).toFixed(1) + "s";
+            slot.appendChild(time);
+          }
+
+          fragment.appendChild(slot);
+        }
+
+        refineryQueue.appendChild(fragment);
+      }
+
+      function renderRefineryAvailableOres() {
+        refineryList.textContent = "";
+        const fragment = document.createDocumentFragment();
 
         const refineItems = inventoryEntries
-          .filter(item => {
-            const block = BLOCKS[item.type];
-            return (
-              block &&
-              block.value > 0 &&
-              block.collectible !== false &&
-              [
-                "ore",
-                "gem",
-                "glow",
-                "geode",
-                "prism",
-                "obsidian",
-                "radium",
-                "unstable"
-              ].includes(block.style)
-            );
-          })
+          .filter(isRefinableItem)
           .slice()
-          .sort((a, b) => {
-            const blockA = BLOCKS[a.type];
-            const blockB = BLOCKS[b.type];
-            return (
-              refineryItemMultiplier(b, blockB) -
-              refineryItemMultiplier(a, blockA)
-            );
-          });
+          .sort((a, b) => b.value - a.value);
 
-        if (refineItems.length === 0) {
+        if (!refineItems.length) {
           const empty = document.createElement("div");
-          empty.style.cssText =
-            "padding:1em;color:#aaa;text-align:center;";
-          empty.textContent = "No refinable ore in your backpack.";
+          empty.className = "refinery-empty-message";
+          empty.textContent = refineryJobs.length
+            ? "No other refinable ore is in your backpack."
+            : "No refinable ore is in your backpack.";
           fragment.appendChild(empty);
         }
 
         for (const item of refineItems) {
           const block = BLOCKS[item.type];
-          const currentMult = refineryItemMultiplier(item, block);
-          const refinementCount =
-            refineryItemRefinementCount(item);
           const cost = refineryCost(item, block);
-          const canAfford = cash >= cost;
           const maxed =
-            currentMult >= boostedMax - REFINERY_MAX_EPSILON;
+            refineryItemMultiplier(item, block) >=
+            refineryMaximumMultiplier() - REFINERY_MAX_EPSILON;
+          const queueFull =
+            refineryJobs.length >= REFINERY_QUEUE_CAPACITY;
+
           const card = document.createElement("button");
+          card.type = "button";
+          card.className =
+            "refinery-ore-card" +
+            (maxed || cash < cost || queueFull ? " locked" : "");
+          card.appendChild(createRefineryOreVisual(block));
 
-          card.className = "upgrade-card";
-          if (maxed) card.classList.add("equipped");
-          if (!canAfford && !maxed) card.classList.add("locked");
-          card.style.setProperty(
-            "--item-color",
-            block.color || "#888"
-          );
+          const copy = document.createElement("div");
+          const name = document.createElement("h3");
+          name.textContent = block.name;
 
-          card.innerHTML =
-            '<div><span class="tier-label">' +
-            block.style +
-            " • " +
-            valueGrade(currentMult) +
-            "</span>" +
-            "<h2>" +
-            block.name +
-            "</h2>" +
-            '<span class="detail-label">Current value: $' +
-            formatCompact(item.value) +
-            "</span>" +
-            '<div class="upgrade-stats">' +
-            "<span>Multiplier " +
-            currentMult.toFixed(2) +
-            "x</span>" +
-            "<span>Max " +
-            boostedMax.toFixed(2) +
-            "x</span>" +
-            "<span>Guaranteed improvement</span>" +
-            "<span>Refined " +
-            refinementCount +
-            " time" +
-            (refinementCount === 1 ? "" : "s") +
-            "</span>" +
-            "<span>Luck roll boost " +
-            luckBoostPercent +
-            "%</span>" +
-            "</div>" +
-            '<span class="upgrade-action">' +
-            (maxed
-              ? "MAX QUALITY"
-              : canAfford
-                ? "REFINE • $" + formatCompact(cost)
-                : "NEED $" +
-                  formatCompact(cost - cash) +
-                  " MORE") +
-            "</span>" +
-            "</div>";
+          const values = document.createElement("div");
+          values.className = "refinery-ore-values";
 
-          if (!maxed) {
-            card.addEventListener(
-              "click",
-              () => refineOreItem(item)
-            );
-          }
+          const worth = document.createElement("span");
+          worth.textContent = "Worth " + formatMoney(item.value);
+
+          const price = document.createElement("strong");
+          price.textContent = maxed
+            ? "MAX QUALITY"
+            : queueFull
+              ? "REFINERY FULL"
+              : cash < cost
+                ? "Need " + formatMoney(cost - cash) + " more"
+                : "Refine " + formatMoney(cost);
+
+          values.append(worth, price);
+          copy.append(name, values);
+          card.appendChild(copy);
+
+          card.addEventListener("click", () => {
+            if (maxed) {
+              showToast(block.name + " is already at maximum quality");
+              playErrorSound();
+              return;
+            }
+            queueOreForRefining(item);
+          });
 
           fragment.appendChild(card);
         }
 
-        container.appendChild(fragment);
+        refineryList.appendChild(fragment);
+      }
+
+      function renderRefineryModal() {
+        if (!refineryQueue || !refineryList) return;
+        renderRefineryQueue();
+        renderRefineryAvailableOres();
       }
 
       function exitEquipmentShop() {
@@ -8576,6 +9240,8 @@
       }
 
       function update(dt) {
+        updateRefineryJobs();
+
         if (playerInShop) {
           if (!activeModal) {
             const horizontal = Math.abs(input.stickX) > 0.12 ? input.stickX : 0;
