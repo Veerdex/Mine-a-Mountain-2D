@@ -2245,7 +2245,7 @@
           <p id="inventoryPackName">Basic Backpack</p>
         </div>
         <div class="inventory-header-actions">
-          <button id="trashStone" aria-label="Delete all grass, dirt, and stone" title="Delete all unfavorited grass, dirt, and stone in your backpack">🪨</button>
+          <button id="trashStone" aria-label="Delete all non-ore blocks" title="Delete every unfavorited filler block in your backpack">🧹</button>
           <button id="inventoryCancelFilter" aria-label="Cancel filters" title="Cancel block filter" style="display:none">✖ Filter</button>
           <button id="inventorySortButton" aria-label="Change sort order" title="Sort: Asc by Worth">⬆ Worth</button>
           <button id="trashToggle" aria-label="Toggle drop item mode" title="Drop items">🗑︎</button>
@@ -2502,7 +2502,6 @@
       const FOREST_AMBIENCE_MAX_VOLUME = 0.62;
       const FOREST_AMBIENCE_SILENT_DEPTH = 20;
       const FOREST_AMBIENCE_FADE_CURVE = 9;
-      const WORLD_DROP_MIN_VEIN_SCALE = 0.35;
       const PLACED_OBJECT_BREAK_TIME = 0.2;
 
       const GRAVEL_STUN_DURATION = 0.35;
@@ -7922,10 +7921,9 @@
           Number(item && item.units) || 1
         );
 
-        return Math.max(
-          WORLD_DROP_MIN_VEIN_SCALE,
-          1 + Math.log2(veinSize / 20)
-        );
+        // 1-block vein = 1x size, 20-block vein = 2x size, and each
+        // multiplication by 20 adds another 1x of scale.
+        return 1 + Math.log2(veinSize) / Math.log2(20);
       }
 
       function worldDropRadiusForItem(item) {
@@ -12163,37 +12161,58 @@
         showToast(trashMode ? "Drop mode enabled" : "Drop mode disabled");
       });
 
+      const NON_ORE_INVENTORY_STYLES = new Set([
+        "grass",
+        "dirt",
+        "stone",
+        "material"
+      ]);
+
+      function isDisposableNonOreBlock(item) {
+        const block = item ? BLOCKS[item.type] : null;
+
+        return !!(
+          block &&
+          NON_ORE_INVENTORY_STYLES.has(block.style)
+        );
+      }
+
       function deleteAllBasicBlocks() {
-        // Grass, dirt, and stone are low-value filler materials. Clear all
-        // unfavorited copies in one tap while continuing to protect favorites.
-        const removableTypes = new Set([GRASS, DIRT, STONE]);
-        const basicItems = inventoryEntries.filter(
-          item => removableTypes.has(item.type) && !item.favorite
+        // Remove every unfavorited filler block while preserving ores, gems,
+        // fossils, specialty resources, and all favorited inventory entries.
+        const disposableItems = inventoryEntries.filter(
+          item =>
+            isDisposableNonOreBlock(item) &&
+            !item.favorite
         );
 
-        if (!basicItems.length) {
-          showToast("No grass, dirt, or stone to delete");
+        if (!disposableItems.length) {
+          showToast("No unfavorited non-ore blocks to delete");
           return;
         }
 
-        let grassCount = 0;
-        let dirtCount = 0;
-        let stoneCount = 0;
+        const removedCounts = new Map();
 
-        for (const item of basicItems) {
-          if (item.type === GRASS) grassCount++;
-          else if (item.type === DIRT) dirtCount++;
-          else if (item.type === STONE) stoneCount++;
+        for (const item of disposableItems) {
+          const blockName =
+            BLOCKS[item.type]?.name || "Block";
+
+          removedCounts.set(
+            blockName,
+            (removedCounts.get(blockName) || 0) + 1
+          );
 
           removeInventoryItemObject(item);
         }
 
         renderInventory();
 
-        const removedParts = [];
-        if (grassCount) removedParts.push(grassCount + " grass");
-        if (dirtCount) removedParts.push(dirtCount + " dirt");
-        if (stoneCount) removedParts.push(stoneCount + " stone");
+        const removedParts = Array.from(
+          removedCounts.entries()
+        ).map(
+          ([name, count]) =>
+            count + " " + name.toLowerCase()
+        );
 
         showToast("Deleted " + removedParts.join(", "));
       }
