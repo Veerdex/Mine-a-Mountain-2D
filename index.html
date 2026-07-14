@@ -4029,7 +4029,7 @@
       const LUCK_PLOT_START_X = 32;
       const LUCK_PLOT_SLOTS = 20;
       const MOUNTAIN_START_X = 55;
-      const FOREST_AMBIENCE_MAX_VOLUME = 0.62;
+      const FOREST_AMBIENCE_MAX_VOLUME = 0.31;
       const FOREST_AMBIENCE_SILENT_DEPTH = 20;
       const FOREST_AMBIENCE_FADE_CURVE = 9;
       const PLACED_OBJECT_BREAK_TIME = 0.2;
@@ -12146,13 +12146,13 @@
       function calculateJazzVolume(playerX, playerY, playerInShopFlag) {
         const shopCenterX = 15 * TILE;
         const shopCenterY = (GROUND_Y - 5 + 2.5) * TILE;
-        if (playerInShopFlag) return 0.25;
+        if (playerInShopFlag) return 0.125;
         const dx = playerX - shopCenterX;
         const dy = playerY - shopCenterY;
         const distanceInBlocks = Math.sqrt(dx * dx + dy * dy) / TILE;
         if (distanceInBlocks >= 5) return 0;
-        if (distanceInBlocks < 1) return 0.125;
-        return 0.125 * (5 - distanceInBlocks) / 4;
+        if (distanceInBlocks < 1) return 0.0625;
+        return 0.0625 * (5 - distanceInBlocks) / 4;
       }
 
       function updateJazzMusic() {
