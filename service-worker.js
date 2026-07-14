@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v36-audio-fix";
+const CACHE_NAME = "mountain-tycoon-pwa-v37-water";
 
 const APP_SHELL = [
   "./",
