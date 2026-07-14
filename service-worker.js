@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v39-water-fixes";
+const CACHE_NAME = "mountain-tycoon-pwa-v40-cave-ambience";
 
 const APP_SHELL = [
   "./",
@@ -11,6 +11,7 @@ const APP_SHELL = [
   "./icons/icon-512.png",
   "./icons/icon-maskable-192.png",
   "./icons/icon-maskable-512.png",
+  "./audio/Cave Ambience.mp3",
   "./audio/Coin.mp3",
   "./audio/Confirmation.mp3",
   "./audio/Force_Field_1.mp3",
@@ -36,7 +37,8 @@ const APP_SHELL = [
   "./audio/Step_On_Wood.mp3",
   "./audio/Switch.mp3",
   "./audio/Toggle.mp3",
-  "./audio/Treasure_Chest_Opened.mp3"
+  "./audio/Treasure_Chest_Opened.mp3",
+  "./audio/Water Dripping.mp3"
 ];
 
 self.addEventListener("install", event => {

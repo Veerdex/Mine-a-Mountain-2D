@@ -4035,6 +4035,12 @@
       const FOREST_AMBIENCE_MAX_VOLUME = 0.155;
       const FOREST_AMBIENCE_SILENT_DEPTH = 20;
       const FOREST_AMBIENCE_FADE_CURVE = 9;
+      const CAVE_AMBIENCE_MAX_VOLUME = 0.20;
+      const CAVE_AMBIENCE_START_DEPTH = 10;
+      const CAVE_AMBIENCE_FULL_DEPTH = 60;
+      const WATER_DRIPPING_MAX_VOLUME = 0.10;
+      const WATER_DRIPPING_START_DEPTH = 30;
+      const WATER_DRIPPING_FULL_DEPTH = 100;
       const PLACED_OBJECT_BREAK_TIME = 0.2;
 
       const GRAVEL_STUN_DURATION = 0.35;
@@ -10777,6 +10783,12 @@
       let nightAmbienceAudio = null;
       let nightAmbienceStarted = false;
       let nightAmbienceCurrentVolume = 0;
+      let caveAmbienceAudio = null;
+      let caveAmbienceStarted = false;
+      let caveAmbienceCurrentVolume = 0;
+      let waterDrippingAudio = null;
+      let waterDrippingStarted = false;
+      let waterDrippingCurrentVolume = 0;
       let jazzMusicAudio = null;
       let jazzMusicStarted = false;
       let jazzMusicCurrentVolume = 0;
@@ -12097,7 +12109,10 @@
         initializeJazzMusic();
         startForestAmbience();
         startNightAmbience();
+        startCaveAmbience();
+        startWaterDripping();
         updateForestAmbience(true);
+        updateCaveAmbience(true);
 
         if (audioUnlockPromise) return audioUnlockPromise;
 
@@ -12349,6 +12364,36 @@
         }
       }
 
+      function startCaveAmbience() {
+        if (caveAmbienceStarted) return;
+        caveAmbienceAudio = document.createElement("audio");
+        caveAmbienceAudio.src = "audio/Cave Ambience.mp3";
+        caveAmbienceAudio.loop = true;
+        caveAmbienceAudio.preload = "auto";
+        caveAmbienceAudio.volume = 0;
+        const pb = caveAmbienceAudio.play();
+        if (pb && pb.then) {
+          pb.then(() => { caveAmbienceStarted = true; }).catch(() => { caveAmbienceStarted = false; });
+        } else {
+          caveAmbienceStarted = true;
+        }
+      }
+
+      function startWaterDripping() {
+        if (waterDrippingStarted) return;
+        waterDrippingAudio = document.createElement("audio");
+        waterDrippingAudio.src = "audio/Water Dripping.mp3";
+        waterDrippingAudio.loop = true;
+        waterDrippingAudio.preload = "auto";
+        waterDrippingAudio.volume = 0;
+        const pb = waterDrippingAudio.play();
+        if (pb && pb.then) {
+          pb.then(() => { waterDrippingStarted = true; }).catch(() => { waterDrippingStarted = false; });
+        } else {
+          waterDrippingStarted = true;
+        }
+      }
+
       function currentForestDepth() {
         if (playerInShop) return 0;
 
@@ -12408,6 +12453,43 @@
 
         forestAmbienceAudio.volume = clamp(forestAmbienceCurrentVolume, 0, 1);
         if (nightAmbienceAudio) nightAmbienceAudio.volume = clamp(nightAmbienceCurrentVolume, 0, 1);
+      }
+
+      function updateCaveAmbience(immediate = false) {
+        const depth = currentForestDepth();
+        const muted = audioMuted || playerInShop;
+
+        if (caveAmbienceAudio) {
+          const linearAmount = clamp(
+            (depth - CAVE_AMBIENCE_START_DEPTH) /
+              (CAVE_AMBIENCE_FULL_DEPTH - CAVE_AMBIENCE_START_DEPTH),
+            0, 1
+          );
+          const target = muted ? 0 : CAVE_AMBIENCE_MAX_VOLUME * linearAmount;
+          if (immediate) {
+            caveAmbienceCurrentVolume = target;
+          } else {
+            caveAmbienceCurrentVolume += (target - caveAmbienceCurrentVolume) * 0.055;
+          }
+          if (caveAmbienceCurrentVolume < 0.0005) caveAmbienceCurrentVolume = 0;
+          caveAmbienceAudio.volume = clamp(caveAmbienceCurrentVolume, 0, 1);
+        }
+
+        if (waterDrippingAudio) {
+          const linearAmount = clamp(
+            (depth - WATER_DRIPPING_START_DEPTH) /
+              (WATER_DRIPPING_FULL_DEPTH - WATER_DRIPPING_START_DEPTH),
+            0, 1
+          );
+          const target = muted ? 0 : WATER_DRIPPING_MAX_VOLUME * linearAmount;
+          if (immediate) {
+            waterDrippingCurrentVolume = target;
+          } else {
+            waterDrippingCurrentVolume += (target - waterDrippingCurrentVolume) * 0.055;
+          }
+          if (waterDrippingCurrentVolume < 0.0005) waterDrippingCurrentVolume = 0;
+          waterDrippingAudio.volume = clamp(waterDrippingCurrentVolume, 0, 1);
+        }
       }
 
       function calculateDayNightState() {
@@ -14787,6 +14869,7 @@
       function applyDeepstoneLayer() {
         if (!currentMountain) return;
 
+        // Mountain body — only cells inside the mountain mask.
         for (
           let x = currentMountain.resourceStartX;
           x <= currentMountain.resourceEndX;
@@ -14816,6 +14899,19 @@
                 Math.random() < chance
               )
             ) {
+              world[cellIndex] = DEEPSTONE;
+            }
+          }
+        }
+
+        // Flat underground terrain on either side of the mountain.
+        for (let x = 0; x < WORLD_W; x++) {
+          if (x >= currentMountain.resourceStartX && x <= currentMountain.resourceEndX) continue;
+          for (let y = GROUND_Y; y < WORLD_H; y++) {
+            const cellIndex = index(x, y);
+            if (world[cellIndex] !== STONE) continue;
+            const chance = deepstoneChanceAtY(y);
+            if (chance >= 1 || (chance > 0 && Math.random() < chance)) {
               world[cellIndex] = DEEPSTONE;
             }
           }
@@ -24970,6 +25066,7 @@
         if (errorSoundCooldown > 0) errorSoundCooldown = Math.max(0, errorSoundCooldown - dt);
         updateRadiationStatic();
         updateForestAmbience();
+        updateCaveAmbience();
         updateJazzMusic();
         updateGeneratorAudio();
       }
@@ -29279,6 +29376,7 @@
           await unlockAudio(true);
           updateRadiationStatic();
           updateForestAmbience(true);
+          updateCaveAmbience(true);
         } else if (
           !audioReady ||
           !audioContext ||
@@ -29287,6 +29385,7 @@
           await unlockAudio(true);
           updateRadiationStatic();
           updateForestAmbience(true);
+          updateCaveAmbience(true);
         } else {
           playToggleSound();
           audioMuted = true;
@@ -29294,6 +29393,7 @@
           updateSoundButton();
           updateRadiationStatic();
           updateForestAmbience(true);
+          updateCaveAmbience(true);
         }
       }
 
