@@ -12359,7 +12359,10 @@
           (player.y + player.h * 0.5) / TILE
         );
 
-        return depthBelowLocalSurface(tileX, tileY);
+        // Use the local column surface (not the mountain peak) so that any
+        // position beneath the visible terrain registers the correct depth.
+        const surfaceY = terrainSurfaceYAt(tileX);
+        return Math.max(0, tileY - surfaceY);
       }
 
       function updateForestAmbience(immediate = false) {
@@ -19591,6 +19594,18 @@
           }
         }
 
+        // Reactivate settled fluids within a 5×5 area. The 4-direction loop
+        // above only covers direct neighbors, leaving frozen cells 2+ tiles away.
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            const type = tileAt(nx, ny);
+            if (type === LAVA) activeLava.add(index(nx, ny));
+            if (type === WATER) activeWater.add(index(nx, ny));
+          }
+        }
+
         for (let yy = Math.max(0, y - 10); yy < y; yy++) {
           for (let xx = Math.max(0, x - 2); xx <= Math.min(WORLD_W - 1, x + 2); xx++) {
             if (tileAt(xx, yy) === GRAVEL) fallingBlocks.add(index(xx, yy));
@@ -25921,6 +25936,30 @@
         ctx.restore();
       }
 
+      // Draws water tiles over the player so the player appears submerged.
+      function drawWaterTiles() {
+        const visibleW = screenW / camera.zoom;
+        const visibleH = screenH / camera.zoom;
+        const startTX = Math.max(0, Math.floor(camera.x / TILE));
+        const endTX = Math.min(WORLD_W - 1, Math.ceil((camera.x + visibleW) / TILE));
+        const startTY = Math.max(0, Math.floor(camera.y / TILE));
+        const endTY = Math.min(WORLD_H - 1, Math.ceil((camera.y + visibleH) / TILE));
+
+        ctx.save();
+        ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+        ctx.scale(camera.zoom, camera.zoom);
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = 0.65;
+        for (let ty = startTY; ty <= endTY; ty++) {
+          for (let tx = startTX; tx <= endTX; tx++) {
+            if (world[index(tx, ty)] === WATER) {
+              paint16BitBlock(ctx, WATER, tx * TILE, ty * TILE, tx, ty);
+            }
+          }
+        }
+        ctx.restore();
+      }
+
       const shop16BitSpriteCache = new Map();
 
       function create16BitShopSprite(shop) {
@@ -28825,6 +28864,7 @@
         drawMiningTarget();
         drawAimIndicator();
         drawPlayer(now || performance.now());
+        drawWaterTiles();
         drawLightingAndFog();
 
         if (camera.revealTimer > 0 && currentMountain) {
