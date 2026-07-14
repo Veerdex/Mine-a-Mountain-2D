@@ -10772,6 +10772,9 @@
       let nightAmbienceAudio = null;
       let dayAmbienceGain = null;
       let nightAmbienceGain = null;
+      let jazzMusicAudio = null;
+      let jazzMusicGain = null;
+      let jazzMusicCurrentVolume = 0;
       let audioReady = false;
       let audioMuted = false;
       let audioUnlockPromise = null;
@@ -12086,6 +12089,7 @@
 
         primeBundledAudioAssets();
         initializeDayNightAudio();
+        initializeJazzMusic();
         startForestAmbience();
         updateForestAmbience(true);
 
@@ -12158,6 +12162,73 @@
           nightSource.connect(nightAmbienceGain);
           nightAmbienceGain.connect(masterGain);
         }
+      }
+
+      function initializeJazzMusic() {
+        const audio = createAudioGraph();
+        if (!audio || !masterGain) return;
+
+        if (!jazzMusicAudio) {
+          jazzMusicAudio = new Audio();
+          jazzMusicAudio.src = "audio/Jazz Music.mp3";
+          jazzMusicAudio.loop = true;
+          jazzMusicAudio.preload = "auto";
+          jazzMusicAudio.playsinline = true;
+
+          const jazzSource = audio.createMediaElementAudioSource(jazzMusicAudio);
+          jazzMusicGain = audio.createGain();
+          jazzMusicGain.gain.value = 0;
+          jazzSource.connect(jazzMusicGain);
+          jazzMusicGain.connect(masterGain);
+
+          jazzMusicAudio.play().catch(() => {
+            // Auto-play prevented, will be started on user interaction
+          });
+        }
+      }
+
+      function calculateJazzVolume(playerX, playerY, playerInShopFlag) {
+        // Equipment Shop entrance center: x=8*TILE + 3*TILE, y=(GROUND_Y-5)*TILE + 2.5*TILE
+        const shopCenterX = (8 + 3) * TILE;
+        const shopCenterY = (GROUND_Y - 5 + 2.5) * TILE;
+
+        // If player is in shop, use maximum proximity volume
+        if (playerInShopFlag) {
+          return 0.5;
+        }
+
+        // Calculate distance from player to shop entrance
+        const dx = playerX - shopCenterX;
+        const dy = playerY - shopCenterY;
+        const distanceInPixels = Math.sqrt(dx * dx + dy * dy);
+        const distanceInBlocks = distanceInPixels / TILE;
+
+        if (distanceInBlocks >= 5) {
+          return 0;
+        }
+        if (distanceInBlocks < 1) {
+          return 0.25;
+        }
+
+        // Linear interpolation between 1 and 5 blocks
+        return 0.25 * (5 - distanceInBlocks) / 4;
+      }
+
+      function updateJazzMusic() {
+        if (!jazzMusicAudio || !jazzMusicGain) return;
+
+        const playerCenterX = player.x + player.w * 0.5;
+        const playerCenterY = player.y + player.h * 0.5;
+        const targetVolume = audioMuted ? 0 : calculateJazzVolume(playerCenterX, playerCenterY, playerInShop);
+
+        // Smooth interpolation toward target volume
+        jazzMusicCurrentVolume += (targetVolume - jazzMusicCurrentVolume) * 0.055;
+
+        if (jazzMusicCurrentVolume < 0.0005) {
+          jazzMusicCurrentVolume = 0;
+        }
+
+        jazzMusicGain.gain.value = clamp(jazzMusicCurrentVolume, 0, 1);
       }
 
       function runWithAudio(callback) {
@@ -24802,6 +24873,7 @@
         if (errorSoundCooldown > 0) errorSoundCooldown = Math.max(0, errorSoundCooldown - dt);
         updateRadiationStatic();
         updateForestAmbience();
+        updateJazzMusic();
         updateGeneratorAudio();
       }
 
