@@ -10839,7 +10839,8 @@
         stepWood: "audio/Step_On_Wood.mp3",
         switch: "audio/Switch.mp3",
         toggle: "audio/Toggle.mp3",
-        treasureChest: "audio/Treasure_Chest_Opened.mp3"
+        treasureChest: "audio/Treasure_Chest_Opened.mp3",
+        potionConsume: "audio/Potion Consume.mp3"
       });
       const AUDIO_VOLUMES = Object.freeze({
         coin: 0.46,
@@ -10866,7 +10867,8 @@
         stepWood: 0.27,
         switch: 0.31,
         toggle: 0.3,
-        treasureChest: 0.52
+        treasureChest: 0.52,
+        potionConsume: 0.55
       });
       const MODIFIER_FORCE_FIELD_SOUND = Object.freeze({
         gleaming: "forceField1",
@@ -11518,22 +11520,7 @@
         updatePotionEffectsHud(true);
         renderInventory();
         saveLocalProgress(false);
-        playTone(
-          460,
-          920,
-          0.18,
-          "sine",
-          0.06,
-          0
-        );
-        playTone(
-          760,
-          1240,
-          0.18,
-          "triangle",
-          0.04,
-          0.08
-        );
+        playPotionConsumeSound();
         showToast(
           definition.label +
           " Potion active for 5:00"
@@ -11617,9 +11604,11 @@
           return false;
         }
 
-        if (
-          depthBelowLocalSurface(x, y) < 4
-        ) {
+        if (depthBelowLocalSurface(x, y) < 4) {
+          return false;
+        }
+
+        if (isDeepZoneY(y)) {
           return false;
         }
 
@@ -11695,121 +11684,43 @@
 
         if (!tier || !currentMountain) return;
 
-        const desiredPairs =
-          chestPairsForTier(tier.level);
-        const candidates =
-          shuffledChestCandidates();
+        // Two treasure chests per tier level (double the old pair count).
+        const desiredChests = chestPairsForTier(tier.level) * 2;
+        const candidates = shuffledChestCandidates();
         const placed = [];
 
-        for (
-          let pairIndex = 0;
-          pairIndex < desiredPairs;
-          pairIndex++
-        ) {
-          let keyPosition = null;
-          let treasurePosition = null;
+        for (let chestIndex = 0; chestIndex < desiredChests; chestIndex++) {
+          let position = null;
 
-          for (
-            let firstIndex = 0;
-            firstIndex < candidates.length;
-            firstIndex++
-          ) {
-            const first =
-              candidates[firstIndex];
-
-            if (
-              !chestFarEnoughFromAll(
-                first,
-                placed
-              )
-            ) {
-              continue;
-            }
-
-            for (
-              let secondIndex = firstIndex + 1;
-              secondIndex < candidates.length;
-              secondIndex++
-            ) {
-              const second =
-                candidates[secondIndex];
-
-              if (
-                !chestFarEnoughFromAll(
-                  second,
-                  placed,
-                  first
-                )
-              ) {
-                continue;
-              }
-
-              keyPosition = first;
-              treasurePosition = second;
+          for (let i = 0; i < candidates.length; i++) {
+            if (chestFarEnoughFromAll(candidates[i], placed)) {
+              position = candidates[i];
               break;
             }
-
-            if (treasurePosition) break;
           }
 
-          if (
-            !keyPosition ||
-            !treasurePosition
-          ) {
-            continue;
-          }
+          if (!position) continue;
 
-          const pairId =
-            currentMountain.generationId +
-            "-" +
-            pairIndex;
           const rewardType =
             STANDARD_POTION_TYPES[
-              Math.floor(
-                Math.random() *
-                STANDARD_POTION_TYPES.length
-              )
+              Math.floor(Math.random() * STANDARD_POTION_TYPES.length)
             ];
 
-          const keyChest = {
+          const chest = {
             id: nextTreasureChestId++,
-            pairId,
-            kind: "key",
-            x: keyPosition.x,
-            y: keyPosition.y,
-            opened: false,
-            removed: false,
-            rewardType: TREASURE_KEY
-          };
-
-          const treasureChest = {
-            id: nextTreasureChestId++,
-            pairId,
+            pairId: currentMountain.generationId + "-" + chestIndex,
             kind: "treasure",
-            x: treasurePosition.x,
-            y: treasurePosition.y,
+            x: position.x,
+            y: position.y,
             opened: false,
             removed: false,
             rewardType
           };
 
-          treasureChests.push(
-            keyChest,
-            treasureChest
-          );
-          placed.push(
-            keyChest,
-            treasureChest
-          );
+          treasureChests.push(chest);
+          placed.push(chest);
 
-          const used = new Set([
-            keyPosition.x +
-              "," +
-              keyPosition.y,
-            treasurePosition.x +
-              "," +
-              treasurePosition.y
-          ]);
+          const used = new Set([position.x + "," + position.y]);
 
           for (
             let candidateIndex =
@@ -11862,23 +11773,8 @@
           return false;
         }
 
-        if (chest.kind === "treasure") {
-          if (countTreasureKeys() <= 0) {
-            if (chestTouchCooldown <= 0) {
-              chestTouchCooldown = 1.2;
-              playErrorSound();
-              showToast(
-                "Treasure chest locked — find a key chest"
-              );
-            }
-            return false;
-          }
-
-          consumeTreasureKey();
-        }
-
         chest.opened = true;
-        playTreasureChestSound(chest.kind === "treasure");
+        playTreasureChestSound(true);
 
         const item =
           makeTreasureItem(
@@ -12851,6 +12747,10 @@
           playbackRate: isTreasure ? 1 : 1.08,
           cooldown: 80
         });
+      }
+
+      function playPotionConsumeSound() {
+        playBundledSound("potionConsume", { volume: 0.55, cooldown: 80 });
       }
 
       function playRefineryStartSound() {
