@@ -12380,7 +12380,7 @@
         else if (t >= 840 && t < 1200) nightFactor = 1;               // full night
         else if (t >= 1200) nightFactor = 1 - (t - 1200) / 120;       // night→day transition
 
-        const baseVolume = audioMuted ? 0 : FOREST_AMBIENCE_MAX_VOLUME * perceivedSurfaceAmount;
+        const baseVolume = (audioMuted || playerInShop) ? 0 : FOREST_AMBIENCE_MAX_VOLUME * perceivedSurfaceAmount;
         const dayTarget = baseVolume * (1 - nightFactor);
         const nightTarget = baseVolume * nightFactor;
 
