@@ -4041,6 +4041,10 @@
       const WATER_DRIPPING_MAX_VOLUME = 0.10;
       const WATER_DRIPPING_START_DEPTH = 30;
       const WATER_DRIPPING_FULL_DEPTH = 100;
+      const WATER_STREAM_MAX_VOLUME = 0.50;
+      const LAVA_POPPING_MAX_VOLUME = 0.30;
+      const PROXIMITY_AUDIO_SILENT_TILES = 20;
+      const PROXIMITY_AUDIO_FULL_TILES = 3;
       const PLACED_OBJECT_BREAK_TIME = 0.2;
 
       const GRAVEL_STUN_DURATION = 0.35;
@@ -10789,6 +10793,15 @@
       let waterDrippingAudio = null;
       let waterDrippingStarted = false;
       let waterDrippingCurrentVolume = 0;
+      let waterStreamAudio = null;
+      let waterStreamStarted = false;
+      let waterStreamCurrentVolume = 0;
+      let lavaPoppingAudio = null;
+      let lavaPoppingStarted = false;
+      let lavaPoppingCurrentVolume = 0;
+      let proximityAudioTimer = 0;
+      let cachedWaterStreamDist = Infinity;
+      let cachedLavaDist = Infinity;
       let jazzMusicAudio = null;
       let jazzMusicStarted = false;
       let jazzMusicCurrentVolume = 0;
@@ -12111,8 +12124,11 @@
         startNightAmbience();
         startCaveAmbience();
         startWaterDripping();
+        startWaterStream();
+        startLavaPopping();
         updateForestAmbience(true);
         updateCaveAmbience(true);
+        updateProximityAudio(true);
 
         if (audioUnlockPromise) return audioUnlockPromise;
 
@@ -12394,6 +12410,36 @@
         }
       }
 
+      function startWaterStream() {
+        if (waterStreamStarted) return;
+        waterStreamAudio = document.createElement("audio");
+        waterStreamAudio.src = "audio/Water Stream.mp3";
+        waterStreamAudio.loop = true;
+        waterStreamAudio.preload = "auto";
+        waterStreamAudio.volume = 0;
+        const pb = waterStreamAudio.play();
+        if (pb && pb.then) {
+          pb.then(() => { waterStreamStarted = true; }).catch(() => { waterStreamStarted = false; });
+        } else {
+          waterStreamStarted = true;
+        }
+      }
+
+      function startLavaPopping() {
+        if (lavaPoppingStarted) return;
+        lavaPoppingAudio = document.createElement("audio");
+        lavaPoppingAudio.src = "audio/Lava Popping.mp3";
+        lavaPoppingAudio.loop = true;
+        lavaPoppingAudio.preload = "auto";
+        lavaPoppingAudio.volume = 0;
+        const pb = lavaPoppingAudio.play();
+        if (pb && pb.then) {
+          pb.then(() => { lavaPoppingStarted = true; }).catch(() => { lavaPoppingStarted = false; });
+        } else {
+          lavaPoppingStarted = true;
+        }
+      }
+
       function currentForestDepth() {
         if (playerInShop) return 0;
 
@@ -12411,7 +12457,7 @@
       }
 
       function updateForestAmbience(immediate = false) {
-        if (!forestAmbienceAudio) return;
+        if (!forestAmbienceAudio && !nightAmbienceAudio) return;
 
         const depth = currentForestDepth();
         const linearSurfaceAmount = clamp(
@@ -12451,7 +12497,7 @@
         if (forestAmbienceCurrentVolume < 0.0005) forestAmbienceCurrentVolume = 0;
         if (nightAmbienceCurrentVolume < 0.0005) nightAmbienceCurrentVolume = 0;
 
-        forestAmbienceAudio.volume = clamp(forestAmbienceCurrentVolume, 0, 1);
+        if (forestAmbienceAudio) forestAmbienceAudio.volume = clamp(forestAmbienceCurrentVolume, 0, 1);
         if (nightAmbienceAudio) nightAmbienceAudio.volume = clamp(nightAmbienceCurrentVolume, 0, 1);
       }
 
@@ -12489,6 +12535,77 @@
           }
           if (waterDrippingCurrentVolume < 0.0005) waterDrippingCurrentVolume = 0;
           waterDrippingAudio.volume = clamp(waterDrippingCurrentVolume, 0, 1);
+        }
+      }
+
+      function scanNearestFluidDistances() {
+        if (playerInShop) {
+          cachedWaterStreamDist = Infinity;
+          cachedLavaDist = Infinity;
+          return;
+        }
+        const cx = Math.floor((player.x + player.w * 0.5) / TILE);
+        const cy = Math.floor((player.y + player.h * 0.5) / TILE);
+        const maxR = PROXIMITY_AUDIO_SILENT_TILES + 1;
+        let minWater = Infinity;
+        let minLava = Infinity;
+        outer: for (let dy = -maxR; dy <= maxR; dy++) {
+          for (let dx = -maxR; dx <= maxR; dx++) {
+            const tx = cx + dx;
+            const ty = cy + dy;
+            if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) continue;
+            const t = world[index(tx, ty)];
+            if (t === WATER || t === LAVA) {
+              const dist = Math.hypot(dx, dy);
+              if (dist > maxR) continue;
+              if (t === WATER && dist < minWater) minWater = dist;
+              if (t === LAVA && dist < minLava) minLava = dist;
+              if (minWater <= PROXIMITY_AUDIO_FULL_TILES && minLava <= PROXIMITY_AUDIO_FULL_TILES) break outer;
+            }
+          }
+        }
+        cachedWaterStreamDist = minWater;
+        cachedLavaDist = minLava;
+      }
+
+      function updateProximityAudio(immediate = false) {
+        proximityAudioTimer -= immediate ? 999 : 1 / 60;
+        if (proximityAudioTimer <= 0) {
+          scanNearestFluidDistances();
+          proximityAudioTimer = 0.25;
+        }
+
+        const muted = audioMuted;
+        const range = PROXIMITY_AUDIO_SILENT_TILES - PROXIMITY_AUDIO_FULL_TILES;
+
+        if (waterStreamAudio) {
+          const linearAmount = clamp(
+            (PROXIMITY_AUDIO_SILENT_TILES - cachedWaterStreamDist) / range,
+            0, 1
+          );
+          const target = muted ? 0 : WATER_STREAM_MAX_VOLUME * linearAmount;
+          if (immediate) {
+            waterStreamCurrentVolume = target;
+          } else {
+            waterStreamCurrentVolume += (target - waterStreamCurrentVolume) * 0.055;
+          }
+          if (waterStreamCurrentVolume < 0.0005) waterStreamCurrentVolume = 0;
+          waterStreamAudio.volume = clamp(waterStreamCurrentVolume, 0, 1);
+        }
+
+        if (lavaPoppingAudio) {
+          const linearAmount = clamp(
+            (PROXIMITY_AUDIO_SILENT_TILES - cachedLavaDist) / range,
+            0, 1
+          );
+          const target = muted ? 0 : LAVA_POPPING_MAX_VOLUME * linearAmount;
+          if (immediate) {
+            lavaPoppingCurrentVolume = target;
+          } else {
+            lavaPoppingCurrentVolume += (target - lavaPoppingCurrentVolume) * 0.055;
+          }
+          if (lavaPoppingCurrentVolume < 0.0005) lavaPoppingCurrentVolume = 0;
+          lavaPoppingAudio.volume = clamp(lavaPoppingCurrentVolume, 0, 1);
         }
       }
 
@@ -25067,6 +25184,7 @@
         updateRadiationStatic();
         updateForestAmbience();
         updateCaveAmbience();
+        updateProximityAudio();
         updateJazzMusic();
         updateGeneratorAudio();
       }
@@ -29377,6 +29495,7 @@
           updateRadiationStatic();
           updateForestAmbience(true);
           updateCaveAmbience(true);
+          updateProximityAudio(true);
         } else if (
           !audioReady ||
           !audioContext ||
@@ -29386,6 +29505,7 @@
           updateRadiationStatic();
           updateForestAmbience(true);
           updateCaveAmbience(true);
+          updateProximityAudio(true);
         } else {
           playToggleSound();
           audioMuted = true;
@@ -29394,6 +29514,7 @@
           updateRadiationStatic();
           updateForestAmbience(true);
           updateCaveAmbience(true);
+          updateProximityAudio(true);
         }
       }
 

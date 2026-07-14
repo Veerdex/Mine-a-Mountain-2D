@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v40-cave-ambience";
+const CACHE_NAME = "mountain-tycoon-pwa-v41-proximity-audio";
 
 const APP_SHELL = [
   "./",
@@ -38,7 +38,9 @@ const APP_SHELL = [
   "./audio/Switch.mp3",
   "./audio/Toggle.mp3",
   "./audio/Treasure_Chest_Opened.mp3",
-  "./audio/Water Dripping.mp3"
+  "./audio/Water Dripping.mp3",
+  "./audio/Water Stream.mp3",
+  "./audio/Lava Popping.mp3"
 ];
 
 self.addEventListener("install", event => {
