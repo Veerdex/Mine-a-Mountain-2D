@@ -4532,23 +4532,6 @@
         "Neutron Pickaxe", "Chrono Pickaxe", "Singularity Pickaxe"
       ];
 
-      // Tier-based luck multiplier scaling with 50% reduction to prevent
-      // inflation from becoming too aggressive. Order: apply 25% ore reduction
-      // first (already in price arrays), then apply 50% of luck scaling.
-      // Formula: 1.0 + (luck_factor - 1.0) * 0.5
-      const TIER_LUCK_SCALING = [
-        1.107,  // Tier 1: 17.10 luck (accounting for inflation)
-        1.125,  // Tier 2: 23.16 luck
-        1.334,  // Tier 3: 32.33 luck
-        1.434,  // Tier 4: 51.64 luck
-        1.699,  // Tier 5: 85.11 luck
-        2.242,  // Tier 6: 147.45 luck
-        2.883,  // Tier 7: 227.06 luck
-        3.769,  // Tier 8: 428.65 luck
-        4.691,  // Tier 9: 710.44 luck
-        5.821   // Tier 10: 1085.73 luck
-      ];
-
       function roundPrice(value) {
         const numericValue = Number(value);
 
@@ -4577,70 +4560,72 @@
       }
 
       const EQUIPMENT_LEVEL_COUNT = 30;
-      const PICKAXE_PRICE_MULTIPLIER_MIN = 10;
-      const PICKAXE_PRICE_MULTIPLIER_MAX = 75;
       const BACKPACK_PRICE_FACTOR = 0.85;
       const FLASHLIGHT_PRICE_FACTOR = 0.75;
 
-      function equipmentPriceMultiplier(level) {
-        const progress = clamp(
-          (level - 1) / (EQUIPMENT_LEVEL_COUNT - 1),
-          0,
-          1
-        );
+      // A tier's complete paid equipment set costs about as much as the next
+      // mountain unlock. This makes equipment and mountain progression share
+      // one economy curve instead of following volatile individual ore values.
+      // Tier 10 has no following mountain, so its endgame budget extrapolates
+      // the final price step and rounds to a clean 170 trillion.
+      const EQUIPMENT_TIER_BUDGETS = [
+        1950,
+        13500,
+        160000,
+        2950000,
+        73500000,
+        1800000000,
+        42500000000,
+        1150000000000,
+        14000000000000,
+        170000000000000
+      ];
 
-        return (
-          PICKAXE_PRICE_MULTIPLIER_MIN +
+      // The three levels inside a tier receive 22%, 32%, and 46% of each
+      // equipment category's share. Pickaxes retain the highest share, while
+      // backpacks and flashlights retain their former 85% and 75% ratios.
+      const EQUIPMENT_LEVEL_BUDGET_SHARES = [0.22, 0.32, 0.46];
+      const EQUIPMENT_CATEGORY_FACTOR_TOTAL =
+        1 + BACKPACK_PRICE_FACTOR + FLASHLIGHT_PRICE_FACTOR;
+      const TIER_ONE_PAID_FACTOR_TOTAL =
+        (1 + BACKPACK_PRICE_FACTOR) *
           (
-            PICKAXE_PRICE_MULTIPLIER_MAX -
-            PICKAXE_PRICE_MULTIPLIER_MIN
-          ) *
-            progress
-        );
-      }
+            EQUIPMENT_LEVEL_BUDGET_SHARES[1] +
+            EQUIPMENT_LEVEL_BUDGET_SHARES[2]
+          ) +
+        FLASHLIGHT_PRICE_FACTOR;
 
-      function bestResourceForEquipmentLevel(level) {
-        const mountainTier = Math.ceil(level / 3);
-        let best = BLOCKS[GRAVEL];
-
-        for (const block of BLOCKS) {
-          if (
-            !block ||
-            !block.tier ||
-            block.tier > mountainTier ||
-            block.collectible === false ||
-            !Number.isFinite(block.hardness) ||
-            block.hardness > level ||
-            block.value <= best.value
-          ) {
-            continue;
-          }
-
-          best = block;
-        }
-
-        return best;
-      }
-
-      function equipmentPriceForLevel(level, priceFactor = 1) {
+      function equipmentPriceForLevel(
+        level,
+        priceFactor = 1,
+        preownedAtLevelOne = false
+      ) {
         const tierIndex = Math.ceil(level / 3) - 1;
-        const bestResource = bestResourceForEquipmentLevel(level);
-        const luckAdjustedResourceValue =
-          bestResource.value * TIER_LUCK_SCALING[tierIndex];
+        const levelWithinTier = (level - 1) % 3;
+
+        if (tierIndex < 0 || tierIndex >= EQUIPMENT_TIER_BUDGETS.length) {
+          return 0;
+        }
+        if (preownedAtLevelOne && level === 1) return 0;
+
+        const normalization =
+          tierIndex === 0
+            ? TIER_ONE_PAID_FACTOR_TOTAL
+            : EQUIPMENT_CATEGORY_FACTOR_TOTAL;
 
         return roundPrice(
-          luckAdjustedResourceValue *
-            equipmentPriceMultiplier(level) *
-            priceFactor
+          EQUIPMENT_TIER_BUDGETS[tierIndex] *
+            EQUIPMENT_LEVEL_BUDGET_SHARES[levelWithinTier] *
+            priceFactor /
+            normalization
         );
       }
 
-      // Pickaxe prices rise from 10× the luck-adjusted best resource at
-      // level 1 to 75× at level 30. Starter equipment remains pre-owned,
-      // so the level-1 price is only a balance reference.
+      // The Standard Pickaxe is pre-owned. All later pickaxes contribute to
+      // their tier's shared paid-equipment budget.
       const PICKAXE_PRICES = Array.from(
         { length: EQUIPMENT_LEVEL_COUNT },
-        (_, index) => equipmentPriceForLevel(index + 1)
+        (_, index) => equipmentPriceForLevel(index + 1, 1, true)
       );
 
       const PICKAXE_UNLOCKS = [
@@ -4674,14 +4659,15 @@
         "Celestial Pack", "Singularity Pack", "Infinite Horizon Pack"
       ];
 
-      // Backpacks cost 85% of the current pickaxe benchmark multiplier.
-      // At the final 75× benchmark, this is equivalent to 63.75×.
+      // The Basic Backpack is pre-owned. Paid backpacks retain an 85% share
+      // relative to an equivalent pickaxe upgrade.
       const BACKPACK_PRICES = Array.from(
         { length: EQUIPMENT_LEVEL_COUNT },
         (_, index) =>
           equipmentPriceForLevel(
             index + 1,
-            BACKPACK_PRICE_FACTOR
+            BACKPACK_PRICE_FACTOR,
+            true
           )
       );
 
@@ -4694,8 +4680,8 @@
         "Stellar Core", "Supernova Burst", "Galactic Ray", "Cosmic Flare", "Omnilux Prime"
       ];
 
-      // Flashlights cost 75% of the current pickaxe benchmark multiplier.
-      // At the final 75× benchmark, this is equivalent to 56.25×.
+      // Flashlights begin unowned, so all three Tier 1 lights participate in
+      // the Tier 1 paid budget. Their share remains 75% of a pickaxe upgrade.
       const FLASHLIGHT_PRICES = Array.from(
         { length: EQUIPMENT_LEVEL_COUNT },
         (_, index) =>
@@ -4704,8 +4690,6 @@
             FLASHLIGHT_PRICE_FACTOR
           )
       );
-
-      const MOUNTAIN_PRICE_EQUIPMENT_FACTOR = 1.25;
 
       // Hardcoded prices derived from value simulation so that
       // runs_needed(tier) = 5% × tier  (5% at T1 → 50% at T9 → no T11).
@@ -4721,35 +4705,6 @@
         1150000000000,  // T9  (40% of T8 value ~$2.90T)
         14000000000000, // T10 (45% of T9 value ~$31.4T)
       ];
-
-      function previousTierEquipmentTotal(mountainLevel) {
-        if (mountainLevel <= 1) return 0;
-
-        const firstEquipmentLevel =
-          (mountainLevel - 2) * 3 + 1;
-        const lastEquipmentLevel =
-          firstEquipmentLevel + 2;
-
-        let total = 0;
-
-        for (
-          let equipmentLevel = firstEquipmentLevel;
-          equipmentLevel <= lastEquipmentLevel;
-          equipmentLevel++
-        ) {
-          // Level-one equipment is already owned and therefore does not
-          // contribute to the first paid mountain's progression cost.
-          if (equipmentLevel === 1) continue;
-
-          const index = equipmentLevel - 1;
-          total +=
-            PICKAXE_PRICES[index] +
-            BACKPACK_PRICES[index] +
-            FLASHLIGHT_PRICES[index];
-        }
-
-        return total;
-      }
 
       const MOUNTAIN_TIERS =
         MOUNTAIN_TIER_DEFINITIONS.map(tier => ({
