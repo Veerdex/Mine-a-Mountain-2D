@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v48-shop-audio-exclusive";
+const CACHE_NAME = "mountain-tycoon-pwa-v49-fresh-world-on-logout";
 
 const APP_SHELL = [
   "./",

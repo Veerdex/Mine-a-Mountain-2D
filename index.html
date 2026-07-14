@@ -10951,6 +10951,7 @@
       let cloudConfigured = false;
       let cloudLastSavedAt = null;
       let autoSaveBlocked = false;
+      let suppressLocalSave = false;
       let leaderboardSyncTimer = null;
       let leaderboardLoading = false;
       let localSaveTimer = null;
@@ -13851,6 +13852,8 @@
       }
 
       function saveLocalProgress(showMessage) {
+        if (suppressLocalSave) return false;
+
         try {
           const state = serializeGameState();
           localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(state));
@@ -14490,13 +14493,25 @@
 
       async function signOutCloudAccount() {
         if (!supabaseClient || cloudBusy) return;
+
+        // Preserve the account's latest progress before clearing the shared
+        // local session. A failed save does not trap the player in the account.
+        if (cloudUser) {
+          await saveCloudProgress(false);
+        }
+
         cloudBusy = true;
         updateCloudUI("Signing out…");
         try {
           const { error } = await supabaseClient.auth.signOut();
           if (error) throw error;
           cloudUser = null;
-          updateCloudUI("Signed out. Local autosave remains active.");
+          suppressLocalSave = true;
+          if (localSaveTimer) clearInterval(localSaveTimer);
+          if (cloudSaveTimer) clearInterval(cloudSaveTimer);
+          localStorage.removeItem(LOCAL_SAVE_KEY);
+          updateCloudUI("Signed out. Starting a fresh world...");
+          window.location.reload();
         } catch (error) {
           updateCloudUI("Sign-out failed: " + error.message);
         } finally {
