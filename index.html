@@ -10768,10 +10768,6 @@
       let radiationStaticGain = null;
       let forestAmbienceCurrentVolume = 0;
       let forestAmbienceStarted = false;
-      let dayAmbienceAudio = null;
-      let nightAmbienceAudio = null;
-      let dayAmbienceGain = null;
-      let nightAmbienceGain = null;
       let jazzMusicAudio = null;
       let jazzMusicGain = null;
       let jazzMusicCurrentVolume = 0;
@@ -12088,7 +12084,6 @@
         if (!audio) return false;
 
         primeBundledAudioAssets();
-        initializeDayNightAudio();
         initializeJazzMusic();
         startForestAmbience();
         updateForestAmbience(true);
@@ -12129,40 +12124,6 @@
         return audio;
       }
 
-      function initializeDayNightAudio() {
-        const audio = createAudioGraph();
-        if (!audio || !masterGain) return;
-
-        // Create day ambience audio
-        if (!dayAmbienceAudio) {
-          dayAmbienceAudio = new Audio();
-          dayAmbienceAudio.src = "audio/Forest Ambience.mp3";
-          dayAmbienceAudio.loop = true;
-          dayAmbienceAudio.preload = "auto";
-          dayAmbienceAudio.playsinline = true;
-
-          const daySource = audioContext.createMediaElementAudioSource(dayAmbienceAudio);
-          dayAmbienceGain = audioContext.createGain();
-          dayAmbienceGain.gain.value = 0;
-          daySource.connect(dayAmbienceGain);
-          dayAmbienceGain.connect(masterGain);
-        }
-
-        // Create night ambience audio
-        if (!nightAmbienceAudio) {
-          nightAmbienceAudio = new Audio();
-          nightAmbienceAudio.src = "audio/Night Time Ambience.mp3";
-          nightAmbienceAudio.loop = true;
-          nightAmbienceAudio.preload = "auto";
-          nightAmbienceAudio.playsinline = true;
-
-          const nightSource = audioContext.createMediaElementAudioSource(nightAmbienceAudio);
-          nightAmbienceGain = audioContext.createGain();
-          nightAmbienceGain.gain.value = 0;
-          nightSource.connect(nightAmbienceGain);
-          nightAmbienceGain.connect(masterGain);
-        }
-      }
 
       function initializeJazzMusic() {
         const audio = createAudioGraph();
@@ -12383,16 +12344,6 @@
         forestAmbienceAudio.volume = 0;
         const playback = forestAmbienceAudio.play();
 
-        // Also start day/night audio if initialized
-        if (dayAmbienceAudio) {
-          dayAmbienceAudio.volume = 0;
-          dayAmbienceAudio.play().catch(() => {});
-        }
-        if (nightAmbienceAudio) {
-          nightAmbienceAudio.volume = 0;
-          nightAmbienceAudio.play().catch(() => {});
-        }
-
         if (playback && typeof playback.then === "function") {
           playback
             .then(() => {
@@ -12464,9 +12415,6 @@
           0,
           1
         );
-
-        // Update day/night audio gain crossfade
-        updateDayNightAudio(clamp(perceivedSurfaceAmount, 0, 1));
       }
 
       function calculateDayNightState() {
@@ -12516,42 +12464,6 @@
         }
       }
 
-      function updateDayNightAudio(depthFadeVolume) {
-        // Calculate the day/night crossfade based on dayNightTime
-        // depthFadeVolume is the existing depth-based fade (0-1)
-        const t = dayNightTime % DAY_NIGHT_PERIOD;
-
-        let dayFactor = 0;
-        let nightFactor = 0;
-
-        if (t < 720) {
-          // Full day
-          dayFactor = 1.0;
-          nightFactor = 0.0;
-        } else if (t < 840) {
-          // Day to night transition
-          const progress = (t - 720) / 120;
-          dayFactor = 1.0 - progress;
-          nightFactor = progress;
-        } else if (t < 1200) {
-          // Full night
-          dayFactor = 0.0;
-          nightFactor = 1.0;
-        } else {
-          // Night to day transition
-          const progress = (t - 1200) / 120;
-          dayFactor = progress;
-          nightFactor = 1.0 - progress;
-        }
-
-        const muteMultiplier = audioMuted ? 0 : 1;
-        if (dayAmbienceGain) {
-          dayAmbienceGain.gain.value = depthFadeVolume * dayFactor * muteMultiplier;
-        }
-        if (nightAmbienceGain) {
-          nightAmbienceGain.gain.value = depthFadeVolume * nightFactor * muteMultiplier;
-        }
-      }
 
       function playJumpSound() {
         playTone(170, 410, 0.14, "triangle", 0.12, 0);
