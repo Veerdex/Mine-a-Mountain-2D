@@ -106,6 +106,8 @@ self.addEventListener("fetch", event => {
           return response;
         }
 
+        // Don't cache partial responses (206) — audio range requests
+        if (response.status === 206) return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
         return response;
