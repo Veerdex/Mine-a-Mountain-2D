@@ -10049,6 +10049,10 @@
       let playerLightCacheRadius = -1;
       let terrainLightRevision = 1;
 
+      // Day/Night cycle
+      const DAY_NIGHT_PERIOD = 1320; // seconds (full cycle)
+      let dayNightTime = 0; // current time in cycle (0-1319s)
+
       const activePotionEffects = {
         mining: 0,
         luck: 0,
@@ -10764,6 +10768,10 @@
       let radiationStaticGain = null;
       let forestAmbienceCurrentVolume = 0;
       let forestAmbienceStarted = false;
+      let dayAmbienceAudio = null;
+      let nightAmbienceAudio = null;
+      let dayAmbienceGain = null;
+      let nightAmbienceGain = null;
       let audioReady = false;
       let audioMuted = false;
       let audioUnlockPromise = null;
@@ -12077,6 +12085,7 @@
         if (!audio) return false;
 
         primeBundledAudioAssets();
+        initializeDayNightAudio();
         startForestAmbience();
         updateForestAmbience(true);
 
@@ -12114,6 +12123,41 @@
         const audio = createAudioGraph();
         if (audio && audio.state !== "running") unlockAudio(false);
         return audio;
+      }
+
+      function initializeDayNightAudio() {
+        const audio = createAudioGraph();
+        if (!audio || !masterGain) return;
+
+        // Create day ambience audio
+        if (!dayAmbienceAudio) {
+          dayAmbienceAudio = new Audio();
+          dayAmbienceAudio.src = "audio/forest-ambience-day.mp3";
+          dayAmbienceAudio.loop = true;
+          dayAmbienceAudio.preload = "auto";
+          dayAmbienceAudio.playsinline = true;
+
+          const daySource = audio.createMediaElementAudioSource(dayAmbienceAudio);
+          dayAmbienceGain = audio.createGain();
+          dayAmbienceGain.gain.value = 0;
+          daySource.connect(dayAmbienceGain);
+          dayAmbienceGain.connect(masterGain);
+        }
+
+        // Create night ambience audio
+        if (!nightAmbienceAudio) {
+          nightAmbienceAudio = new Audio();
+          nightAmbienceAudio.src = "audio/forest-ambience-night.mp3";
+          nightAmbienceAudio.loop = true;
+          nightAmbienceAudio.preload = "auto";
+          nightAmbienceAudio.playsinline = true;
+
+          const nightSource = audio.createMediaElementAudioSource(nightAmbienceAudio);
+          nightAmbienceGain = audio.createGain();
+          nightAmbienceGain.gain.value = 0;
+          nightSource.connect(nightAmbienceGain);
+          nightAmbienceGain.connect(masterGain);
+        }
       }
 
       function runWithAudio(callback) {
@@ -12268,6 +12312,16 @@
         forestAmbienceAudio.volume = 0;
         const playback = forestAmbienceAudio.play();
 
+        // Also start day/night audio if initialized
+        if (dayAmbienceAudio) {
+          dayAmbienceAudio.volume = 0;
+          dayAmbienceAudio.play().catch(() => {});
+        }
+        if (nightAmbienceAudio) {
+          nightAmbienceAudio.volume = 0;
+          nightAmbienceAudio.play().catch(() => {});
+        }
+
         if (playback && typeof playback.then === "function") {
           playback
             .then(() => {
@@ -12339,6 +12393,93 @@
           0,
           1
         );
+
+        // Update day/night audio gain crossfade
+        updateDayNightAudio(clamp(perceivedSurfaceAmount, 0, 1));
+      }
+
+      function calculateDayNightState() {
+        // Returns {intensity, r, g, b} based on dayNightTime
+        // Cycle segments (total 1320s):
+        // Day: 0-720s, intensity=1.0, color={255,255,200}
+        // Transition day→night: 720-840s, interpolate
+        // Night: 840-1200s, intensity=0.2, color={200,100,50}
+        // Transition night→day: 1200-1320s, interpolate
+
+        const t = dayNightTime % DAY_NIGHT_PERIOD;
+
+        if (t < 720) {
+          // Full day
+          return {
+            intensity: 1.0,
+            r: 255,
+            g: 255,
+            b: 200
+          };
+        } else if (t < 840) {
+          // Day to night transition (120s)
+          const progress = (t - 720) / 120;
+          return {
+            intensity: 1.0 - progress * 0.8, // 1.0 → 0.2
+            r: Math.round(255 - progress * 55), // 255 → 200
+            g: Math.round(255 - progress * 155), // 255 → 100
+            b: Math.round(200 - progress * 150) // 200 → 50
+          };
+        } else if (t < 1200) {
+          // Full night
+          return {
+            intensity: 0.2,
+            r: 200,
+            g: 100,
+            b: 50
+          };
+        } else {
+          // Night to day transition (120s)
+          const progress = (t - 1200) / 120;
+          return {
+            intensity: 0.2 + progress * 0.8, // 0.2 → 1.0
+            r: Math.round(200 + progress * 55), // 200 → 255
+            g: Math.round(100 + progress * 155), // 100 → 255
+            b: Math.round(50 + progress * 150) // 50 → 200
+          };
+        }
+      }
+
+      function updateDayNightAudio(depthFadeVolume) {
+        // Calculate the day/night crossfade based on dayNightTime
+        // depthFadeVolume is the existing depth-based fade (0-1)
+        const t = dayNightTime % DAY_NIGHT_PERIOD;
+
+        let dayFactor = 0;
+        let nightFactor = 0;
+
+        if (t < 720) {
+          // Full day
+          dayFactor = 1.0;
+          nightFactor = 0.0;
+        } else if (t < 840) {
+          // Day to night transition
+          const progress = (t - 720) / 120;
+          dayFactor = 1.0 - progress;
+          nightFactor = progress;
+        } else if (t < 1200) {
+          // Full night
+          dayFactor = 0.0;
+          nightFactor = 1.0;
+        } else {
+          // Night to day transition
+          const progress = (t - 1200) / 120;
+          dayFactor = progress;
+          nightFactor = 1.0 - progress;
+        }
+
+        const muteMultiplier = audioMuted ? 0 : 1;
+        if (dayAmbienceGain) {
+          dayAmbienceGain.gain.value = depthFadeVolume * dayFactor * muteMultiplier;
+        }
+        if (nightAmbienceGain) {
+          nightAmbienceGain.gain.value = depthFadeVolume * nightFactor * muteMultiplier;
+        }
       }
 
       function playJumpSound() {
@@ -12699,7 +12840,8 @@
             equippedBackpackLevel,
             ownedFlashlightLevel,
             equippedFlashlightLevel,
-            surfaceCooldown
+            surfaceCooldown,
+            dayNightTime
           },
           player: {
             x: player.x,
@@ -13260,6 +13402,7 @@
         ownedFlashlightLevel = clamp(Number(progression.ownedFlashlightLevel) || 0, 0, FLASHLIGHTS.length);
         equippedFlashlightLevel = clamp(Number(progression.equippedFlashlightLevel) || 0, 0, ownedFlashlightLevel);
         surfaceCooldown = Math.max(0, Number(progression.surfaceCooldown) || 0);
+        dayNightTime = ((Number(progression.dayNightTime) || 0) % DAY_NIGHT_PERIOD + DAY_NIGHT_PERIOD) % DAY_NIGHT_PERIOD;
 
         contractSystem = mergeContractSystem(
           contractSystem,
@@ -24301,6 +24444,9 @@
         const rows = lastY - firstY + 1;
         if (cols <= 0 || rows <= 0) return;
 
+        // Get day/night state for sunlight tinting (not applied in shop)
+        const dayNightState = playerInShop ? null : calculateDayNightState();
+
         // Build a per-tile light level = max of every source, then render it as
         // one bilinearly upscaled darkness image (1 texel per tile). Unlike the
         // old per-tile destination-out rectangles, a single interpolated image
@@ -24335,10 +24481,13 @@
           for (let tx = firstX; tx <= lastX; tx++) {
             const i = bufIndex(tx, ty);
             if (ty < terrainSurfaceYAt(tx)) {
-              light[i] = 1;
+              // Apply day/night intensity to above-surface daylight
+              light[i] = dayNightState ? dayNightState.intensity : 1;
             } else {
               const sun = sunlightMap[index(tx, ty)];
-              light[i] = sun > 0.01 ? Math.pow(sun, 0.82) * 0.96 : 0;
+              // Apply day/night intensity to below-surface sunlight
+              const baseLight = sun > 0.01 ? Math.pow(sun, 0.82) * 0.96 : 0;
+              light[i] = dayNightState ? baseLight * dayNightState.intensity : baseLight;
             }
           }
         }
@@ -24452,9 +24601,24 @@
           const torch = torchLight[i];
           // Yellow tint for torch light: shift blue down and add red/green based on torch intensity
           const yellowTint = torch * 0.72; // Controls intensity of yellow tint
-          data[p] = 5 + Math.round(yellowTint * 88);     // Red: increase toward yellow
-          data[p + 1] = 9 + Math.round(yellowTint * 68); // Green: increase toward yellow
-          data[p + 2] = Math.max(0, 14 - Math.round(yellowTint * 14)); // Blue: decrease (removing blue makes yellow)
+
+          // Base shadow color from day/night cycle
+          let shadowR = 5;
+          let shadowG = 9;
+          let shadowB = 14;
+
+          if (dayNightState && level < 1) {
+            // Blend shadow color toward day/night ambient color
+            // At night, shadows should have an orange tint
+            const nightness = 1 - dayNightState.intensity; // 0 at day, 1 at night
+            shadowR = Math.round(5 + (dayNightState.r - 5) * nightness * 0.6);
+            shadowG = Math.round(9 + (dayNightState.g - 9) * nightness * 0.6);
+            shadowB = Math.round(14 + (dayNightState.b - 14) * nightness * 0.6);
+          }
+
+          data[p] = shadowR + Math.round(yellowTint * 88);     // Red: add torch tint
+          data[p + 1] = shadowG + Math.round(yellowTint * 68); // Green: add torch tint
+          data[p + 2] = Math.max(0, shadowB - Math.round(yellowTint * 14)); // Blue: torch reduces blue
           data[p + 3] = (1 - level) * 255;
         }
         darkTexCtx.putImageData(img, 0, 0);
@@ -24500,6 +24664,9 @@
       }
 
       function update(dt) {
+        // Increment day/night cycle timer
+        dayNightTime = (dayNightTime + dt) % DAY_NIGHT_PERIOD;
+
         updateRefineryJobs();
 
         if (!activeModal && !document.hidden) {
