@@ -10768,6 +10768,9 @@
       let radiationStaticGain = null;
       let forestAmbienceCurrentVolume = 0;
       let forestAmbienceStarted = false;
+      let nightAmbienceAudio = null;
+      let nightAmbienceStarted = false;
+      let nightAmbienceCurrentVolume = 0;
       let jazzMusicAudio = null;
       let jazzMusicStarted = false;
       let jazzMusicCurrentVolume = 0;
@@ -12086,6 +12089,7 @@
         primeBundledAudioAssets();
         initializeJazzMusic();
         startForestAmbience();
+        startNightAmbience();
         updateForestAmbience(true);
 
         if (audioUnlockPromise) return audioUnlockPromise;
@@ -12143,13 +12147,13 @@
       function calculateJazzVolume(playerX, playerY, playerInShopFlag) {
         const shopCenterX = (8 + 3) * TILE;
         const shopCenterY = (GROUND_Y - 5 + 2.5) * TILE;
-        if (playerInShopFlag) return 0.5;
+        if (playerInShopFlag) return 0.25;
         const dx = playerX - shopCenterX;
         const dy = playerY - shopCenterY;
         const distanceInBlocks = Math.sqrt(dx * dx + dy * dy) / TILE;
         if (distanceInBlocks >= 5) return 0;
-        if (distanceInBlocks < 1) return 0.25;
-        return 0.25 * (5 - distanceInBlocks) / 4;
+        if (distanceInBlocks < 1) return 0.125;
+        return 0.125 * (5 - distanceInBlocks) / 4;
       }
 
       function updateJazzMusic() {
@@ -12328,6 +12332,21 @@
         }
       }
 
+      function startNightAmbience() {
+        if (nightAmbienceStarted) return;
+        nightAmbienceAudio = document.createElement("audio");
+        nightAmbienceAudio.src = "audio/Night Time Ambience.mp3";
+        nightAmbienceAudio.loop = true;
+        nightAmbienceAudio.preload = "auto";
+        nightAmbienceAudio.volume = 0;
+        const pb = nightAmbienceAudio.play();
+        if (pb && pb.then) {
+          pb.then(() => { nightAmbienceStarted = true; }).catch(() => { nightAmbienceStarted = false; });
+        } else {
+          nightAmbienceStarted = true;
+        }
+      }
+
       function currentForestDepth() {
         if (playerInShop) return 0;
 
@@ -12351,10 +12370,6 @@
           1
         );
 
-        // Browser audio volume is linear in amplitude, while perceived
-        // loudness is closer to logarithmic. This concave logarithmic curve
-        // keeps the forest audible farther underground, then reaches exactly
-        // zero at the configured silent depth.
         const perceivedSurfaceAmount =
           linearSurfaceAmount <= 0
             ? 0
@@ -12364,27 +12379,30 @@
               ) /
               Math.log1p(FOREST_AMBIENCE_FADE_CURVE);
 
-        const targetVolume = audioMuted
-          ? 0
-          : FOREST_AMBIENCE_MAX_VOLUME *
-            perceivedSurfaceAmount;
+        // Day/night crossfade factor: 0=full day, 1=full night
+        const t = dayNightTime % DAY_NIGHT_PERIOD;
+        let nightFactor = 0;
+        if (t >= 720 && t < 840) nightFactor = (t - 720) / 120;       // day→night transition
+        else if (t >= 840 && t < 1200) nightFactor = 1;               // full night
+        else if (t >= 1200) nightFactor = 1 - (t - 1200) / 120;       // night→day transition
+
+        const baseVolume = audioMuted ? 0 : FOREST_AMBIENCE_MAX_VOLUME * perceivedSurfaceAmount;
+        const dayTarget = baseVolume * (1 - nightFactor);
+        const nightTarget = baseVolume * nightFactor;
 
         if (immediate) {
-          forestAmbienceCurrentVolume = targetVolume;
+          forestAmbienceCurrentVolume = dayTarget;
+          nightAmbienceCurrentVolume = nightTarget;
         } else {
-          forestAmbienceCurrentVolume +=
-            (targetVolume - forestAmbienceCurrentVolume) * 0.055;
+          forestAmbienceCurrentVolume += (dayTarget - forestAmbienceCurrentVolume) * 0.055;
+          nightAmbienceCurrentVolume += (nightTarget - nightAmbienceCurrentVolume) * 0.055;
         }
 
-        if (forestAmbienceCurrentVolume < 0.0005) {
-          forestAmbienceCurrentVolume = 0;
-        }
+        if (forestAmbienceCurrentVolume < 0.0005) forestAmbienceCurrentVolume = 0;
+        if (nightAmbienceCurrentVolume < 0.0005) nightAmbienceCurrentVolume = 0;
 
-        forestAmbienceAudio.volume = clamp(
-          forestAmbienceCurrentVolume,
-          0,
-          1
-        );
+        forestAmbienceAudio.volume = clamp(forestAmbienceCurrentVolume, 0, 1);
+        if (nightAmbienceAudio) nightAmbienceAudio.volume = clamp(nightAmbienceCurrentVolume, 0, 1);
       }
 
       function calculateDayNightState() {
@@ -24560,14 +24578,6 @@
           let shadowG = 9;
           let shadowB = 14;
 
-          if (dayNightState && level < 1) {
-            // Blend shadow color toward day/night ambient color
-            // At night, shadows should have an orange tint
-            const nightness = 1 - dayNightState.intensity; // 0 at day, 1 at night
-            shadowR = Math.round(5 + (dayNightState.r - 5) * nightness * 0.6);
-            shadowG = Math.round(9 + (dayNightState.g - 9) * nightness * 0.6);
-            shadowB = Math.round(14 + (dayNightState.b - 14) * nightness * 0.6);
-          }
 
           data[p] = shadowR + Math.round(yellowTint * 88);     // Red: add torch tint
           data[p + 1] = shadowG + Math.round(yellowTint * 68); // Green: add torch tint
