@@ -18437,7 +18437,13 @@
 
         player.jumpWasDown = input.jump;
         player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL_SPEED);
-        player.x += player.vx * dt;
+
+        const playerCenterTileX = Math.floor((player.x + player.w * 0.5) / TILE);
+        const playerCenterTileY = Math.floor((player.y + player.h * 0.5) / TILE);
+        const inWater = tileAt(playerCenterTileX, playerCenterTileY) === WATER;
+        const waterMult = inWater ? 0.35 : 1;
+
+        player.x += player.vx * dt * waterMult;
 
         if (player.vx > 0) {
           const right = player.x + player.w;
@@ -18457,7 +18463,7 @@
         const previousBottom = previousY + player.h;
         player.grounded = false;
         player.onPlatform = false;
-        player.y += player.vy * dt;
+        player.y += player.vy * dt * waterMult;
 
         if (player.vy > 0) {
           const bottom = player.y + player.h;
