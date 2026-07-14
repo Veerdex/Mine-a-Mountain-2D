@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v38-water-overlay";
+const CACHE_NAME = "mountain-tycoon-pwa-v39-water-fixes";
 
 const APP_SHELL = [
   "./",

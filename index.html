@@ -4356,7 +4356,7 @@
         { name: "Crown of the First Mountain", weight: 2, hardness: 0, value: 0, breakTime: 0, color: "#f4d773", style: "structure-valuables", collectible: true, deposit: false, structureValuable: true },
 
         // Appended to preserve all prior save IDs. Water pockets flow like lava.
-        { name: "Water Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#3d9be0", style: "water", tier: 1, spawnRate: 1.0, clumpMin: 8, clumpMax: 22, hazard: true, collectible: false, deposit: false }
+        { name: "Water Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#3d9be0", style: "water", tier: 1, spawnRate: 2.0, clumpMin: 16, clumpMax: 44, hazard: true, collectible: false, deposit: false }
       ];
 
       const ORE_MODIFIERS = [
@@ -17862,6 +17862,11 @@
           const inventoryOreSprite = !special
             ? create16BitOreDropSprite(entry.type)
             : null;
+          const isStructureLootStyle = !special && !inventoryOreSprite &&
+            (block.style === "structure-loot" || block.style === "structure-valuables");
+          const inventoryStructureSprite = isStructureLootStyle
+            ? createStructureLootSprite(entry.type)
+            : null;
           const inventoryKeySprite = entry.type === TREASURE_KEY
             ? create16BitTreasureKeySprite()
             : null;
@@ -17879,6 +17884,7 @@
                   : formatCompact(entry.units) +
                     " blocks"
               );
+          const inventoryDisplaySprite = inventoryOreSprite || inventoryStructureSprite;
           const swatchHtml = special
             ? (
                 '<div class="block-swatch special-item-swatch' +
@@ -17893,11 +17899,11 @@
               )
             : (
                 '<div class="block-swatch' +
-                (inventoryOreSprite ? ' ore-sprite-swatch' : '') +
+                (inventoryDisplaySprite ? ' ore-sprite-swatch' : '') +
                 oreModifierClass(entry) +
                 '" style="' +
-                (inventoryOreSprite
-                  ? 'background-image:url(' + inventoryOreSprite.toDataURL("image/png") + ')'
+                (inventoryDisplaySprite
+                  ? 'background-image:url(' + inventoryDisplaySprite.toDataURL("image/png") + ')'
                   : 'background:' + block.color) +
                 '"></div>'
               );
@@ -18604,7 +18610,8 @@
               !torch &&
               !plank &&
               !structurePart &&
-              (type === AIR || tileOverlapsPlayer(tx, ty) || tileProtectedByShop(tx, ty))
+              (type === AIR || type === LAVA || type === WATER || type === ACID ||
+               tileOverlapsPlayer(tx, ty) || tileProtectedByShop(tx, ty))
             ) continue;
 
             const targetX = tx * TILE + TILE * 0.5;
@@ -27580,6 +27587,35 @@
         }
 
         oreDropSpriteCache.set(type, sprite);
+        return sprite;
+      }
+
+      const structureLootSpriteCache = new Map();
+
+      function createStructureLootSprite(type) {
+        if (structureLootSpriteCache.has(type)) return structureLootSpriteCache.get(type);
+        const block = BLOCKS[type];
+        if (!block) { structureLootSpriteCache.set(type, null); return null; }
+        const size = 32;
+        const sprite = document.createElement("canvas");
+        sprite.width = size;
+        sprite.height = size;
+        const t = sprite.getContext("2d");
+        const cx = size / 2, cy = size / 2, r = size * 0.38;
+        t.fillStyle = "rgba(7,15,18,0.95)";
+        t.beginPath(); t.arc(cx, cy, r + 2, 0, Math.PI * 2); t.fill();
+        const glow = t.createRadialGradient(cx - size * 0.08, cy - size * 0.09, size * 0.025, cx, cy, r);
+        glow.addColorStop(0, "#ffffff");
+        glow.addColorStop(0.22, block.color);
+        glow.addColorStop(0.72, block.color);
+        glow.addColorStop(1, "rgba(12,20,22,0.25)");
+        t.fillStyle = glow;
+        t.beginPath(); t.arc(cx, cy, r, 0, Math.PI * 2); t.fill();
+        t.fillStyle = "rgba(255,255,255,0.95)";
+        t.fillRect(cx - size * 0.13, cy - size * 0.16, size * 0.08, size * 0.08);
+        t.fillStyle = "rgba(255,255,255,0.55)";
+        t.fillRect(cx + size * 0.06, cy + size * 0.08, size * 0.05, size * 0.05);
+        structureLootSpriteCache.set(type, sprite);
         return sprite;
       }
 
