@@ -12245,9 +12245,7 @@
         startWaterDripping();
         startWaterStream();
         startLavaPopping();
-        updateForestAmbience(true);
-        updateCaveAmbience(true);
-        updateProximityAudio(true);
+        updateShopAudioState(true);
 
         if (audioUnlockPromise) return audioUnlockPromise;
 
@@ -12313,12 +12311,16 @@
         return 0.03125 * (5 - distanceInBlocks) / 4;
       }
 
-      function updateJazzMusic() {
+      function updateJazzMusic(immediate = false) {
         if (!jazzMusicAudio) return;
         const playerCenterX = player.x + player.w * 0.5;
         const playerCenterY = player.y + player.h * 0.5;
         const targetVolume = audioMuted ? 0 : calculateJazzVolume(playerCenterX, playerCenterY, playerInShop);
-        jazzMusicCurrentVolume += (targetVolume - jazzMusicCurrentVolume) * 0.055;
+        if (immediate) {
+          jazzMusicCurrentVolume = targetVolume;
+        } else {
+          jazzMusicCurrentVolume += (targetVolume - jazzMusicCurrentVolume) * 0.055;
+        }
         if (jazzMusicCurrentVolume < 0.0005) jazzMusicCurrentVolume = 0;
         jazzMusicAudio.volume = clamp(jazzMusicCurrentVolume, 0, 1);
       }
@@ -12432,7 +12434,7 @@
         });
       }
 
-      function updateRadiationStatic() {
+      function updateRadiationStatic(immediate = false) {
         if (
           !audioContext ||
           !audioReady ||
@@ -12450,17 +12452,22 @@
         // Almost silent at zero radiation, increasingly loud and harsh toward
         // 100%. The curved response keeps low exposure subtle.
         const targetVolume =
-          audioMuted || severity <= 0.001
+          audioMuted || playerInShop || severity <= 0.001
             ? 0.0001
             : 0.0025 + Math.pow(severity, 1.55) * 0.155;
         const targetFrequency = 1150 + severity * 3150;
         const targetQ = 0.62 + severity * 1.25;
 
-        radiationStaticGain.gain.setTargetAtTime(
-          targetVolume,
-          now,
-          severity > 0.7 ? 0.045 : 0.09
-        );
+        if (immediate) {
+          radiationStaticGain.gain.cancelScheduledValues(now);
+          radiationStaticGain.gain.setValueAtTime(targetVolume, now);
+        } else {
+          radiationStaticGain.gain.setTargetAtTime(
+            targetVolume,
+            now,
+            severity > 0.7 ? 0.045 : 0.09
+          );
+        }
         radiationStaticFilter.frequency.setTargetAtTime(
           targetFrequency,
           now,
@@ -12694,7 +12701,7 @@
           proximityAudioTimer = 0.25;
         }
 
-        const muted = audioMuted;
+        const muted = audioMuted || playerInShop;
         const range = PROXIMITY_AUDIO_SILENT_TILES - PROXIMITY_AUDIO_FULL_TILES;
 
         if (waterStreamAudio) {
@@ -12726,6 +12733,14 @@
           if (lavaPoppingCurrentVolume < 0.0005) lavaPoppingCurrentVolume = 0;
           lavaPoppingAudio.volume = clamp(lavaPoppingCurrentVolume, 0, 1);
         }
+      }
+
+      function updateShopAudioState(immediate = false) {
+        updateForestAmbience(immediate);
+        updateCaveAmbience(immediate);
+        updateProximityAudio(immediate);
+        updateJazzMusic(immediate);
+        updateRadiationStatic(immediate);
       }
 
       function calculateDayNightState() {
@@ -16267,6 +16282,7 @@
           input.build = false;
           input.torch = false;
           resetJoystick();
+          updateShopAudioState(true);
           updateHUD();
           return;
         }
@@ -17789,6 +17805,7 @@
           player.y = (GROUND_Y - 1) * TILE - player.h;
         }
         camera.zoom = 0.88;
+        updateShopAudioState(true);
         updateHUD();
         showToast("Left the Equipment Shop");
       }
@@ -25563,11 +25580,7 @@
         }
         if (miningWarningCooldown > 0) miningWarningCooldown -= dt;
         if (errorSoundCooldown > 0) errorSoundCooldown = Math.max(0, errorSoundCooldown - dt);
-        updateRadiationStatic();
-        updateForestAmbience();
-        updateCaveAmbience();
-        updateProximityAudio();
-        updateJazzMusic();
+        updateShopAudioState();
         updateGeneratorAudio();
       }
 
@@ -29874,29 +29887,20 @@
           audioMuted = false;
           updateSoundButton();
           await unlockAudio(true);
-          updateRadiationStatic();
-          updateForestAmbience(true);
-          updateCaveAmbience(true);
-          updateProximityAudio(true);
+          updateShopAudioState(true);
         } else if (
           !audioReady ||
           !audioContext ||
           audioContext.state !== "running"
         ) {
           await unlockAudio(true);
-          updateRadiationStatic();
-          updateForestAmbience(true);
-          updateCaveAmbience(true);
-          updateProximityAudio(true);
+          updateShopAudioState(true);
         } else {
           playToggleSound();
           audioMuted = true;
           updateGeneratorAudio(true);
           updateSoundButton();
-          updateRadiationStatic();
-          updateForestAmbience(true);
-          updateCaveAmbience(true);
-          updateProximityAudio(true);
+          updateShopAudioState(true);
         }
       }
 
