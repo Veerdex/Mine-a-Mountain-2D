@@ -3709,7 +3709,7 @@
       <div class="panel-header">
         <div>
           <h1>Cloud Save</h1>
-          <p>Local autosave works immediately. Create a username and password to sync the same progress across devices. No email required.</p>
+          <p>Local autosave works immediately. Create a username and password to sync the same progress across devices. No email required. Sign out before using a different account.</p>
         </div>
         <button class="close-button" aria-label="Close">×</button>
       </div>
@@ -14304,8 +14304,10 @@
         cloudSignOut.disabled = !signedIn || cloudBusy;
         cloudSaveNow.disabled = !signedIn || cloudBusy;
         cloudLoadNow.disabled = !signedIn || cloudBusy;
-        cloudSignIn.disabled = cloudBusy || !cloudConfigured;
-        cloudSignUp.disabled = cloudBusy || !cloudConfigured;
+        cloudSignIn.disabled = signedIn || cloudBusy || !cloudConfigured;
+        cloudSignUp.disabled = signedIn || cloudBusy || !cloudConfigured;
+        cloudUsername.disabled = signedIn || cloudBusy || !cloudConfigured;
+        cloudPassword.disabled = signedIn || cloudBusy || !cloudConfigured;
         cloudButton.classList.toggle("connected", signedIn);
         cloudButton.classList.toggle("saving", cloudBusy);
         cloudButtonLabel.textContent = signedIn ? "ACCOUNT" : "LOG IN";
@@ -14421,6 +14423,11 @@
 
       async function signUpCloudAccount() {
         if (!supabaseClient || cloudBusy) return;
+        if (cloudUser) {
+          updateCloudUI("Sign out before creating another account.");
+          showToast("Sign out before creating another account");
+          return;
+        }
         const { username, password } = authCredentials();
         if (!isValidUsername(username)) {
           showToast("Username must be 3-20 characters: letters, numbers, or _");
@@ -14461,6 +14468,11 @@
 
       async function signInCloudAccount() {
         if (!supabaseClient || cloudBusy) return;
+        if (cloudUser) {
+          updateCloudUI("Sign out before signing in to another account.");
+          showToast("Sign out before switching accounts");
+          return;
+        }
         const { username, password } = authCredentials();
         if (!username || !password) {
           showToast("Enter your username and password");
@@ -21728,18 +21740,51 @@
       }
 
 
-      function playerLightIntensityAt(worldX, worldY) {
-        const localX = worldX - playerLightOriginX;
-        const localY = worldY - playerLightOriginY;
+      function samplePlayerLightField(localX, localY) {
         if (
           localX < 0 ||
           localY < 0 ||
-          localX >= PLAYER_LIGHT_DIAMETER ||
-          localY >= PLAYER_LIGHT_DIAMETER
+          localX > PLAYER_LIGHT_DIAMETER - 1 ||
+          localY > PLAYER_LIGHT_DIAMETER - 1
         ) {
           return 0;
         }
-        return playerLightField[localY * PLAYER_LIGHT_DIAMETER + localX] || 0;
+
+        const x0 = Math.floor(localX);
+        const y0 = Math.floor(localY);
+        const x1 = Math.min(PLAYER_LIGHT_DIAMETER - 1, x0 + 1);
+        const y1 = Math.min(PLAYER_LIGHT_DIAMETER - 1, y0 + 1);
+        const fx = localX - x0;
+        const fy = localY - y0;
+        const top =
+          playerLightField[y0 * PLAYER_LIGHT_DIAMETER + x0] * (1 - fx) +
+          playerLightField[y0 * PLAYER_LIGHT_DIAMETER + x1] * fx;
+        const bottom =
+          playerLightField[y1 * PLAYER_LIGHT_DIAMETER + x0] * (1 - fx) +
+          playerLightField[y1 * PLAYER_LIGHT_DIAMETER + x1] * fx;
+
+        return top * (1 - fy) + bottom * fy;
+      }
+
+      function playerLightIntensityAt(worldX, worldY) {
+        const playerCenterTileX =
+          (player.x + player.w * 0.5) / TILE - 0.5;
+        const playerCenterTileY =
+          (player.y + player.h * 0.5) / TILE - 0.5;
+        const fieldCenterX =
+          playerLightOriginX + PLAYER_LIGHT_FIELD_RADIUS;
+        const fieldCenterY =
+          playerLightOriginY + PLAYER_LIGHT_FIELD_RADIUS;
+        const localX =
+          worldX -
+          playerLightOriginX -
+          (playerCenterTileX - fieldCenterX);
+        const localY =
+          worldY -
+          playerLightOriginY -
+          (playerCenterTileY - fieldCenterY);
+
+        return samplePlayerLightField(localX, localY);
       }
 
       function flashlightBrightnessAt(dist, range, dimScale) {
@@ -25253,8 +25298,17 @@
         const torchLight = new Float32Array(cols * rows); // Track torch intensity separately for yellow tint
         const bufIndex = (tx, ty) => (ty - firstY) * cols + (tx - firstX);
 
-        const playerTileX = Math.floor((player.x + player.w * 0.5) / TILE);
-        const playerTileY = Math.floor((player.y + player.h * 0.5) / TILE);
+        // Tile-space coordinates are centred on tile centres: integer values
+        // place the light exactly at a block centre, while fractional values
+        // preserve every sub-tile movement made by the player.
+        const playerCenterTileX =
+          (player.x + player.w * 0.5) / TILE - 0.5;
+        const playerCenterTileY =
+          (player.y + player.h * 0.5) / TILE - 0.5;
+        const playerTileX = Math.floor(playerCenterTileX + 0.5);
+        const playerTileY = Math.floor(playerCenterTileY + 0.5);
+        const playerFieldOffsetX = playerCenterTileX - playerTileX;
+        const playerFieldOffsetY = playerCenterTileY - playerTileY;
         const playerDepth = depthBelowLocalSurface(playerTileX, playerTileY);
         const playerBrightnessMultiplier = depthBrightnessMultiplier(
           playerDepth,
@@ -25289,17 +25343,29 @@
           }
         }
 
-        // Block-aware player light (weakens with depth).
-        for (let localY = 0; localY < PLAYER_LIGHT_DIAMETER; localY++) {
-          const worldY = playerLightOriginY + localY;
-          const dy = localY - PLAYER_LIGHT_FIELD_RADIUS;
-          for (let localX = 0; localX < PLAYER_LIGHT_DIAMETER; localX++) {
-            const dx = localX - PLAYER_LIGHT_FIELD_RADIUS;
+        // Block-aware player light (weakens with depth). The propagation field
+        // remains tile based, but it is sampled with the player's fractional
+        // offset so the rendered glow travels continuously between blocks.
+        for (
+          let worldY = playerLightOriginY - 1;
+          worldY <= playerLightOriginY + PLAYER_LIGHT_DIAMETER;
+          worldY++
+        ) {
+          const dy = worldY - playerCenterTileY;
+          for (
+            let worldX = playerLightOriginX - 1;
+            worldX <= playerLightOriginX + PLAYER_LIGHT_DIAMETER;
+            worldX++
+          ) {
+            const dx = worldX - playerCenterTileX;
             if (dx * dx + dy * dy > 49) continue; // clip to radius 7
-            const intensity = playerLightField[localY * PLAYER_LIGHT_DIAMETER + localX];
+            const intensity = samplePlayerLightField(
+              worldX - playerLightOriginX - playerFieldOffsetX,
+              worldY - playerLightOriginY - playerFieldOffsetY
+            );
             if (intensity > 0.015) {
               addLight(
-                playerLightOriginX + localX,
+                worldX,
                 worldY,
                 Math.pow(intensity, 0.5) * playerBrightnessMultiplier,
                 false
@@ -25308,14 +25374,33 @@
           }
         }
 
-        // Safety ring so the player is never boxed into black after a tab switch.
-        for (let sy = playerTileY - 1; sy <= playerTileY + 1; sy++) {
-          for (let sx = playerTileX - 1; sx <= playerTileX + 1; sx++) {
+        // Safety ring so the player is never boxed into black after a tab
+        // switch. Its square falloff also uses the continuous player position.
+        for (
+          let sy = Math.floor(playerCenterTileY - 2);
+          sy <= Math.ceil(playerCenterTileY + 2);
+          sy++
+        ) {
+          for (
+            let sx = Math.floor(playerCenterTileX - 2);
+            sx <= Math.ceil(playerCenterTileX + 2);
+            sx++
+          ) {
             if (sx < 0 || sx >= WORLD_W || sy < 0 || sy >= WORLD_H) continue;
+            const safetyWeight = clamp(
+              2 - Math.max(
+                Math.abs(sx - playerCenterTileX),
+                Math.abs(sy - playerCenterTileY)
+              ),
+              0,
+              1
+            );
+            if (safetyWeight <= 0) continue;
             const t = tileAt(sx, sy);
             const safetyBrightness =
               (t === AIR || t === GAS || t === LAVA ? 0.94 : 0.76) *
-              playerBrightnessMultiplier;
+              playerBrightnessMultiplier *
+              safetyWeight;
             addLight(sx, sy, safetyBrightness);
           }
         }
@@ -25360,14 +25445,26 @@
               playerRadiusMultiplier +
               activePlayerLightBonus()
           );
-          const flR = Math.ceil(flRange);
-          for (let dy = -flR; dy <= flR; dy++) {
-            for (let dx = -flR; dx <= flR; dx++) {
+          const flR = Math.ceil(flRange + 1);
+          for (
+            let ty = Math.floor(playerCenterTileY - flR);
+            ty <= Math.ceil(playerCenterTileY + flR);
+            ty++
+          ) {
+            for (
+              let tx = Math.floor(playerCenterTileX - flR);
+              tx <= Math.ceil(playerCenterTileX + flR);
+              tx++
+            ) {
+              const dx = tx - playerCenterTileX;
+              const dy = ty - playerCenterTileY;
               const dist = Math.sqrt(dx * dx + dy * dy);
               const brightness =
                 flashlightBrightnessAt(dist, flRange, 0.88) *
                 playerBrightnessMultiplier;
-              if (brightness > 0.015) addLight(playerTileX + dx, playerTileY + dy, brightness, false);
+              if (brightness > 0.015) {
+                addLight(tx, ty, brightness, false);
+              }
             }
           }
         }

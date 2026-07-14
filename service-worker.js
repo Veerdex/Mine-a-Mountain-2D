@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v49-fresh-world-on-logout";
+const CACHE_NAME = "mountain-tycoon-pwa-v51-smooth-light-runtime-fix";
 
 const APP_SHELL = [
   "./",
