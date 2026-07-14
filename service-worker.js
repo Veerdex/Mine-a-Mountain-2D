@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v45-contract-rebalance";
+const CACHE_NAME = "mountain-tycoon-pwa-v47-refinery-house-edge";
 
 const APP_SHELL = [
   "./",

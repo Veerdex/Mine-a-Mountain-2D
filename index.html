@@ -4055,8 +4055,10 @@
 
       const REFINERY_MAX_BONUS = 1.25;
       const REFINERY_MAX_EPSILON = 0.0005;
-      const REFINERY_VALUE_COST_RATE = 0.18;
-      const REFINERY_REPEAT_COST_MULTIPLIER = 1.35;
+      // Price each cycle from its expected ore-value gain. Returning 95% of
+      // the fee as value on average gives the refinery a 5% house edge.
+      const REFINERY_HOUSE_EDGE = 0.05;
+      const REFINERY_BASE_EXPECTED_IMPROVEMENT_FRACTION = 0.2305;
       const REFINERY_QUEUE_CAPACITY = 5;
       const REFINERY_DURATION_MS = 10000;
 
@@ -4580,6 +4582,9 @@
         14000000000000,
         170000000000000
       ];
+      const CELESTIAL_LEGACY_BASE_COST =
+        EQUIPMENT_TIER_BUDGETS[9];
+      const CELESTIAL_LEGACY_COST_GROWTH = 1.60;
 
       // The three levels inside a tier receive 22%, 32%, and 46% of each
       // equipment category's share. Pickaxes retain the highest share, while
@@ -5462,7 +5467,10 @@
         blocked.add(cartX + 1);
 
         const itemCount = 2 + Math.floor(Math.random() * 3);
-        const tokenIncluded = Math.random() < 0.18;
+        const tokenIncluded = rollStructureSignatureReward(
+          "abandoned-mineshaft",
+          0.18
+        );
         const ordinaryCount = Math.max(1, itemCount - (tokenIncluded ? 1 : 0));
         const tokenValue = tokenIncluded
           ? Math.max(1, Math.round(targetValue * (0.25 + Math.random() * 0.15)))
@@ -5813,7 +5821,10 @@
         carveSupplyRoom(structure);
 
         const ordinaryCount = 3 + Math.floor(Math.random() * 3);
-        const compassIncluded = Math.random() < 0.15;
+        const compassIncluded = rollStructureSignatureReward(
+          "miner-supply-room",
+          0.15
+        );
         const compassValue = compassIncluded
           ? Math.max(
               1,
@@ -6113,7 +6124,10 @@
         const baseOrdinaryCount = 3 + Math.floor(Math.random() * 2);
         const bedFindIncluded = Math.random() < 0.25;
         const ordinaryCount = baseOrdinaryCount + (bedFindIncluded ? 1 : 0);
-        const locketIncluded = Math.random() < 0.12;
+        const locketIncluded = rollStructureSignatureReward(
+          "underground-house",
+          0.12
+        );
         const locketValue = locketIncluded
           ? Math.max(
               1,
@@ -6416,7 +6430,10 @@
         carveSupplyRoom(structure);
 
         const ordinaryCount = 3 + Math.floor(Math.random() * 2);
-        const blueprintIncluded = Math.random() < 0.1;
+        const blueprintIncluded = rollStructureSignatureReward(
+          "underground-workshop",
+          0.10
+        );
         const blueprintValue = blueprintIncluded
           ? Math.max(
               1,
@@ -6829,7 +6846,10 @@
         carveSupplyRoom(structure);
 
         const ordinaryCount = 4 + Math.floor(Math.random() * 3);
-        const watchIncluded = Math.random() < 0.08;
+        const watchIncluded = rollStructureSignatureReward(
+          "rail-station",
+          0.08
+        );
         const watchValue = watchIncluded
           ? Math.max(
               1,
@@ -7176,7 +7196,10 @@
         carveSupplyRoom(structure);
 
         const ordinaryCount = 3 + Math.floor(Math.random() * 3);
-        const idolIncluded = Math.random() < 0.07;
+        const idolIncluded = rollStructureSignatureReward(
+          "ancient-shrine",
+          0.07
+        );
         const idolValue = idolIncluded
           ? clamp(
               Math.round(targetValue * (0.45 + Math.random() * 0.1)),
@@ -9271,6 +9294,7 @@
           recordOreBookMined(item.type, item, false);
         }
         if (firstCollection) {
+          clearStructureRarePityForItem(item.type);
           updateContractProgress(
             "collectStructureLoot",
             1,
@@ -9496,6 +9520,14 @@
       const CONTRACT_STRUCTURE_LOOT_REWARD_INDEX = 8;
       const CONTRACT_STRUCTURE_RARE_REWARD_INDEX = 9;
       const CONTRACT_TREASURE_REWARD_INDEX = 10;
+      const CONTRACT_MOUNTAIN_SCOPED_TYPES = new Set([
+        "mineBlocks",
+        "mineOre",
+        "triggerHazards",
+        "reachDepth",
+        "openTreasure"
+      ]);
+      const STRUCTURE_RARE_PITY_LIMIT = 5;
 
       const CONTRACT_ORE_PAIRS = [
         [CLAY, COAL],
@@ -9655,7 +9687,8 @@
             type: "mineBlocks",
             title: "Clear the Path",
             description:
-              "Mine " + (60 + tier * 35) + " total blocks.",
+              "Mine " + (60 + tier * 35) +
+              " total blocks in Tier " + tier + " or higher.",
             target: 60 + tier * 35
           },
           {
@@ -9664,7 +9697,8 @@
             title: firstOre.name + " Order",
             description:
               "Mine " + (8 + tier * 4) + " " +
-              firstOre.name + " blocks.",
+              firstOre.name + " blocks in Tier " +
+              tier + " or higher.",
             target: 8 + tier * 4,
             targetType: orePair[0]
           },
@@ -9674,7 +9708,7 @@
             title: "Major Excavation",
             description:
               "Mine " + (150 + tier * 90) +
-              " total blocks.",
+              " total blocks in Tier " + tier + " or higher.",
             target: 150 + tier * 90
           },
           {
@@ -9683,7 +9717,8 @@
             title: secondOre.name + " Order",
             description:
               "Mine " + (6 + tier * 3) + " " +
-              secondOre.name + " blocks.",
+              secondOre.name + " blocks in Tier " +
+              tier + " or higher.",
             target: 6 + tier * 3,
             targetType: orePair[1]
           },
@@ -9693,7 +9728,8 @@
             title: "Refinery Work Order",
             description:
               "Complete " + (1 + tier) +
-              " refinery cycles.",
+              " refinery cycles using Tier " +
+              tier + " or higher ores.",
             target: 1 + tier
           },
           {
@@ -9702,7 +9738,8 @@
             title: "Hazard Research",
             description:
               "Trigger " + (1 + Math.ceil(tier / 2)) +
-              " danger blocks.",
+              " danger blocks in Tier " +
+              tier + " or higher.",
             target: 1 + Math.ceil(tier / 2)
           },
           {
@@ -9712,7 +9749,7 @@
             description:
               "Reach a depth of " +
               ((8 + tier * 8) * 2) +
-              " blocks.",
+              " blocks on Tier " + tier + " or higher.",
             target: (8 + tier * 8) * 2
           },
           {
@@ -9792,7 +9829,9 @@
               treasureTarget === 1
                 ? " treasure chest."
                 : " treasure chests."
-          ),
+            ) +
+            " Only Tier " + tier +
+            " or higher mountains count.",
           target: treasureTarget,
           reward:
             rewards[CONTRACT_TREASURE_REWARD_INDEX]
@@ -10103,6 +10142,7 @@
       let dpr = 1;
       let cash = 0;
       let totalCollectedMoney = 0;
+      let celestialLegacyRank = 0;
       let currentMountain = null;
       let activeModal = null;
       let toastTimer = 0;
@@ -10375,7 +10415,8 @@
             progress: 0,
             active: false,
             completed: false,
-            claimed: false
+            claimed: false,
+            rarePity: 0
           };
         }
 
@@ -10398,12 +10439,18 @@
           claimed ||
           !!source.completed ||
           progress >= contract.target;
+        const rarePity = clamp(
+          Math.floor(Number(source.rarePity) || 0),
+          0,
+          STRUCTURE_RARE_PITY_LIMIT
+        );
 
         return {
           progress: completed ? contract.target : progress,
           active: !claimed && !!source.active,
           completed,
-          claimed
+          claimed,
+          rarePity
         };
       }
 
@@ -10480,12 +10527,17 @@
             currentState.completed ||
             loadedState.completed ||
             progress >= contract.target;
+          const rarePity = Math.max(
+            Number(currentState.rarePity) || 0,
+            Number(loadedState.rarePity) || 0
+          );
 
           states[contract.id] = {
             progress: completed ? contract.target : progress,
             active: !claimed && loadedState.active,
             completed,
-            claimed
+            claimed,
+            rarePity
           };
         }
 
@@ -10511,6 +10563,67 @@
         }
 
         return contractSystem.states[contractId];
+      }
+
+      function structureRareContractForDefinition(definitionId) {
+        return CONTRACT_CATALOG.find(
+          contract =>
+            contract.type === "collectStructureItem" &&
+            CONTRACT_STRUCTURE_TARGETS.some(
+              target =>
+                target.definitionId === definitionId &&
+                Number(target.specialType) ===
+                  Number(contract.targetType)
+            )
+        ) || null;
+      }
+
+      function rollStructureSignatureReward(
+        definitionId,
+        baseChance
+      ) {
+        const contract =
+          structureRareContractForDefinition(definitionId);
+        const chance = clamp(
+          Number(baseChance) || 0,
+          0,
+          1
+        );
+
+        if (!contract) return Math.random() < chance;
+
+        const state = contractState(contract.id);
+        if (
+          !state ||
+          !state.active ||
+          state.completed ||
+          state.claimed
+        ) {
+          return Math.random() < chance;
+        }
+
+        state.rarePity = Math.min(
+          STRUCTURE_RARE_PITY_LIMIT,
+          (Number(state.rarePity) || 0) + 1
+        );
+
+        return (
+          state.rarePity >= STRUCTURE_RARE_PITY_LIMIT ||
+          Math.random() < chance
+        );
+      }
+
+      function clearStructureRarePityForItem(type) {
+        const contract = CONTRACT_CATALOG.find(
+          candidate =>
+            candidate.type === "collectStructureItem" &&
+            Number(candidate.targetType) === Number(type)
+        );
+        const state = contract
+          ? contractState(contract.id)
+          : null;
+
+        if (state) state.rarePity = 0;
       }
 
       function contractTierUnlocked(tier) {
@@ -10543,6 +10656,22 @@
         for (let level = 1; level <= maximum; level++) {
           unlockContractTier(level);
         }
+      }
+
+      function highestUnlockedMountainTier() {
+        return Math.max(
+          1,
+          ...contractSystem.unlockedTiers.map(
+            tier => Math.floor(Number(tier) || 1)
+          )
+        );
+      }
+
+      function equipmentTierUnlocked(tier) {
+        return (
+          Math.floor(Number(tier) || 1) <=
+          highestUnlockedMountainTier()
+        );
       }
 
       function activeContracts() {
@@ -12920,7 +13049,10 @@
           updateContractProgress(
             "reachDepth",
             depthBlocks,
-            { absolute: true }
+            {
+              absolute: true,
+              mountainTier: currentMountain.level
+            }
           );
         }
 
@@ -13003,6 +13135,7 @@
           progression: {
             cash,
             totalCollectedMoney,
+            celestialLegacyRank,
             ownedPickaxeLevel,
             equippedPickaxeLevel,
             ownedBackpackLevel,
@@ -13560,6 +13693,12 @@
           totalCollectedMoney,
           cash,
           Number(progression.totalCollectedMoney) || 0
+        );
+        celestialLegacyRank = Math.max(
+          0,
+          Math.floor(
+            Number(progression.celestialLegacyRank) || 0
+          )
         );
 
         lifetimeStats = mergeLifetimeStats(
@@ -14795,26 +14934,29 @@
       }
 
       function refineryCost(item, block) {
-        const refinementCount =
-          refineryItemRefinementCount(item);
-        const currentItemValue = Math.max(
+        const currentMultiplier = refineryItemMultiplier(item, block);
+        const remainingMultiplier = Math.max(
           0,
-          Number(item && item.value) || 0
+          refineryMaximumMultiplier() - currentMultiplier
         );
-
-        const minimumBaseCost = block.value * 0.25;
-        const valueScaledCost =
-          currentItemValue * REFINERY_VALUE_COST_RATE;
-        const repeatMultiplier = Math.pow(
-          REFINERY_REPEAT_COST_MULTIPLIER,
-          refinementCount
-        );
+        const luckBoost = refineryLuckRollBoost();
+        const expectedImprovementFraction =
+          REFINERY_BASE_EXPECTED_IMPROVEMENT_FRACTION +
+          (1 - REFINERY_BASE_EXPECTED_IMPROVEMENT_FRACTION) *
+            luckBoost;
+        const itemValueScale =
+          refineryItemBaseValue(item, block) *
+          refineryItemBonusMultiplier(item) *
+          oreModifierMultiplier(item);
+        const expectedValueGain =
+          itemValueScale *
+          remainingMultiplier *
+          expectedImprovementFraction;
 
         return Math.max(
           1,
-          Math.ceil(
-            Math.max(minimumBaseCost, valueScaledCost) *
-              repeatMultiplier
+          Math.round(
+            expectedValueGain / (1 - REFINERY_HOUSE_EDGE)
           )
         );
       }
@@ -16141,6 +16283,7 @@
 
         if (name === "pickaxe") renderPickaxeShop();
         if (name === "backpack") renderBackpackShop();
+        if (name === "mountain") refreshMountainShop();
         if (name === "sell") renderSellShop();
         if (name === "luck") renderLuckPlot();
         if (name === "refinery") renderRefineryModal();
@@ -16193,10 +16336,12 @@
       }
 
       function buildMountainShop() {
+        mountainOptions.textContent = "";
         const fragment = document.createDocumentFragment();
         for (const tier of MOUNTAIN_TIERS) {
           const button = document.createElement("button");
           button.className = "mountain-option";
+          button.dataset.mountainLevel = String(tier.level);
           button.innerHTML =
             '<span class="tier-label">Tier ' + tier.level + '</span>' +
             '<span class="price-label">' + formatMoney(tier.price) + '</span>' +
@@ -16208,7 +16353,110 @@
           button.addEventListener("click", () => purchaseMountain(tier.level));
           fragment.appendChild(button);
         }
+
+        const legacyButton = document.createElement("button");
+        legacyButton.id = "celestialLegacyButton";
+        legacyButton.className = "mountain-option";
+        legacyButton.addEventListener(
+          "click",
+          purchaseCelestialLegacyRank
+        );
+        fragment.appendChild(legacyButton);
+
         mountainOptions.appendChild(fragment);
+        refreshMountainShop();
+      }
+
+      function celestialLegacyCost() {
+        return roundPrice(
+          CELESTIAL_LEGACY_BASE_COST *
+            Math.pow(
+              CELESTIAL_LEGACY_COST_GROWTH,
+              celestialLegacyRank
+            )
+        );
+      }
+
+      function celestialLegacyUnlocked() {
+        return (
+          highestUnlockedMountainTier() >= 10 &&
+          ownedPickaxeLevel >= PICKAXES.length &&
+          ownedBackpackLevel >= BACKPACKS.length &&
+          ownedFlashlightLevel >= FLASHLIGHTS.length
+        );
+      }
+
+      function refreshMountainShop() {
+        const highestTier = highestUnlockedMountainTier();
+
+        for (const button of mountainOptions.querySelectorAll(
+          ".mountain-option[data-mountain-level]"
+        )) {
+          const level = Number(button.dataset.mountainLevel);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            level <= highestTier + 1;
+          button.disabled = !available;
+          button.classList.toggle("locked", !available);
+
+          const priceLabel = button.querySelector(".price-label");
+          if (priceLabel) {
+            priceLabel.textContent = available
+              ? formatMoney(MOUNTAIN_TIERS[level - 1].price)
+              : "LOCKED • Purchase Tier " + (level - 1);
+          }
+        }
+
+        const legacyButton = document.getElementById(
+          "celestialLegacyButton"
+        );
+        if (!legacyButton) return;
+
+        const tierTenReached = highestTier >= 10;
+        const unlocked = celestialLegacyUnlocked();
+        legacyButton.hidden = !tierTenReached;
+        legacyButton.disabled = !unlocked;
+        legacyButton.classList.toggle("locked", !unlocked);
+        legacyButton.innerHTML =
+          '<span class="tier-label">Celestial Legacy Rank ' +
+          celestialLegacyRank +
+          '</span><span class="price-label">' +
+          (
+            unlocked
+              ? formatMoney(celestialLegacyCost())
+              : "MASTER ALL TIER 10 EQUIPMENT"
+          ) +
+          '</span><span class="detail-label">Permanent endgame recognition • Cost grows 1.60× per rank</span>';
+      }
+
+      function purchaseCelestialLegacyRank() {
+        if (!celestialLegacyUnlocked()) {
+          showToast(
+            "Master all Tier 10 equipment to begin your Celestial Legacy"
+          );
+          return;
+        }
+
+        const cost = celestialLegacyCost();
+        if (!TEST_INFINITE_MONEY && cash < cost) {
+          showToast(
+            "Need " +
+              formatMoney(cost - cash) +
+              " more for the next Legacy rank"
+          );
+          return;
+        }
+
+        if (!TEST_INFINITE_MONEY) cash -= cost;
+        celestialLegacyRank += 1;
+        displayCash = cash;
+        playPurchaseSound();
+        updateHUD();
+        refreshMountainShop();
+        saveLocalProgress(false);
+        showToast(
+          "CELESTIAL LEGACY • Rank " + celestialLegacyRank
+        );
       }
 
       function upgradeActionText(level, ownedLevel, price, equippedLevel) {
@@ -16217,13 +16465,38 @@
         return "BUY • " + formatMoney(price);
       }
 
+      function equipmentActionText(
+        equipment,
+        ownedLevel,
+        equippedLevel
+      ) {
+        if (
+          !TEST_UNLOCK_ALL_UPGRADES &&
+          !equipmentTierUnlocked(equipment.tier)
+        ) {
+          return (
+            "LOCKED • PURCHASE TIER " + equipment.tier
+          );
+        }
+
+        return upgradeActionText(
+          equipment.level,
+          ownedLevel,
+          equipment.price,
+          equippedLevel
+        );
+      }
+
       function renderPickaxeShop() {
         const fragment = document.createDocumentFragment();
         pickaxeOptions.textContent = "";
 
         for (const pickaxe of PICKAXES) {
           const sequentiallyAvailable = pickaxe.level <= ownedPickaxeLevel + 1;
-          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const tierAvailable = equipmentTierUnlocked(pickaxe.tier);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
           if (pickaxe.level === equippedPickaxeLevel) card.classList.add("equipped");
@@ -16236,7 +16509,7 @@
             '<span class="detail-label">Unlock band: ' + pickaxe.unlock + '</span>' +
             '<div class="upgrade-stats"><span>Power ' + pickaxe.power + '</span><span>Speed ' + pickaxe.speed.toFixed(2) + '×</span>' +
             '<span>Reach ' + pickaxe.reach.toFixed(2) + ' tiles</span><span>Level ' + pickaxe.level + '/30</span></div>' +
-            '<span class="upgrade-action">' + upgradeActionText(pickaxe.level, ownedPickaxeLevel, pickaxe.price, equippedPickaxeLevel) + '</span></div>';
+            '<span class="upgrade-action">' + equipmentActionText(pickaxe, ownedPickaxeLevel, equippedPickaxeLevel) + '</span></div>';
 
           card.addEventListener("click", () => selectPickaxe(pickaxe.level));
           fragment.appendChild(card);
@@ -16251,7 +16524,10 @@
 
         for (const backpack of BACKPACKS) {
           const sequentiallyAvailable = backpack.level <= ownedBackpackLevel + 1;
-          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const tierAvailable = equipmentTierUnlocked(backpack.tier);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
           if (backpack.level === equippedBackpackLevel) card.classList.add("equipped");
@@ -16264,7 +16540,7 @@
             '<span class="detail-label">Carries up to ' + formatCompact(backpack.capacity) + ' total weight.</span>' +
             '<div class="upgrade-stats"><span>Capacity ' + formatCompact(backpack.capacity) + '</span><span>Level ' + backpack.level + '/30</span>' +
             '<span>Current load ' + formatCompact(inventoryWeight) + '</span><span>Tier ' + backpack.tier + '</span></div>' +
-            '<span class="upgrade-action">' + upgradeActionText(backpack.level, ownedBackpackLevel, backpack.price, equippedBackpackLevel) + '</span></div>';
+            '<span class="upgrade-action">' + equipmentActionText(backpack, ownedBackpackLevel, equippedBackpackLevel) + '</span></div>';
 
           card.addEventListener("click", () => selectBackpack(backpack.level));
           fragment.appendChild(card);
@@ -16494,7 +16770,8 @@
 
         updateContractProgress(
           "refineOres",
-          1
+          1,
+          { sourceTier: block.tier }
         );
 
         // Completion audio acts as a notification while the refinery menu is
@@ -16947,7 +17224,14 @@
       }
 
       function recordTreasureContractOpen(amount = 1) {
-        return updateContractProgress("openTreasure", amount);
+        return updateContractProgress(
+          "openTreasure",
+          amount,
+          {
+            mountainTier:
+              currentMountain ? currentMountain.level : 0
+          }
+        );
       }
 
       function activeIncompleteContracts() {
@@ -16982,6 +17266,22 @@
 
         for (const contract of activeIncompleteContracts()) {
           if (contract.type !== objectiveType) continue;
+
+          if (
+            CONTRACT_MOUNTAIN_SCOPED_TYPES.has(objectiveType) &&
+            Math.floor(Number(options.mountainTier) || 0) <
+              contract.tier
+          ) {
+            continue;
+          }
+
+          if (
+            objectiveType === "refineOres" &&
+            Math.floor(Number(options.sourceTier) || 0) <
+              contract.tier
+          ) {
+            continue;
+          }
 
           if (
             (
@@ -17078,7 +17378,11 @@
         triggeredHazardCells.add(key);
         updateContractProgress(
           "triggerHazards",
-          1
+          1,
+          {
+            mountainTier:
+              currentMountain ? currentMountain.level : 0
+          }
         );
         return true;
       }
@@ -17597,7 +17901,10 @@
         equipmentPickaxeOptions.textContent = "";
         for (const pickaxe of PICKAXES) {
           const sequentiallyAvailable = pickaxe.level <= ownedPickaxeLevel + 1;
-          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const tierAvailable = equipmentTierUnlocked(pickaxe.tier);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
           if (pickaxe.level === equippedPickaxeLevel) card.classList.add("equipped");
@@ -17610,7 +17917,7 @@
             '<span class="detail-label">Unlock band: ' + pickaxe.unlock + '</span>' +
             '<div class="upgrade-stats"><span>Power ' + pickaxe.power + '</span><span>Speed ' + pickaxe.speed.toFixed(2) + '×</span>' +
             '<span>Reach ' + pickaxe.reach.toFixed(2) + ' tiles</span><span>Level ' + pickaxe.level + '/30</span></div>' +
-            '<span class="upgrade-action">' + upgradeActionText(pickaxe.level, ownedPickaxeLevel, pickaxe.price, equippedPickaxeLevel) + '</span></div>';
+            '<span class="upgrade-action">' + equipmentActionText(pickaxe, ownedPickaxeLevel, equippedPickaxeLevel) + '</span></div>';
           card.addEventListener("click", () => selectPickaxe(pickaxe.level));
           pickFragment.appendChild(card);
         }
@@ -17621,7 +17928,10 @@
         equipmentBackpackOptions.textContent = "";
         for (const backpack of BACKPACKS) {
           const sequentiallyAvailable = backpack.level <= ownedBackpackLevel + 1;
-          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const tierAvailable = equipmentTierUnlocked(backpack.tier);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
           if (backpack.level === equippedBackpackLevel) card.classList.add("equipped");
@@ -17634,7 +17944,7 @@
             '<span class="detail-label">Carries up to ' + formatCompact(backpack.capacity) + ' total weight.</span>' +
             '<div class="upgrade-stats"><span>Capacity ' + formatCompact(backpack.capacity) + '</span><span>Level ' + backpack.level + '/30</span>' +
             '<span>Current load ' + formatCompact(inventoryWeight) + '</span><span>Tier ' + backpack.tier + '</span></div>' +
-            '<span class="upgrade-action">' + upgradeActionText(backpack.level, ownedBackpackLevel, backpack.price, equippedBackpackLevel) + '</span></div>';
+            '<span class="upgrade-action">' + equipmentActionText(backpack, ownedBackpackLevel, equippedBackpackLevel) + '</span></div>';
           card.addEventListener("click", () => selectBackpack(backpack.level));
           backFragment.appendChild(card);
         }
@@ -17644,6 +17954,16 @@
       function selectPickaxe(level) {
         const pickaxe = PICKAXES[level - 1];
         if (!pickaxe) return;
+
+        if (
+          !TEST_UNLOCK_ALL_UPGRADES &&
+          !equipmentTierUnlocked(pickaxe.tier)
+        ) {
+          showToast(
+            "Purchase the Tier " + pickaxe.tier + " mountain first"
+          );
+          return;
+        }
 
         if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedPickaxeLevel + 1) {
           showToast("Buy the previous pickaxe first");
@@ -17666,12 +17986,23 @@
         mining.scanTimer = 0;
         renderPickaxeShop();
         updateHUD();
+        refreshMountainShop();
         showToast(pickaxe.name + " equipped");
       }
 
       function selectBackpack(level) {
         const backpack = BACKPACKS[level - 1];
         if (!backpack) return;
+
+        if (
+          !TEST_UNLOCK_ALL_UPGRADES &&
+          !equipmentTierUnlocked(backpack.tier)
+        ) {
+          showToast(
+            "Purchase the Tier " + backpack.tier + " mountain first"
+          );
+          return;
+        }
 
         if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedBackpackLevel + 1) {
           showToast("Buy the previous backpack first");
@@ -17698,12 +18029,23 @@
         equippedBackpackLevel = level;
         renderBackpackShop();
         updateHUD();
+        refreshMountainShop();
         showToast(backpack.name + " equipped");
       }
 
       function selectFlashlight(level) {
         const flashlight = FLASHLIGHTS[level - 1];
         if (!flashlight) return;
+
+        if (
+          !TEST_UNLOCK_ALL_UPGRADES &&
+          !equipmentTierUnlocked(flashlight.tier)
+        ) {
+          showToast(
+            "Purchase the Tier " + flashlight.tier + " mountain first"
+          );
+          return;
+        }
 
         if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedFlashlightLevel + 1) {
           showToast("Buy the previous flashlight first");
@@ -17726,6 +18068,7 @@
         playerLightRevision++;
         renderFlashlightShop();
         updateHUD();
+        refreshMountainShop();
         showToast(flashlight.name + " equipped");
       }
 
@@ -17737,7 +18080,10 @@
 
         for (const flashlight of FLASHLIGHTS) {
           const sequentiallyAvailable = flashlight.level <= ownedFlashlightLevel + 1;
-          const available = TEST_UNLOCK_ALL_UPGRADES || sequentiallyAvailable;
+          const tierAvailable = equipmentTierUnlocked(flashlight.tier);
+          const available =
+            TEST_UNLOCK_ALL_UPGRADES ||
+            (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
           if (flashlight.level === equippedFlashlightLevel) card.classList.add("equipped");
@@ -17750,7 +18096,7 @@
             '<span class="detail-label">Range ' + flashlight.range.toFixed(1) + ' tiles.</span>' +
             '<div class="upgrade-stats"><span>Range ' + flashlight.range.toFixed(1) + '</span><span>Level ' + flashlight.level + '/30</span>' +
             '<span>Tier ' + flashlight.tier + '</span></div>' +
-            '<span class="upgrade-action">' + upgradeActionText(flashlight.level, ownedFlashlightLevel, flashlight.price, equippedFlashlightLevel) + '</span></div>';
+            '<span class="upgrade-action">' + equipmentActionText(flashlight, ownedFlashlightLevel, equippedFlashlightLevel) + '</span></div>';
 
           card.addEventListener("click", () => selectFlashlight(flashlight.level));
           fragment.appendChild(card);
@@ -18538,6 +18884,18 @@
       function purchaseMountain(level) {
         const tier = MOUNTAIN_TIERS[level - 1];
         if (!tier) return;
+        const highestTier = highestUnlockedMountainTier();
+        if (
+          !TEST_UNLOCK_ALL_UPGRADES &&
+          tier.level > highestTier + 1
+        ) {
+          showToast(
+            "Purchase Tier " +
+              (tier.level - 1) +
+              " before buying this mountain"
+          );
+          return;
+        }
         if (!TEST_INFINITE_MONEY && cash < tier.price) {
           showToast("Not enough money");
           return;
@@ -18549,6 +18907,7 @@
         playPurchaseSound();
         const unlockedNewContracts =
           unlockContractTier(tier.level);
+        refreshMountainShop();
         generateMountain(tier);
         lifetimeStats.mountainsGenerated += 1;
         closeModal();
@@ -19857,12 +20216,20 @@
           lifetimeStats.totalBlocksMined += 1;
           updateContractProgress(
             "mineBlocks",
-            1
+            1,
+            {
+              mountainTier:
+                currentMountain ? currentMountain.level : 0
+            }
           );
           updateContractProgress(
             "mineOre",
             1,
-            { targetType: type }
+            {
+              targetType: type,
+              mountainTier:
+                currentMountain ? currentMountain.level : 0
+            }
           );
         }
 
@@ -30215,12 +30582,20 @@
 
         updateContractProgress(
           "mineBlocks",
-          veinSize
+          veinSize,
+          {
+            mountainTier:
+              currentMountain ? currentMountain.level : 0
+          }
         );
         updateContractProgress(
           "mineOre",
           veinSize,
-          { targetType: minedType }
+          {
+            targetType: minedType,
+            mountainTier:
+              currentMountain ? currentMountain.level : 0
+          }
         );
 
         recordOreBookMined(
@@ -30698,6 +31073,9 @@
           '<div class="stats-card"><small>Contracts completed</small><strong>' +
           formatCompact(stats.contractsCompleted) +
           '</strong></div>' +
+          '<div class="stats-card"><small>Celestial Legacy rank</small><strong>' +
+          formatCompact(celestialLegacyRank) +
+          '</strong><p>Permanent endgame recognition</p></div>' +
           '<div class="stats-card"><small>Modified veins found</small><strong>' +
           formatCompact(totalModified) +
           '</strong></div>' +
