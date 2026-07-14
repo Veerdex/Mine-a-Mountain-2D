@@ -12136,13 +12136,13 @@
         // Create day ambience audio
         if (!dayAmbienceAudio) {
           dayAmbienceAudio = new Audio();
-          dayAmbienceAudio.src = "audio/forest-ambience-day.mp3";
+          dayAmbienceAudio.src = "audio/Forest Ambience.mp3";
           dayAmbienceAudio.loop = true;
           dayAmbienceAudio.preload = "auto";
           dayAmbienceAudio.playsinline = true;
 
-          const daySource = audio.createMediaElementAudioSource(dayAmbienceAudio);
-          dayAmbienceGain = audio.createGain();
+          const daySource = audioContext.createMediaElementAudioSource(dayAmbienceAudio);
+          dayAmbienceGain = audioContext.createGain();
           dayAmbienceGain.gain.value = 0;
           daySource.connect(dayAmbienceGain);
           dayAmbienceGain.connect(masterGain);
@@ -12151,13 +12151,13 @@
         // Create night ambience audio
         if (!nightAmbienceAudio) {
           nightAmbienceAudio = new Audio();
-          nightAmbienceAudio.src = "audio/forest-ambience-night.mp3";
+          nightAmbienceAudio.src = "audio/Night Time Ambience.mp3";
           nightAmbienceAudio.loop = true;
           nightAmbienceAudio.preload = "auto";
           nightAmbienceAudio.playsinline = true;
 
-          const nightSource = audio.createMediaElementAudioSource(nightAmbienceAudio);
-          nightAmbienceGain = audio.createGain();
+          const nightSource = audioContext.createMediaElementAudioSource(nightAmbienceAudio);
+          nightAmbienceGain = audioContext.createGain();
           nightAmbienceGain.gain.value = 0;
           nightSource.connect(nightAmbienceGain);
           nightAmbienceGain.connect(masterGain);
@@ -12175,8 +12175,8 @@
           jazzMusicAudio.preload = "auto";
           jazzMusicAudio.playsinline = true;
 
-          const jazzSource = audio.createMediaElementAudioSource(jazzMusicAudio);
-          jazzMusicGain = audio.createGain();
+          const jazzSource = audioContext.createMediaElementAudioSource(jazzMusicAudio);
+          jazzMusicGain = audioContext.createGain();
           jazzMusicGain.gain.value = 0;
           jazzSource.connect(jazzMusicGain);
           jazzMusicGain.connect(masterGain);
@@ -12472,10 +12472,10 @@
       function calculateDayNightState() {
         // Returns {intensity, r, g, b} based on dayNightTime
         // Cycle segments (total 1320s):
-        // Day: 0-720s, intensity=1.0, color={255,255,200}
-        // Transition day→night: 720-840s, interpolate
-        // Night: 840-1200s, intensity=0.2, color={200,100,50}
-        // Transition night→day: 1200-1320s, interpolate
+        // Day: 0-720s, intensity=1.0, color={255,255,255} (white)
+        // Transition day→night: 720-840s, intensity fades 1.0 → 0.2, color stays white
+        // Night: 840-1200s, intensity=0.2, color={255,255,255} (white)
+        // Transition night→day: 1200-1320s, intensity fades 0.2 → 1.0, color stays white
 
         const t = dayNightTime % DAY_NIGHT_PERIOD;
 
@@ -12485,33 +12485,33 @@
             intensity: 1.0,
             r: 255,
             g: 255,
-            b: 200
+            b: 255
           };
         } else if (t < 840) {
           // Day to night transition (120s)
           const progress = (t - 720) / 120;
           return {
             intensity: 1.0 - progress * 0.8, // 1.0 → 0.2
-            r: Math.round(255 - progress * 55), // 255 → 200
-            g: Math.round(255 - progress * 155), // 255 → 100
-            b: Math.round(200 - progress * 150) // 200 → 50
+            r: 255,
+            g: 255,
+            b: 255
           };
         } else if (t < 1200) {
           // Full night
           return {
             intensity: 0.2,
-            r: 200,
-            g: 100,
-            b: 50
+            r: 255,
+            g: 255,
+            b: 255
           };
         } else {
           // Night to day transition (120s)
           const progress = (t - 1200) / 120;
           return {
             intensity: 0.2 + progress * 0.8, // 0.2 → 1.0
-            r: Math.round(200 + progress * 55), // 200 → 255
-            g: Math.round(100 + progress * 155), // 100 → 255
-            b: Math.round(50 + progress * 150) // 50 → 200
+            r: 255,
+            g: 255,
+            b: 255
           };
         }
       }
