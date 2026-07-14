@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v44-equipment-price-flow";
+const CACHE_NAME = "mountain-tycoon-pwa-v45-contract-rebalance";
 
 const APP_SHELL = [
   "./",

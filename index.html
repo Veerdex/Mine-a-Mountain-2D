@@ -9262,12 +9262,28 @@
         const record = structure.loot.find(candidate =>
           Number(candidate.item && candidate.item.id) === Number(item.id)
         );
+        const firstCollection = !!record && !record.collected;
         if (record) {
           record.released = true;
           record.collected = true;
         }
         if (BLOCKS[item.type] && BLOCKS[item.type].structureValuable) {
           recordOreBookMined(item.type, item, false);
+        }
+        if (firstCollection) {
+          updateContractProgress(
+            "collectStructureLoot",
+            1,
+            {
+              targetDefinitionId:
+                structure.definitionId
+            }
+          );
+          updateContractProgress(
+            "collectStructureItem",
+            1,
+            { targetType: item.type }
+          );
         }
       }
 
@@ -9467,8 +9483,19 @@
       }
 
       const CONTRACT_MAX_ACTIVE = 3;
-      const CONTRACT_REWARD_BUDGET_RATE = 0.75;
-      const CONTRACT_REWARD_WEIGHTS = [4, 6, 8, 10, 12, 15, 19, 26];
+      const CONTRACT_TOTAL_PAYOUT_RATE = 0.50;
+
+      // All eleven contracts in a tier share one payout budget. The first
+      // eight weights correspond to the existing mining, refinery, hazard,
+      // depth, and sales contracts. The final three reward ordinary structure
+      // salvage, the signature structure valuable, and treasure exploration.
+      const CONTRACT_REWARD_WEIGHTS = [
+        4, 6, 8, 10, 12, 15, 19, 26,
+        18, 32, 14
+      ];
+      const CONTRACT_STRUCTURE_LOOT_REWARD_INDEX = 8;
+      const CONTRACT_STRUCTURE_RARE_REWARD_INDEX = 9;
+      const CONTRACT_TREASURE_REWARD_INDEX = 10;
 
       const CONTRACT_ORE_PAIRS = [
         [CLAY, COAL],
@@ -9483,34 +9510,81 @@
         [NEUTRONITE, CHRONOCRYSTAL]
       ];
 
-      function contractTierBudget(tier) {
-        if (tier === 1) return 400;
+      const CONTRACT_STRUCTURE_TARGETS = [
+        {
+          definitionId: "underground-house",
+          name: "Underground House",
+          specialType: SILVER_FAMILY_LOCKET
+        },
+        {
+          definitionId: "miner-supply-room",
+          name: "Miner Supply Room",
+          specialType: BRASS_SURVEY_COMPASS
+        },
+        {
+          definitionId: "underground-workshop",
+          name: "Underground Workshop",
+          specialType: MASTER_MECHANISTS_BLUEPRINT
+        },
+        {
+          definitionId: "abandoned-mineshaft",
+          name: "Abandoned Mineshaft",
+          specialType: MINERS_TOKEN
+        },
+        {
+          definitionId: "rail-station",
+          name: "Rail Station",
+          specialType: STATIONMASTERS_POCKET_WATCH
+        },
+        {
+          definitionId: "ancient-shrine",
+          name: "Ancient Shrine",
+          specialType: ANCIENT_IDOL
+        },
+        {
+          definitionId: "crystal-chamber",
+          name: "Crystal Chamber",
+          specialType: CRYSTAL_CORE
+        },
+        {
+          definitionId: "underground-laboratory",
+          name: "Underground Laboratory",
+          specialType: EXPERIMENTAL_POWER_CELL
+        },
+        {
+          definitionId: "sealed-vault",
+          name: "Sealed Vault",
+          specialType: SEALED_GOLD_BAR
+        },
+        {
+          definitionId: "forgotten-temple",
+          name: "Forgotten Temple",
+          specialType: CROWN_OF_FIRST_MOUNTAIN
+        }
+      ];
 
-        return Math.max(
-          1,
-          Math.floor(
-            MOUNTAIN_TIERS[tier - 1].price *
-              CONTRACT_REWARD_BUDGET_RATE
-          )
+      function contractProgressionBudget(tier) {
+        const tierIndex = clamp(
+          Math.floor(Number(tier) || 1) - 1,
+          0,
+          EQUIPMENT_TIER_BUDGETS.length - 1
         );
+
+        return EQUIPMENT_TIER_BUDGETS[tierIndex];
       }
 
-      function treasureContractReward(tier) {
-        if (tier === 1) return 100;
-
+      function contractTierBudget(tier) {
         return Math.max(
           1,
           roundPrice(
-            MOUNTAIN_TIERS[tier - 1].price * 0.10
+            contractProgressionBudget(tier) *
+              CONTRACT_TOTAL_PAYOUT_RATE
           )
         );
       }
 
       function contractTierTotalPayout(tier) {
-        return (
-          contractTierBudget(tier) +
-          treasureContractReward(tier)
-        );
+        return contractTierBudget(tier);
       }
 
       function treasureContractTarget(tier) {
@@ -9520,6 +9594,10 @@
       function contractRewardsForTier(tier) {
         const budget = contractTierBudget(tier);
         let remaining = budget;
+        const totalWeight = CONTRACT_REWARD_WEIGHTS.reduce(
+          (sum, weight) => sum + weight,
+          0
+        );
 
         return CONTRACT_REWARD_WEIGHTS.map(
           (weight, index) => {
@@ -9532,7 +9610,7 @@
 
             const desired = Math.max(
               1,
-              roundPrice(budget * weight / 100)
+              roundPrice(budget * weight / totalWeight)
             );
             const reward = Math.min(
               desired,
@@ -9546,22 +9624,30 @@
       }
 
       function contractSellTarget(tier) {
-        const base =
-          tier === 1
-            ? 800
-            : MOUNTAIN_TIERS[tier - 1].price;
-
         return Math.max(
           100,
-          roundPrice(base * 0.6)
+          roundPrice(
+            contractProgressionBudget(tier) * 0.50
+          )
+        );
+      }
+
+      function contractStructureLootTarget(tier) {
+        return Math.min(
+          5,
+          2 + Math.floor(Number(tier) / 3)
         );
       }
 
       function createTierContracts(tier) {
         const rewards = contractRewardsForTier(tier);
         const orePair = CONTRACT_ORE_PAIRS[tier - 1];
+        const structureTarget =
+          CONTRACT_STRUCTURE_TARGETS[tier - 1];
         const firstOre = BLOCKS[orePair[0]];
         const secondOre = BLOCKS[orePair[1]];
+        const specialStructureItem =
+          BLOCKS[structureTarget.specialType];
 
         const blueprints = [
           {
@@ -9650,6 +9736,46 @@
           })
         );
 
+        const structureLootTarget =
+          contractStructureLootTarget(tier);
+
+        contracts.push({
+          id: "tier-" + tier + "-structure-loot",
+          tier,
+          key: "structure-loot",
+          type: "collectStructureLoot",
+          title: structureTarget.name + " Salvage",
+          description:
+            "Recover " +
+            structureLootTarget +
+            " rewards from a " +
+            structureTarget.name +
+            ".",
+          target: structureLootTarget,
+          targetDefinitionId:
+            structureTarget.definitionId,
+          reward:
+            rewards[CONTRACT_STRUCTURE_LOOT_REWARD_INDEX]
+        });
+
+        contracts.push({
+          id: "tier-" + tier + "-structure-rare",
+          tier,
+          key: "structure-rare",
+          type: "collectStructureItem",
+          title: "Recover " + specialStructureItem.name,
+          description:
+            "Find the signature " +
+            specialStructureItem.name +
+            " hidden in a " +
+            structureTarget.name +
+            ". Progress carries across mountains.",
+          target: 1,
+          targetType: structureTarget.specialType,
+          reward:
+            rewards[CONTRACT_STRUCTURE_RARE_REWARD_INDEX]
+        });
+
         const treasureTarget =
           treasureContractTarget(tier);
 
@@ -9666,9 +9792,10 @@
               treasureTarget === 1
                 ? " treasure chest."
                 : " treasure chests."
-            ),
+          ),
           target: treasureTarget,
-          reward: treasureContractReward(tier)
+          reward:
+            rewards[CONTRACT_TREASURE_REWARD_INDEX]
         });
 
         return contracts;
@@ -16806,6 +16933,12 @@
         if (contract.type === "reachDepth") return formatCompact(remaining) + " deeper blocks remaining";
         if (contract.type === "refineOres") return formatCompact(remaining) + (remaining === 1 ? " refinery cycle remaining" : " refinery cycles remaining");
         if (contract.type === "triggerHazards") return formatCompact(remaining) + (remaining === 1 ? " hazard remaining" : " hazards remaining");
+        if (contract.type === "openTreasure") return formatCompact(remaining) + (remaining === 1 ? " treasure chest remaining" : " treasure chests remaining");
+        if (contract.type === "collectStructureLoot") return formatCompact(remaining) + (remaining === 1 ? " structure reward remaining" : " structure rewards remaining");
+        if (contract.type === "collectStructureItem") {
+          const block = BLOCKS[contract.targetType];
+          return formatCompact(remaining) + " " + (block ? block.name : "signature reward") + " remaining";
+        }
         if (contract.type === "mineOre") {
           const block = BLOCKS[contract.targetType];
           return formatCompact(remaining) + " " + (block ? block.name : "ore") + " remaining";
@@ -16851,9 +16984,20 @@
           if (contract.type !== objectiveType) continue;
 
           if (
-            objectiveType === "mineOre" &&
+            (
+              objectiveType === "mineOre" ||
+              objectiveType === "collectStructureItem"
+            ) &&
             Number(contract.targetType) !==
               Number(options.targetType)
+          ) {
+            continue;
+          }
+
+          if (
+            objectiveType === "collectStructureLoot" &&
+            String(contract.targetDefinitionId) !==
+              String(options.targetDefinitionId)
           ) {
             continue;
           }
@@ -17218,7 +17362,7 @@
         contractBudgetNote.textContent =
           "Total one-time payout budgets — " +
           budgetText +
-          ". Including treasure contracts, paid tiers use 85% of the mountain price; Tier 1 remains capped at $500.";
+          ". Each tier pays 50% of its mountain-linked equipment budget across mining, structure, and treasure contracts.";
       }
 
       function activateContract(contractId) {
