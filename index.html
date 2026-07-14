@@ -4085,6 +4085,10 @@
       const MAX_ORE_DENSITY_MULTIPLIER = 1.5;
       const HIGH_ELEVATION_FULL_BONUS = 50;
       const DEEP_HAZARD_MULTIPLIER = 1.5;
+      // Per-tier scalar that converts the accumulated legacy cluster rate into
+      // a linearly decreasing density curve: ~200 ore/1000 cells at T1 down to
+      // ~40 ore/1000 cells at T10.  Derived from 1000-trial Monte Carlo simulation.
+      const ORE_DENSITY_SCALAR_BY_TIER = [1.83, 1.07, 0.71, 0.73, 0.63, 0.62, 0.44, 0.50, 0.48, 0.43];
 
       const PLAYER_LIGHT_RADIUS = 10;
       const PLAYER_LIGHT_SOLID_COST = 2.5;
@@ -15557,17 +15561,21 @@
 
         if (!entries.length) return;
 
-        // This exactly restores the pre-overhaul local 1× cluster rate for
-        // each tier. The cell pool then applies the requested 1×–1.5×
-        // elevation/depth multiplier.
+        // Scale the legacy accumulated cluster rate so density decreases
+        // linearly from ~200 ore/1000 cells at T1 to ~40 at T10.
         const baseClusterRate =
           legacyOreClusterRateForTier(
             tier.level
           );
+        const densityScalar =
+          ORE_DENSITY_SCALAR_BY_TIER[
+            tier.level - 1
+          ] ?? 1;
         const expectedClusters =
           pools.ore.totalWeight *
           baseClusterRate /
-          1000;
+          1000 *
+          densityScalar;
         const clusterCount =
           stochasticGenerationCount(
             expectedClusters
