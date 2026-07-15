@@ -1,20 +1,16 @@
-SUPABASE CONFIG CACHE FIX
+MOUNTAIN TYCOON VERSION 19 — QUICK START
+========================================
 
-Replace only these two files in the deployed PWA:
-- index.html
-- service-worker.js
+1. Run supabase-schema.sql in the Supabase SQL Editor.
+2. Enable the Email authentication provider and turn Confirm email OFF.
+3. Keep the existing Project URL and publishable key in supabase-config.js.
+4. Upload this complete folder to the site root.
+5. Deploy over HTTPS and hard-refresh once.
 
-Do not replace or delete your existing supabase-config.js.
+Version 19 includes three worlds per account. The database stores the complete
+three-slot collection in one private player_saves.save_data JSONB value. Old
+single-world saves migrate into slot 1 automatically.
 
-This update:
-- Changes the service-worker cache to mountain-tycoon-pwa-v3
-- Stops caching supabase-config.js
-- Adds a one-time ?v=3 cache bust to the config script
-- Accepts a trailing slash on the Project URL
-- Accepts publishableKey, anonKey, or key field names
-- Shows the exact setup/load problem in the Account menu
-
-After deploying:
-1. Fully close and reopen the installed PWA, or hard refresh the browser page.
-2. If an old installed copy remains, clear the site's storage/service worker
-   once, then reopen it.
+This package replaces the obsolete cache-fix-only README from older versions.
+Do not deploy only index.html and service-worker.js; deploy the complete v19
+package, including the updated schema and documentation.

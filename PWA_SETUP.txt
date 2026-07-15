@@ -1,40 +1,49 @@
-MOUNTAIN TYCOON PWA + LEADERBOARD PACKAGE
+MOUNTAIN TYCOON PWA + SUPABASE SETUP
+====================================
 
-FILES
+REQUIRED FILES
+--------------
 - index.html
 - manifest.webmanifest
 - service-worker.js
 - supabase-config.js
 - supabase-schema.sql
+- audio/
 - icons/
 
-SUPABASE SETUP
-1. Create or open your Supabase project.
-2. Open SQL Editor, paste the complete supabase-schema.sql file, and run it.
-   It creates both the private player_saves table and public leaderboard table.
-3. Under Authentication -> Providers -> Email, enable Email.
-4. Because the game uses username-based internal emails, turn Confirm email OFF.
-5. Copy your Project URL and publishable/anon key into supabase-config.js.
-6. Never place the service_role key in browser files.
+SUPABASE
+--------
+1. Create or open the Supabase project.
+2. Open SQL Editor and run the complete supabase-schema.sql file.
+3. Under Authentication > Providers > Email, enable Email.
+4. Turn Confirm email OFF because username accounts use internal email
+   addresses that cannot receive confirmation messages.
+5. Copy the Project URL and publishable key into supabase-config.js.
+6. Never place a service_role key in browser files.
+
+PRIVATE SAVES
+-------------
+- One player_saves row belongs to each authenticated account.
+- save_data contains the complete three-world collection.
+- Row Level Security prevents access to another player's collection.
+- Old single-world saves remain loadable and migrate into slot 1.
+- The public leaderboard exposes only username and lifetime money.
 
 DEPLOYMENT
-1. Upload the entire folder together and preserve all filenames.
-2. Serve it over HTTPS. PWAs/service workers do not work from file://.
+----------
+1. Upload this entire folder without changing its internal paths.
+2. Serve it over HTTPS; service workers do not run from file://.
 3. Make index.html the root page.
-4. When deploying later updates, increment CACHE_NAME in service-worker.js.
-
-LEADERBOARD
-- Rankings use lifetime money collected from item sales, not current cash.
-- Only username and lifetime total are publicly readable.
-- Full save data stays private under player_saves RLS.
-- A database trigger prevents older saves from reducing a lifetime total.
-- Older pre-leaderboard saves use current cash as the minimum recoverable total.
-
-INSTALLING
-- Android Chrome: use Install app / Add to Home screen.
-- iPhone/iPad Safari: Share -> Add to Home Screen.
-- Windows/macOS Chrome or Edge: use the address-bar install icon or browser menu.
+4. Deploy service-worker.js whenever CACHE_NAME changes.
+5. Fully reopen an installed copy or hard-refresh after an update.
 
 OFFLINE
-- The app shell and local save work offline after the first successful load.
-- Login, cloud saves, and leaderboard updates require internet.
+-------
+The app shell and local world slots work offline after one successful online
+load. Login, cloud synchronization, and leaderboard updates require internet.
+
+INSTALLATION
+------------
+- Android Chrome: Install app or Add to Home screen.
+- iPhone/iPad Safari: Share > Add to Home Screen.
+- Desktop Chrome or Edge: use the install icon or browser menu.

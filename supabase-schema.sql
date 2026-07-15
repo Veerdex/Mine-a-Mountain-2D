@@ -1,15 +1,43 @@
 -- Run this entire file in Supabase Dashboard -> SQL Editor.
 
 -- ============================================================
--- Private player saves
+-- Private player saves and three-world collections
+--
+-- save_data format version 1:
+-- {
+--   "format": "mountain-tycoon-world-slots",
+--   "version": 1,
+--   "updatedAt": "<ISO timestamp>",
+--   "slots": [<world or null>, <world or null>, <world or null>]
+-- }
+--
+-- Older rows may contain one legacy world instead. Do not add a JSON shape
+-- constraint that would reject them; the game migrates them into slot 1.
 -- ============================================================
 
 create table if not exists public.player_saves (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  save_data jsonb not null default '{}'::jsonb,
+  save_data jsonb not null default
+    '{"format":"mountain-tycoon-world-slots","version":1,"slots":[null,null,null]}'::jsonb,
   version integer not null default 1,
   updated_at timestamptz not null default now()
 );
+
+-- Apply the current defaults to projects created with an older schema.
+-- Existing rows and legacy save JSON are intentionally left unchanged.
+alter table public.player_saves
+  alter column save_data set default
+    '{"format":"mountain-tycoon-world-slots","version":1,"slots":[null,null,null]}'::jsonb,
+  alter column version set default 1;
+
+comment on table public.player_saves is
+  'One private save row per account. save_data contains all three world slots.';
+
+comment on column public.player_saves.save_data is
+  'Versioned Mountain Tycoon world-slot collection. Legacy single-world JSON remains valid for client migration.';
+
+comment on column public.player_saves.version is
+  'Server-side world-collection format version. Current version is 1.';
 
 alter table public.player_saves enable row level security;
 
@@ -45,7 +73,7 @@ to authenticated;
 -- ============================================================
 -- Public lifetime-money leaderboard
 -- Only the username and lifetime total are public.
--- Full save data remains private in player_saves.
+-- The complete three-world collection remains private in player_saves.
 -- ============================================================
 
 create table if not exists public.leaderboard_entries (

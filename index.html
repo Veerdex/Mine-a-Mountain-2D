@@ -3325,10 +3325,224 @@
       }
     }
 
+    /* --------------------------------------------------
+       Three-slot world menu and permanent world settings
+       -------------------------------------------------- */
+    #worldGate {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: none;
+      place-items: center;
+      padding: 20px;
+      overflow: auto;
+      background:
+        linear-gradient(rgba(16, 38, 47, 0.78), rgba(8, 22, 29, 0.92)),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 2px, transparent 2px 8px),
+        #173f4a;
+    }
+
+    #worldGate.open { display: grid; }
+
+    .world-panel {
+      width: min(1080px, 96vw);
+      max-height: calc(100vh - 34px);
+      overflow: auto;
+      padding: 20px;
+      border: 3px solid #87d2c2;
+      border-radius: 18px;
+      color: #f3fbf6;
+      background: linear-gradient(180deg, #244f55, #17383f);
+      box-shadow: 0 20px 65px rgba(0,0,0,0.55), inset 0 0 0 3px rgba(0,0,0,0.22);
+    }
+
+    .world-title-row,
+    .world-creator-header,
+    .world-creator-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .world-title-row h1,
+    .world-creator-header h1 { margin: 0; font-size: clamp(24px, 4vw, 40px); }
+    .world-title-row p,
+    .world-creator-header p { margin: 5px 0 0; color: #c5e6e3; font-weight: 700; }
+
+    .world-account-button,
+    .world-create-button,
+    .world-action,
+    .world-creator-actions button {
+      min-height: 43px;
+      padding: 9px 14px;
+      border: 2px solid #79cdb8;
+      border-radius: 11px;
+      background: #27695f;
+      color: white;
+      font: 900 13px/1.1 inherit;
+      cursor: pointer;
+    }
+
+    .world-action.secondary,
+    .world-creator-actions .secondary { background: #36545b; border-color: #78989e; }
+    .world-action.danger { background: #793b3b; border-color: #dc8585; }
+    .world-action:disabled { opacity: 0.42; cursor: default; }
+
+    #worldSlotList {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .world-slot {
+      display: flex;
+      min-height: 250px;
+      flex-direction: column;
+      padding: 15px;
+      border: 2px solid #5b8e8d;
+      border-radius: 15px;
+      background: rgba(4, 20, 25, 0.43);
+    }
+
+    .world-slot.empty { border-style: dashed; place-content: center; text-align: center; }
+    .world-slot.fallen { border-color: #b65a58; background: rgba(81, 25, 27, 0.5); }
+    .world-slot-number { color: #8adbc9; font-size: 11px; font-weight: 1000; letter-spacing: 0.12em; }
+    .world-slot h2 { margin: 7px 0 5px; font-size: 22px; overflow-wrap: anywhere; }
+    .world-slot-meta { color: #c8e3e1; font-size: 12px; font-weight: 750; line-height: 1.55; }
+    .world-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .world-badge { padding: 4px 7px; border-radius: 999px; background: #315f65; color: #dff9f3; font-size: 10px; font-weight: 1000; }
+    .world-badge.sandbox { background: #755f24; color: #ffed9a; }
+    .world-badge.hardcore { background: #7a3030; color: #ffd0c9; }
+    .world-slot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: auto; padding-top: 13px; }
+    .world-slot-actions .play { grid-column: 1 / -1; background: #24815f; border-color: #8ce4b5; }
+
+    #worldCreator[hidden], #worldMenuView[hidden] { display: none; }
+    .world-create-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+    .world-field { display: grid; gap: 6px; }
+    .world-field > span { color: #bfe4df; font-size: 11px; font-weight: 1000; letter-spacing: 0.06em; text-transform: uppercase; }
+    .world-field input,
+    .world-field select {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 2px solid #577e82;
+      border-radius: 10px;
+      background: #102b32;
+      color: white;
+      font: 800 14px inherit;
+    }
+
+    .world-settings-heading { margin: 18px 0 9px; color: #91e0cc; font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; }
+    #worldSliderGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; }
+    .world-slider {
+      display: grid;
+      grid-template-columns: minmax(145px, 1fr) minmax(130px, 1.1fr) 58px;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.18);
+    }
+    .world-slider label { font-size: 12px; font-weight: 850; }
+    .world-slider output { color: #ffe082; text-align: right; font-size: 12px; font-weight: 1000; }
+    .world-slider input { width: 100%; accent-color: #5fd4ad; }
+
+    .world-rule-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .world-permanent-warning { margin: 15px 0 0; padding: 11px 13px; border-left: 4px solid #ffcc67; border-radius: 8px; background: rgba(100,65,12,0.34); color: #ffe6aa; font-size: 12px; font-weight: 800; line-height: 1.5; }
+    #worldCreationError { min-height: 20px; margin: 8px 0; color: #ffaaa0; font-size: 12px; font-weight: 900; }
+
+    @media (max-width: 820px) {
+      #worldSlotList { grid-template-columns: 1fr; }
+      .world-slot { min-height: 210px; }
+      #worldSliderGrid, .world-create-grid, .world-rule-grid { grid-template-columns: 1fr; }
+      .world-slider { grid-template-columns: minmax(120px, 1fr) minmax(100px, 1fr) 52px; }
+    }
+
   </style>
 </head>
 
 <body>
+  <div id="worldGate" aria-label="World selection">
+    <div class="world-panel">
+      <section id="worldMenuView">
+        <div class="world-title-row">
+          <div>
+            <h1>Select a World</h1>
+            <p>Every account can keep up to three completely independent worlds.</p>
+          </div>
+          <button id="worldAccountButton" class="world-account-button">ACCOUNT &amp; CLOUD</button>
+        </div>
+        <div id="worldSlotList"></div>
+      </section>
+
+      <section id="worldCreator" hidden>
+        <div class="world-creator-header">
+          <div>
+            <h1 id="worldCreatorTitle">Create World</h1>
+            <p id="worldCreatorSubtitle">Choose carefully. Normal-world rules become permanent.</p>
+          </div>
+        </div>
+
+        <div class="world-create-grid">
+          <label class="world-field"><span>World Name</span><input id="worldNameInput" maxlength="28" placeholder="My Mountain World" /></label>
+          <label class="world-field"><span>World Seed</span><input id="worldSeedInput" maxlength="40" placeholder="Leave blank for a random seed" /></label>
+          <label class="world-field"><span>Difficulty Preset</span>
+            <select id="worldPresetSelect">
+              <option value="explorer">Explorer</option>
+              <option value="standard" selected>Standard</option>
+              <option value="veteran">Veteran</option>
+              <option value="expert">Expert</option>
+              <option value="hardcore">Hardcore</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label class="world-field"><span>Game Mode</span>
+            <select id="worldModeSelect">
+              <option value="normal" selected>Normal</option>
+              <option value="sandbox">Sandbox — Infinite Everything</option>
+            </select>
+          </label>
+        </div>
+
+        <h2 class="world-settings-heading">Player and world sliders</h2>
+        <div id="worldSliderGrid"></div>
+
+        <div class="world-rule-grid">
+          <label class="world-field"><span>Death Penalty</span>
+            <select id="worldDeathPenalty">
+              <option value="none">None</option>
+              <option value="money">Lose Money (20%)</option>
+              <option value="inventory">Drop Inventory</option>
+              <option value="both">Both (20% + Inventory)</option>
+            </select>
+          </label>
+          <label class="world-field"><span>Dropped Inventory</span>
+            <select id="worldDropRecovery">
+              <option value="recoverable">Recoverable</option>
+              <option value="destroyed">Destroyed</option>
+            </select>
+          </label>
+          <label class="world-field"><span>Hardcore</span>
+            <select id="worldHardcoreSelect">
+              <option value="off">Off</option>
+              <option value="on">On — One Life</option>
+            </select>
+          </label>
+        </div>
+
+        <p id="worldSettingsWarning" class="world-permanent-warning">Normal-world settings cannot be changed after creation. Sandbox settings remain editable.</p>
+        <div id="worldCreationError" role="alert"></div>
+        <div class="world-creator-actions">
+          <button id="worldCreatorCancel" class="secondary">CANCEL</button>
+          <button id="worldCreatorConfirm">CREATE WORLD</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <canvas id="game" tabindex="0" aria-label="Mountain Tycoon game area"></canvas>
 
   <div id="hud">
@@ -3395,6 +3609,16 @@
       <button id="cloudButton" aria-label="Open login and account menu">
         <span id="cloudButtonLabel">LOG IN</span>
         <small id="cloudButtonStatus">LOCAL ONLY</small>
+      </button>
+
+      <button id="worldsButton" aria-label="Save and return to world selection">
+        <span>WORLDS</span>
+        <small id="worldsButtonStatus">3 SAVE SLOTS</small>
+      </button>
+
+      <button id="worldSettingsButton" aria-label="Edit Sandbox world settings" hidden>
+        <span>WORLD SETTINGS</span>
+        <small>SANDBOX — EDITABLE</small>
       </button>
 
       <button id="controlsToggleButton" aria-label="Show or hide mobile controls">
@@ -3733,12 +3957,12 @@
           <h2>Progress</h2>
           <p>Account: <strong id="cloudAccountLabel">Not signed in</strong></p>
           <p>Last cloud save: <strong id="cloudLastSaved">Never</strong></p>
-          <p>The save includes money, upgrades, inventory, Luck Plot, contracts, the Ore Collection Book, cave treasure, potion timers, Deepstone terrain, current mountain depth rules, mined terrain, drops, platforms, torches, discovery, and player position.</p>
+          <p>Cloud sync includes all three world slots, their permanent settings, money, upgrades, inventory, contracts, structures, terrain, drops, platforms, torches, discovery, and player positions.</p>
           <div class="cloud-actions">
-            <button id="cloudSaveNow" class="primary" disabled>SAVE TO CLOUD</button>
-            <button id="cloudLoadNow" disabled>LOAD CLOUD SAVE</button>
+            <button id="cloudSaveNow" class="primary" disabled>SAVE WORLDS TO CLOUD</button>
+            <button id="cloudLoadNow" disabled>LOAD CLOUD WORLDS</button>
             <button id="localSaveNow">SAVE LOCALLY</button>
-            <button id="localResetSave" class="danger">DELETE LOCAL SAVE</button>
+            <button id="localResetSave" class="danger">DELETE LOCAL WORLDS</button>
           </div>
         </section>
       </div>
@@ -4005,6 +4229,8 @@
 
       const BUILD_REACH_TILES = 5;
       const BUILD_REPEAT_INTERVAL = 0.17;
+      const PLACEMENT_WHEEL_DEAD_ZONE = 38;
+      const PLACEMENT_WHEEL_MAX_RADIUS = 108;
       const PLANK_SURFACE_OFFSET = TILE * 0.40;
       const PLATFORM_DROP_TIME = 0.28;
       const TORCH_REACH_TILES = 5;
@@ -4017,7 +4243,9 @@
       const MAX_LIGHT_BRIGHTNESS_DIM_PERCENT = 60;
       const MAX_LIGHT_RADIUS_DIM_PERCENT = 90;
 
-      const MINING_CONE_DOT = 0.34;
+      // Targets must sit within 35 degrees of the aim direction. This creates
+      // a 70-degree total cone, half the previous roughly 140-degree cone.
+      const MINING_CONE_DOT = 0.8191520443;
       const MIN_REVEAL_ZOOM = 0.58;
       const MAX_REVEAL_ZOOM = 0.88;
       const CHUNK_TILES = 16;
@@ -4042,6 +4270,13 @@
       const WATER_DRIPPING_FULL_DEPTH = 100;
       const WATER_STREAM_MAX_VOLUME = 0.50;
       const LAVA_POPPING_MAX_VOLUME = 0.30;
+      const WATER_FLOW_INTERVAL = 0.16;
+      const LAVA_FLOW_INTERVAL = WATER_FLOW_INTERVAL * 2;
+      // Fluid work scales with the amount that is currently awake, while a
+      // hard ceiling prevents a newly opened reservoir from stalling a frame.
+      const FLUID_FLOW_BASE_BUDGET = 32;
+      const FLUID_FLOW_MAX_BUDGET = 256;
+      const FLUID_FLOW_ACTIVE_SHARE = 0.18;
       const PROXIMITY_AUDIO_SILENT_TILES = 20;
       const PROXIMITY_AUDIO_FULL_TILES = 3;
       const PLACED_OBJECT_BREAK_TIME = 0.2;
@@ -4050,6 +4285,9 @@
       const FRACTURED_STONE_WARNING_TIME = 0.8;
       const ACID_CORROSION_RATE = 45;
       const ACID_RECOVERY_RATE = 15;
+      const MAX_OXYGEN_SECONDS = 20;
+      const OXYGEN_RECOVERY_MULTIPLIER = 3;
+      const OXYGEN_BAR_FADE_SPEED = 3.5;
       const RESONANCE_WARNING_TIME = 1.2;
       const VOID_FISSURE_CHARGE_TIME = 2.0;
 
@@ -4289,7 +4527,7 @@
 
         // Deepstone replaces ordinary Stone in the lower half of newly
         // generated mountains. It needs the same power but takes 3× longer.
-        { name: "Deepstone", weight: 6, hardness: 1, value: 2, breakTime: 1.74, color: "#424a52", style: "stone", collectible: true, deposit: false },
+        { name: "Deepstone", weight: 18, hardness: 1, value: 10, breakTime: 1.74, color: "#424a52", style: "stone", collectible: true, deposit: false },
 
         // Tier 4 Abandoned Mineshaft rewards. Their actual values are assigned
         // from the structure budget when the mountain is generated.
@@ -4371,7 +4609,7 @@
         { name: "Crown of the First Mountain", weight: 2, hardness: 0, value: 0, breakTime: 0, color: "#f4d773", style: "structure-valuables", collectible: true, deposit: false, structureValuable: true },
 
         // Appended to preserve all prior save IDs. Water pockets flow like lava.
-        { name: "Water Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#3d9be0", style: "water", tier: 1, spawnRate: 2.0, clumpMin: 16, clumpMax: 44, hazard: true, collectible: false, deposit: false }
+        { name: "Water Pocket", weight: 0, hardness: Infinity, value: 0, breakTime: Infinity, color: "#3d9be0", style: "water", tier: 1, spawnRate: 1.6, clumpMin: 16, clumpMax: 44, hazard: true, collectible: false, deposit: false }
       ];
 
       const ORE_MODIFIERS = [
@@ -4803,7 +5041,8 @@
           Math.round(
             (currentMountainTierValue(level) / 10) /
               ageDivisor *
-              clamp(Number(randomScale) || 1, 0.8, 1.2)
+              clamp(Number(randomScale) || 1, 0.8, 1.2) *
+              worldSettingMultiplier("structureRewardValue")
           )
         );
       }
@@ -5163,7 +5402,52 @@
           variant: Math.floor(Number(options.variant) || 0)
         };
         structure.parts.push(part);
+        registerStructurePartCollision(part);
         return part;
+      }
+
+      function structurePartProvidesCollision(part) {
+        if (!part || part.broken) return false;
+        const kind = String(part.kind || "");
+        return (
+          kind.includes("-shell-") ||
+          kind === "station-platform"
+        );
+      }
+
+      function registerStructurePartCollision(part) {
+        if (!structurePartProvidesCollision(part)) return;
+        for (let y = part.y; y < part.y + part.h; y++) {
+          if (y < 0 || y >= WORLD_H) continue;
+          for (let x = part.x; x < part.x + part.w; x++) {
+            if (x < 0 || x >= WORLD_W) continue;
+            structureCollisionCells.add(index(x, y));
+          }
+        }
+      }
+
+      function rebuildStructureCollisionCells() {
+        structureCollisionCells.clear();
+        for (const structure of structures) {
+          for (const part of structure.parts) {
+            registerStructurePartCollision(part);
+          }
+        }
+      }
+
+      function clearTerrainBehindStructureParts() {
+        for (const structure of structures) {
+          for (const part of structure.parts) {
+            for (let y = part.y; y < part.y + part.h; y++) {
+              if (y < 0 || y >= WORLD_H) continue;
+              for (let x = part.x; x < part.x + part.w; x++) {
+                if (x < 0 || x >= WORLD_W) continue;
+                removeDepositCell(x, y);
+                setTile(x, y, AIR);
+              }
+            }
+          }
+        }
       }
 
       function structureRectangleDistance(x, y, width, height, existing) {
@@ -5741,12 +6025,10 @@
           x++
         ) {
           removeDepositCell(x, bottomY);
-          const foundationType =
-            depthBelowLocalSurface(x, bottomY) >=
-            DEEPSTONE_FULL_DEPTH
-              ? DEEPSTONE
-              : STONE;
-          setTile(x, bottomY, foundationType);
+          // The structure's own bottom shell/platform occupies this row.
+          // Leaving Stone or Deepstone here made the floor art overlap a
+          // terrain block instead of replacing it.
+          setTile(x, bottomY, AIR);
         }
 
         for (const entrance of structure.entrances) {
@@ -8856,23 +9138,36 @@
 
       function generateStructures(tier) {
         structures.length = 0;
+        structureCollisionCells.clear();
         nextStructureId = 1;
         nextStructurePartId = 1;
 
-        const totalSlots = mountainStructureSlotCount(tier.level);
-        let remainingSlots = totalSlots;
-        const rolls = [];
-        const poolSelections = [];
         const currentDefinition = STRUCTURE_DEFINITIONS.find(definition =>
           definition.enabled && definition.tier === tier.level
         );
+        const structureFrequency = worldSettingMultiplier("structureFrequency");
+        const totalSlots = structureFrequency <= 0
+          ? 0
+          : Math.max(
+              currentDefinition ? currentDefinition.slotCost : 1,
+              Math.round(mountainStructureSlotCount(tier.level) * structureFrequency)
+            );
+        let remainingSlots = totalSlots;
+        const rolls = [];
+        const poolSelections = [];
 
         // Only the structure matching the current mountain tier receives the
         // dedicated 50% roll, and it can spawn no more than once from it.
         if (currentDefinition) {
           const roll = Math.random();
           const canFit = currentDefinition.slotCost <= remainingSlots;
-          const passed = canFit && roll < currentDefinition.spawnChance;
+          const adjustedChance = clamp(
+            currentDefinition.spawnChance *
+              worldSettingMultiplier("structureFrequency"),
+            0,
+            1
+          );
+          const passed = canFit && roll < adjustedChance;
           let spawned = false;
 
           if (passed) {
@@ -8889,7 +9184,7 @@
           rolls.push({
             definitionId: currentDefinition.id,
             roll,
-            chance: currentDefinition.spawnChance,
+            chance: adjustedChance,
             slotCost: currentDefinition.slotCost,
             spawned
           });
@@ -8937,6 +9232,12 @@
             spawned
           });
         }
+
+        // Structure art owns every occupied part cell. Clear any deposit or
+        // terrain left behind by a builder, then rebuild shared collision for
+        // every intact outer shell and station platform.
+        clearTerrainBehindStructureParts();
+        rebuildStructureCollisionCells();
 
         currentMountain.structureSlots = {
           total: totalSlots,
@@ -9215,6 +9516,7 @@
         if (!found || found.part.broken) return false;
 
         found.part.broken = true;
+        rebuildStructureCollisionCells();
         const released = releaseStructurePartLoot(found.structure, found.part);
         updateAncientShrineAltarLock(found.structure, true);
         updateCrystalChamberCradleLock(found.structure, true);
@@ -10021,6 +10323,28 @@
       const localResetSave = document.getElementById("localResetSave");
       const cloudAccountLabel = document.getElementById("cloudAccountLabel");
       const cloudLastSaved = document.getElementById("cloudLastSaved");
+      const worldGate = document.getElementById("worldGate");
+      const worldMenuView = document.getElementById("worldMenuView");
+      const worldSlotList = document.getElementById("worldSlotList");
+      const worldAccountButton = document.getElementById("worldAccountButton");
+      const worldCreator = document.getElementById("worldCreator");
+      const worldCreatorTitle = document.getElementById("worldCreatorTitle");
+      const worldCreatorSubtitle = document.getElementById("worldCreatorSubtitle");
+      const worldNameInput = document.getElementById("worldNameInput");
+      const worldSeedInput = document.getElementById("worldSeedInput");
+      const worldPresetSelect = document.getElementById("worldPresetSelect");
+      const worldModeSelect = document.getElementById("worldModeSelect");
+      const worldSliderGrid = document.getElementById("worldSliderGrid");
+      const worldDeathPenalty = document.getElementById("worldDeathPenalty");
+      const worldDropRecovery = document.getElementById("worldDropRecovery");
+      const worldHardcoreSelect = document.getElementById("worldHardcoreSelect");
+      const worldSettingsWarning = document.getElementById("worldSettingsWarning");
+      const worldCreationError = document.getElementById("worldCreationError");
+      const worldCreatorCancel = document.getElementById("worldCreatorCancel");
+      const worldCreatorConfirm = document.getElementById("worldCreatorConfirm");
+      const worldsButton = document.getElementById("worldsButton");
+      const worldsButtonStatus = document.getElementById("worldsButtonStatus");
+      const worldSettingsButton = document.getElementById("worldSettingsButton");
       const jumpButton = document.getElementById("jump");
       const mineButton = document.getElementById("mine");
       const buildButton = document.getElementById("build");
@@ -10098,6 +10422,7 @@
       const worldDrops = [];
       const treasureChests = [];
       const structures = [];
+      const structureCollisionCells = new Set();
       const pickupParticles = [];
       const sellFlights = [];
       const coinParticles = [];
@@ -10111,7 +10436,7 @@
       const discovered = new Uint8Array(WORLD_W * WORLD_H);
       const sunlightMap = new Float32Array(WORLD_W * WORLD_H);
       const PLAYER_LIGHT_FIELD_RADIUS =
-        PLAYER_LIGHT_RADIUS;
+        PLAYER_LIGHT_RADIUS * 5;
       const PLAYER_LIGHT_DIAMETER =
         PLAYER_LIGHT_FIELD_RADIUS * 2 + 1;
       const playerLightField = new Float32Array(PLAYER_LIGHT_DIAMETER * PLAYER_LIGHT_DIAMETER);
@@ -10162,7 +10487,7 @@
       let playerStunTimer = 0;
       let gravelHitCooldown = 0;
       let hazardScanTimer = 0;
-      let environmentTimer = 0;
+      let lavaTimer = 0;
       let acidTimer = 0;
       let waterTimer = 0;
       let fallingTimer = 0;
@@ -10943,8 +11268,90 @@
         updateOreBookMenuStatus();
       }
 
-      const SAVE_FORMAT_VERSION = 22;
+      const SAVE_FORMAT_VERSION = 23;
       const LOCAL_SAVE_KEY = "mountain-tycoon-save-v1";
+      const LOCAL_WORLDS_KEY = "mountain-tycoon-world-slots-v1";
+      const WORLD_LAUNCH_KEY = "mountain-tycoon-launch-slot";
+      const WORLD_COLLECTION_FORMAT = "mountain-tycoon-world-slots";
+      const WORLD_COLLECTION_VERSION = 1;
+      const WORLD_SLOT_COUNT = 3;
+
+      const WORLD_SLIDER_DEFINITIONS = Object.freeze([
+        { key: "miningSpeed", label: "Mining Speed", min: 25, max: 500, step: 5 },
+        { key: "playerLightRange", label: "Player Light Range", min: 25, max: 500, step: 5 },
+        { key: "backpackCapacity", label: "Backpack Capacity", min: 25, max: 500, step: 5 },
+        { key: "oxygenDuration", label: "Oxygen Duration", min: 0, max: 500, step: 5 },
+        { key: "movementSpeed", label: "Movement Speed", min: 50, max: 250, step: 5 },
+        { key: "oreAbundance", label: "Ore Abundance", min: 25, max: 250, step: 5 },
+        { key: "waterFrequency", label: "Water Pocket Frequency", min: 0, max: 200, step: 5 },
+        { key: "lavaFrequency", label: "Lava Pocket Frequency", min: 0, max: 200, step: 5 },
+        { key: "otherHazardFrequency", label: "Other Hazard Frequency", min: 0, max: 200, step: 5 },
+        { key: "structureFrequency", label: "Structure Frequency", min: 0, max: 200, step: 5 },
+        { key: "treasureFrequency", label: "Treasure Chest Frequency", min: 0, max: 200, step: 5 },
+        { key: "oreSellValue", label: "Ore Sell Value", min: 50, max: 200, step: 5 },
+        { key: "structureRewardValue", label: "Structure Reward Value", min: 25, max: 250, step: 5 },
+        { key: "treasureValue", label: "Treasure Chest Value", min: 25, max: 250, step: 5 },
+        { key: "mountainPrices", label: "Mountain Prices", min: 50, max: 200, step: 5 },
+        { key: "contractRewards", label: "Contract Rewards", min: 50, max: 200, step: 5 },
+        { key: "luckEffectiveness", label: "Luck Effectiveness", min: 0, max: 500, step: 5 }
+      ]);
+
+      const WORLD_PRESETS = Object.freeze({
+        explorer: {
+          miningSpeed: 150, playerLightRange: 175, backpackCapacity: 150,
+          oxygenDuration: 200, movementSpeed: 115, oreAbundance: 150,
+          waterFrequency: 60, lavaFrequency: 50, otherHazardFrequency: 60,
+          structureFrequency: 140, treasureFrequency: 150, oreSellValue: 125,
+          structureRewardValue: 140, treasureValue: 140, mountainPrices: 75,
+          contractRewards: 130, luckEffectiveness: 175,
+          deathPenalty: "none", dropRecovery: "recoverable", hardcore: false
+        },
+        standard: {
+          miningSpeed: 100, playerLightRange: 100, backpackCapacity: 100,
+          oxygenDuration: 100, movementSpeed: 100, oreAbundance: 100,
+          waterFrequency: 100, lavaFrequency: 100, otherHazardFrequency: 100,
+          structureFrequency: 100, treasureFrequency: 100, oreSellValue: 100,
+          structureRewardValue: 100, treasureValue: 100, mountainPrices: 100,
+          contractRewards: 100, luckEffectiveness: 100,
+          deathPenalty: "none", dropRecovery: "recoverable", hardcore: false
+        },
+        veteran: {
+          miningSpeed: 90, playerLightRange: 80, backpackCapacity: 85,
+          oxygenDuration: 75, movementSpeed: 100, oreAbundance: 85,
+          waterFrequency: 115, lavaFrequency: 125, otherHazardFrequency: 125,
+          structureFrequency: 90, treasureFrequency: 85, oreSellValue: 90,
+          structureRewardValue: 90, treasureValue: 90, mountainPrices: 115,
+          contractRewards: 90, luckEffectiveness: 75,
+          deathPenalty: "money", dropRecovery: "recoverable", hardcore: false
+        },
+        expert: {
+          miningSpeed: 75, playerLightRange: 60, backpackCapacity: 70,
+          oxygenDuration: 50, movementSpeed: 95, oreAbundance: 70,
+          waterFrequency: 140, lavaFrequency: 160, otherHazardFrequency: 160,
+          structureFrequency: 75, treasureFrequency: 65, oreSellValue: 75,
+          structureRewardValue: 75, treasureValue: 75, mountainPrices: 140,
+          contractRewards: 75, luckEffectiveness: 50,
+          deathPenalty: "both", dropRecovery: "recoverable", hardcore: false
+        },
+        hardcore: {
+          miningSpeed: 60, playerLightRange: 40, backpackCapacity: 60,
+          oxygenDuration: 25, movementSpeed: 90, oreAbundance: 55,
+          waterFrequency: 170, lavaFrequency: 200, otherHazardFrequency: 200,
+          structureFrequency: 60, treasureFrequency: 50, oreSellValue: 60,
+          structureRewardValue: 60, treasureValue: 60, mountainPrices: 175,
+          contractRewards: 60, luckEffectiveness: 25,
+          deathPenalty: "both", dropRecovery: "destroyed", hardcore: true
+        }
+      });
+
+      let worldCollection = null;
+      let currentWorldSlot = -1;
+      let activeWorldEntry = null;
+      let worldSettings = { ...WORLD_PRESETS.standard };
+      let worldPlayTimeSeconds = 0;
+      let worldCreatorSlot = -1;
+      let worldCreatorEditingSandbox = false;
+      let worldGateOpen = false;
       let supabaseClient = null;
       let cloudUser = null;
       let cloudBusy = false;
@@ -10977,6 +11384,10 @@
       let desktopPlacementMode = "build";
       let desktopPreviewMode = "mine";
       let desktopActiveMode = "mine"; // tracks current active mode (mining vs placement)
+      let placementWheelActive = false;
+      let placementWheelOffsetX = 0;
+      let placementWheelOffsetY = 0;
+      let placementWheelHoveredMode = null;
       let mobileControlsVisible = true;
       let playerInShop = false;
       let shopExitX = null;
@@ -11269,7 +11680,9 @@
         grounded: false,
         onPlatform: false,
         jumpWasDown: false,
-        facing: 1
+        facing: 1,
+        oxygen: MAX_OXYGEN_SECONDS,
+        oxygenBarAlpha: 0
       };
 
       const camera = {
@@ -11299,7 +11712,8 @@
       const building = {
         targetX: -1,
         targetY: -1,
-        valid: false
+        valid: false,
+        materialType: null
       };
 
       const torchPlacement = {
@@ -11374,7 +11788,8 @@
         }
 
         const cellIndex = index(x, y);
-        if (world[cellIndex] === type) {
+        const previousType = world[cellIndex];
+        if (previousType === type) {
           return true;
         }
 
@@ -11396,6 +11811,15 @@
         }
 
         world[cellIndex] = type;
+
+        // Keep the runtime queues synchronized even when a system other than
+        // the fluid simulation creates, replaces, or clears a liquid cell.
+        if (previousType === WATER) activeWater.delete(cellIndex);
+        if (previousType === LAVA) activeLava.delete(cellIndex);
+        if (previousType === ACID) activeAcid.delete(cellIndex);
+        if (type === WATER) activeWater.add(cellIndex);
+        if (type === LAVA) activeLava.add(cellIndex);
+        if (type === ACID) activeAcid.add(cellIndex);
 
         if (type === AIR) {
           removeOpenedChestAboveFloor(x, y);
@@ -11481,8 +11905,19 @@
       }
 
       function solidPixel(px, py) {
-        const type = tileAt(Math.floor(px / TILE), Math.floor(py / TILE));
-        return type !== AIR && type !== LAVA && type !== GAS && type !== WATER;
+        const tileX = Math.floor(px / TILE);
+        const tileY = Math.floor(py / TILE);
+        const type = tileAt(tileX, tileY);
+        if (type !== AIR && type !== LAVA && type !== GAS && type !== WATER) {
+          return true;
+        }
+        return (
+          tileX >= 0 &&
+          tileX < WORLD_W &&
+          tileY >= 0 &&
+          tileY < WORLD_H &&
+          structureCollisionCells.has(index(tileX, tileY))
+        );
       }
 
       function clamp(value, min, max) {
@@ -11531,15 +11966,19 @@
       }
 
       function activeMiningSpeedMultiplier() {
-        return 1 + 0.25 * activePotionPotency("mining");
+        return (
+          1 + 0.25 * activePotionPotency("mining")
+        ) * worldSettingMultiplier("miningSpeed");
       }
 
       function activeMovementSpeedMultiplier() {
-        return 1 + 0.5 * activePotionPotency("speed");
+        return (
+          1 + 0.5 * activePotionPotency("speed")
+        ) * worldSettingMultiplier("movementSpeed");
       }
 
       function activeLuckBonus() {
-        return 50 * activePotionPotency("luck");
+        return 50 * activePotionPotency("luck") * worldSettingMultiplier("luckEffectiveness");
       }
 
       function activePlayerLightBonus() {
@@ -11723,7 +12162,11 @@
 
         const effectId = definition.effectId;
         const wasActive = potionEffectActive(effectId);
-        activePotionEffects[effectId] = POTION_DURATION_SECONDS;
+        activePotionEffects[effectId] = POTION_DURATION_SECONDS * clamp(
+          Number(item.potionDurationMultiplier) || 1,
+          0.25,
+          2.5
+        );
         activePotionPotencies[effectId] = wasActive
           ? Math.max(
               activePotionPotency(effectId),
@@ -11909,7 +12352,10 @@
         if (!tier || !currentMountain) return;
 
         // Two treasure chests per tier level (double the old pair count).
-        const desiredChests = chestPairsForTier(tier.level) * 2;
+        const desiredChests = stochasticGenerationCount(
+          chestPairsForTier(tier.level) * 2 *
+            worldSettingMultiplier("treasureFrequency")
+        );
         const candidates = shuffledChestCandidates();
         const placed = [];
 
@@ -12004,6 +12450,15 @@
           makeTreasureItem(
             chest.rewardType
           );
+        if (chest.kind === "treasure") {
+          item.potionDurationMultiplier =
+            worldSettingMultiplier("treasureValue");
+          const potion = potionDefinitionForType(item.type);
+          if (potion) {
+            const minutes = POTION_DURATION_SECONDS * item.potionDurationMultiplier / 60;
+            item.note = potion.bonusText + " for " + formatCompact(minutes) + " minutes of active gameplay.";
+          }
+        }
         spawnWorldDrop(
           item,
           (chest.x + 0.5) * TILE,
@@ -12081,6 +12536,107 @@
         torchButton.classList.toggle("desktop-selected", desktop && desktopPlacementMode === "torch");
       }
 
+      function placementModeLabel(mode) {
+        if (mode === "torch") return "torches";
+        if (mode === "stone") return "stone / deepstone";
+        return "wooden platforms";
+      }
+
+      function setDesktopPlacementMode(mode, announce = false) {
+        if (!["build", "stone", "torch"].includes(mode)) return false;
+        desktopPlacementMode = mode;
+        desktopActiveMode = mode;
+        setDesktopPreviewMode("place");
+        setDesktopPlacementPressed(mousePlaceDown);
+        updateDesktopPlacementUI();
+        mining.scanTimer = 0;
+        if (announce) {
+          playSwitchSound();
+          showToast("Right click mode: " + placementModeLabel(mode));
+        }
+        return true;
+      }
+
+      function placementWheelModeFromOffset(x, y) {
+        const distance = Math.hypot(x, y);
+        if (distance < PLACEMENT_WHEEL_DEAD_ZONE) return null;
+
+        const nx = x / distance;
+        const ny = y / distance;
+        const candidates = [
+          { mode: "torch", dot: -ny },
+          { mode: "stone", dot: nx * -0.8660254 + ny * 0.5 },
+          { mode: "build", dot: nx * 0.8660254 + ny * 0.5 }
+        ];
+        candidates.sort((a, b) => b.dot - a.dot);
+        return candidates[0].mode;
+      }
+
+      function beginPlacementWheel() {
+        if (
+          placementWheelActive ||
+          !desktopControlsActive() ||
+          activeModal ||
+          playerInShop ||
+          camera.revealTimer > 0
+        ) {
+          return false;
+        }
+
+        placementWheelActive = true;
+        placementWheelOffsetX = 0;
+        placementWheelOffsetY = 0;
+        placementWheelHoveredMode = null;
+        mouseMineDown = false;
+        input.mine = false;
+        setDesktopPlacementPressed(false);
+        canvas.style.cursor = "none";
+
+        try {
+          const lockRequest = canvas.requestPointerLock?.();
+          if (lockRequest && typeof lockRequest.catch === "function") {
+            lockRequest.catch(() => {});
+          }
+        } catch (error) {}
+
+        return true;
+      }
+
+      function movePlacementWheel(deltaX, deltaY) {
+        if (!placementWheelActive) return;
+        placementWheelOffsetX += Number(deltaX) || 0;
+        placementWheelOffsetY += Number(deltaY) || 0;
+        const distance = Math.hypot(
+          placementWheelOffsetX,
+          placementWheelOffsetY
+        );
+        if (distance > PLACEMENT_WHEEL_MAX_RADIUS) {
+          const scale = PLACEMENT_WHEEL_MAX_RADIUS / distance;
+          placementWheelOffsetX *= scale;
+          placementWheelOffsetY *= scale;
+        }
+        placementWheelHoveredMode = placementWheelModeFromOffset(
+          placementWheelOffsetX,
+          placementWheelOffsetY
+        );
+      }
+
+      function finishPlacementWheel(commit = true) {
+        if (!placementWheelActive) return false;
+        const selected = commit ? placementWheelHoveredMode : null;
+        placementWheelActive = false;
+        placementWheelOffsetX = 0;
+        placementWheelOffsetY = 0;
+        placementWheelHoveredMode = null;
+        canvas.style.cursor = "";
+        if (document.pointerLockElement === canvas) {
+          document.exitPointerLock?.();
+        }
+        if (selected) setDesktopPlacementMode(selected, true);
+        refreshKeyboard();
+        return !!selected;
+      }
+
       function setMobileControlsVisible(visible) {
         mobileControlsVisible = !!visible;
         document.body.classList.toggle("mobile-controls-hidden", !mobileControlsVisible);
@@ -12090,7 +12646,10 @@
 
       function setDesktopPlacementPressed(pressed) {
         mousePlaceDown = !!pressed;
-        input.build = mousePlaceDown && desktopPlacementMode === "build";
+        input.build =
+          mousePlaceDown &&
+          (desktopPlacementMode === "build" ||
+            desktopPlacementMode === "stone");
         input.torch = mousePlaceDown && desktopPlacementMode === "torch";
         buildButton.classList.toggle("pressed", input.build);
         torchButton.classList.toggle("pressed", input.torch);
@@ -12103,7 +12662,7 @@
       }
 
       function updateMouseAim(clientX, clientY) {
-        if (!desktopControlsActive() || activeModal) return;
+        if (!desktopControlsActive() || activeModal || placementWheelActive) return;
         const point = worldPointFromClient(clientX, clientY);
         cursorWorldX = point.x;
         cursorWorldY = point.y;
@@ -12142,13 +12701,12 @@
           openModal("luck");
           return;
         }
-        desktopPlacementMode = desktopPlacementMode === "build" ? "torch" : "build";
-        playSwitchSound();
-        desktopActiveMode = desktopPlacementMode;
-        setDesktopPreviewMode("place");
-        setDesktopPlacementPressed(mousePlaceDown);
-        updateDesktopPlacementUI();
-        showToast(desktopPlacementMode === "build" ? "Right click mode: wooden platforms" : "Right click mode: torches");
+        const modes = ["build", "stone", "torch"];
+        const currentIndex = Math.max(0, modes.indexOf(desktopPlacementMode));
+        setDesktopPlacementMode(
+          modes[(currentIndex + 1) % modes.length],
+          true
+        );
       }
 
       function showToast(message) {
@@ -13043,11 +13601,11 @@
           ? 0
           : depthBelowLocalSurface(playerTileX, playerTileY);
 
-        cashLabel.textContent = formatMoney(displayCash);
+        cashLabel.textContent = isSandboxWorld() ? "$∞" : formatMoney(displayCash);
         packLabel.textContent =
           formatCompact(inventoryWeight) +
           " / " +
-          formatCompact(backpack.capacity) +
+          backpackCapacityLabel(backpack) +
           " wt";
 
         hazardLabel.textContent = "RAD " + Math.round(radiation) + "%";
@@ -13075,7 +13633,7 @@
         inventoryButtonWeight.textContent =
           formatCompact(inventoryWeight) +
           " / " +
-          formatCompact(backpack.capacity);
+          backpackCapacityLabel(backpack);
         luckHud.textContent = "LUCK " + totalPlotLuck().toFixed(2);
 
         if (leaderboardLifetimeValue) {
@@ -13140,13 +13698,563 @@
       }
 
       function cloneSaveItem(item) {
-        return item ? JSON.parse(JSON.stringify(item)) : null;
+        if (!item) return null;
+        const cloned = JSON.parse(JSON.stringify(item));
+        return normalizeBasicBlockStackItem(cloned);
+      }
+
+      function normalizeWorldSettings(raw) {
+        const source = raw && typeof raw === "object"
+          ? raw
+          : WORLD_PRESETS.standard;
+        const normalized = {};
+
+        for (const definition of WORLD_SLIDER_DEFINITIONS) {
+          const numericValue = Number(source[definition.key]);
+          normalized[definition.key] = clamp(
+            Math.round(
+              Number.isFinite(numericValue)
+                ? numericValue
+                : WORLD_PRESETS.standard[definition.key]
+            ),
+            definition.min,
+            definition.max
+          );
+        }
+
+        normalized.deathPenalty = ["none", "money", "inventory", "both"].includes(source.deathPenalty)
+          ? source.deathPenalty
+          : "none";
+        normalized.dropRecovery = source.dropRecovery === "destroyed"
+          ? "destroyed"
+          : "recoverable";
+        normalized.hardcore = !!source.hardcore;
+        return normalized;
+      }
+
+      function worldSettingMultiplier(key) {
+        const value = Number(worldSettings && worldSettings[key]);
+        return Number.isFinite(value) ? Math.max(0, value) / 100 : 1;
+      }
+
+      function maximumOxygenSeconds() {
+        return MAX_OXYGEN_SECONDS * worldSettingMultiplier("oxygenDuration");
+      }
+
+      function isSandboxWorld() {
+        return !!(activeWorldEntry && activeWorldEntry.gameMode === "sandbox");
+      }
+
+      function hasInfiniteWorldResources() {
+        return TEST_INFINITE_MONEY || isSandboxWorld();
+      }
+
+      function worldUnlocksEverything() {
+        return TEST_UNLOCK_ALL_UPGRADES || isSandboxWorld();
+      }
+
+      function effectiveBackpackCapacity(backpack = currentBackpack()) {
+        if (isSandboxWorld()) return Number.MAX_SAFE_INTEGER;
+        return Math.max(1, backpack.capacity * worldSettingMultiplier("backpackCapacity"));
+      }
+
+      function backpackCapacityLabel(backpack = currentBackpack()) {
+        return isSandboxWorld() ? "∞" : formatCompact(effectiveBackpackCapacity(backpack));
+      }
+
+      function effectiveMountainPrice(tier) {
+        if (!tier) return 0;
+        return roundPrice(tier.price * worldSettingMultiplier("mountainPrices"));
+      }
+
+      function effectiveContractReward(contract) {
+        return Math.max(
+          0,
+          roundPrice(
+            (Number(contract && contract.reward) || 0) *
+              worldSettingMultiplier("contractRewards")
+          )
+        );
+      }
+
+      function isOreSaleItem(item) {
+        const block = item && BLOCKS[item.type];
+        if (!block) return false;
+        return [
+          "ore", "gem", "glow", "geode", "prism", "obsidian",
+          "radium", "unstable", "void", "aether", "neutron", "chrono"
+        ].includes(block.style);
+      }
+
+      function worldSaleValue(item) {
+        const base = Math.max(0, Number(item && item.value) || 0);
+        return isOreSaleItem(item)
+          ? Math.round(base * worldSettingMultiplier("oreSellValue"))
+          : base;
+      }
+
+      function emptyWorldCollection() {
+        return {
+          format: WORLD_COLLECTION_FORMAT,
+          version: WORLD_COLLECTION_VERSION,
+          updatedAt: new Date().toISOString(),
+          slots: new Array(WORLD_SLOT_COUNT).fill(null)
+        };
+      }
+
+      function randomWorldSeed() {
+        const cryptoObject = window.crypto;
+        if (cryptoObject && cryptoObject.getRandomValues) {
+          const values = new Uint32Array(2);
+          cryptoObject.getRandomValues(values);
+          return values[0].toString(36) + values[1].toString(36);
+        }
+        return Date.now().toString(36) + Math.floor(Math.random() * 0xffffffff).toString(36);
+      }
+
+      function normalizeWorldEntry(raw, slotIndex) {
+        if (!raw || typeof raw !== "object") return null;
+        const gameMode = raw.gameMode === "sandbox" ? "sandbox" : "normal";
+        const preset = WORLD_PRESETS[raw.preset] ? raw.preset : "custom";
+        const settings = normalizeWorldSettings(raw.settings || WORLD_PRESETS[preset] || WORLD_PRESETS.standard);
+        if (gameMode === "sandbox") settings.hardcore = false;
+        return {
+          id: String(raw.id || ("world-" + Date.now().toString(36) + "-" + slotIndex)),
+          name: String(raw.name || ("World " + (slotIndex + 1))).slice(0, 28),
+          seed: String(raw.seed || randomWorldSeed()).slice(0, 40),
+          gameMode,
+          preset,
+          settings,
+          createdAt: raw.createdAt || new Date().toISOString(),
+          updatedAt: raw.updatedAt || raw.saveData?.savedAt || new Date().toISOString(),
+          playTimeSeconds: Math.max(0, Number(raw.playTimeSeconds) || 0),
+          fallen: !!raw.fallen,
+          fallReason: String(raw.fallReason || ""),
+          saveData: raw.saveData && typeof raw.saveData === "object" ? raw.saveData : null
+        };
+      }
+
+      function legacyWorldEntry(save) {
+        return normalizeWorldEntry({
+          id: "legacy-" + Date.now().toString(36),
+          name: "Legacy World",
+          seed: "legacy-" + (save.currentMountain?.generationId || Date.now()),
+          gameMode: "normal",
+          preset: "standard",
+          settings: WORLD_PRESETS.standard,
+          createdAt: save.savedAt || new Date().toISOString(),
+          updatedAt: save.savedAt || new Date().toISOString(),
+          saveData: save
+        }, 0);
+      }
+
+      function normalizeWorldCollection(raw) {
+        if (raw && raw.format === WORLD_COLLECTION_FORMAT && Array.isArray(raw.slots)) {
+          const collection = emptyWorldCollection();
+          collection.updatedAt = raw.updatedAt || collection.updatedAt;
+          for (let index = 0; index < WORLD_SLOT_COUNT; index++) {
+            collection.slots[index] = normalizeWorldEntry(raw.slots[index], index);
+          }
+          return collection;
+        }
+
+        if (raw && typeof raw === "object" && raw.formatVersion) {
+          const collection = emptyWorldCollection();
+          collection.slots[0] = legacyWorldEntry(raw);
+          return collection;
+        }
+
+        return emptyWorldCollection();
+      }
+
+      function writeWorldCollection() {
+        if (!worldCollection || suppressLocalSave) return false;
+        try {
+          worldCollection.updatedAt = new Date().toISOString();
+          localStorage.setItem(LOCAL_WORLDS_KEY, JSON.stringify(worldCollection));
+          return true;
+        } catch (error) {
+          console.error("World slot save failed", error);
+          return false;
+        }
+      }
+
+      function currentWorldTier(entry) {
+        return Math.max(0, Number(entry?.saveData?.currentMountain?.level) || 0);
+      }
+
+      function currentWorldCash(entry) {
+        return Math.max(0, Number(entry?.saveData?.progression?.cash) || 0);
+      }
+
+      function formatWorldPlayTime(seconds) {
+        const totalMinutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return hours ? hours + "h " + minutes + "m" : minutes + "m";
+      }
+
+      function escapeWorldHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function renderWorldSlots() {
+        if (!worldCollection) worldCollection = emptyWorldCollection();
+        worldSlotList.textContent = "";
+
+        worldCollection.slots.forEach((entry, slotIndex) => {
+          const card = document.createElement("article");
+          card.className = "world-slot" + (!entry ? " empty" : entry.fallen ? " fallen" : "");
+
+          if (!entry) {
+            card.innerHTML =
+              '<div class="world-slot-number">SAVE SLOT ' + (slotIndex + 1) + '</div>' +
+              '<h2>Empty World</h2><p class="world-slot-meta">Create a new permanent Normal world or an editable Sandbox.</p>' +
+              '<div class="world-slot-actions"><button class="world-action play" data-create-world="' + slotIndex + '">CREATE WORLD</button></div>';
+          } else {
+            const modeLabel = entry.gameMode === "sandbox" ? "Sandbox" : "Normal";
+            const presetLabel = entry.preset.charAt(0).toUpperCase() + entry.preset.slice(1);
+            const tier = currentWorldTier(entry);
+            const status = entry.fallen ? "FALLEN WORLD" : tier ? "Mountain Tier " + tier : "No mountain purchased";
+            card.innerHTML =
+              '<div class="world-slot-number">SAVE SLOT ' + (slotIndex + 1) + '</div>' +
+              '<h2>' + escapeWorldHtml(entry.name) + '</h2>' +
+              '<div class="world-badges"><span class="world-badge ' + (entry.gameMode === "sandbox" ? "sandbox" : "") + '">' + modeLabel + '</span>' +
+              '<span class="world-badge">' + presetLabel + '</span>' +
+              (entry.settings.hardcore ? '<span class="world-badge hardcore">Hardcore</span>' : '') + '</div>' +
+              '<p class="world-slot-meta">' + status + '<br>Cash: ' + (entry.gameMode === "sandbox" ? '∞' : formatMoney(currentWorldCash(entry))) +
+              '<br>Playtime: ' + formatWorldPlayTime(entry.playTimeSeconds) + '<br>Seed: ' + escapeWorldHtml(entry.seed) + '</p>' +
+              '<div class="world-slot-actions">' +
+              '<button class="world-action play" data-play-world="' + slotIndex + '" ' + (entry.fallen ? 'disabled' : '') + '>' + (entry.fallen ? 'WORLD ENDED' : 'PLAY') + '</button>' +
+              (entry.gameMode === "sandbox" ? '<button class="world-action secondary" data-edit-world="' + slotIndex + '">SETTINGS</button>' : '<button class="world-action secondary" data-view-world="' + slotIndex + '">RULES LOCKED</button>') +
+              '<button class="world-action danger" data-delete-world="' + slotIndex + '">DELETE</button></div>';
+          }
+
+          worldSlotList.appendChild(card);
+        });
+      }
+
+      function showWorldMenu() {
+        worldGateOpen = true;
+        worldGate.classList.add("open");
+        worldMenuView.hidden = false;
+        worldCreator.hidden = true;
+        renderWorldSlots();
+        setBurgerMenuOpen(false);
+      }
+
+      function hideWorldGate() {
+        worldGateOpen = false;
+        worldGate.classList.remove("open");
+        worldMenuView.hidden = false;
+        worldCreator.hidden = true;
+      }
+
+      function renderWorldSliderControls() {
+        if (worldSliderGrid.childElementCount) return;
+        for (const definition of WORLD_SLIDER_DEFINITIONS) {
+          const row = document.createElement("div");
+          row.className = "world-slider";
+          row.innerHTML =
+            '<label for="world-setting-' + definition.key + '">' + definition.label + '</label>' +
+            '<input id="world-setting-' + definition.key + '" data-world-setting="' + definition.key + '" type="range" min="' + definition.min + '" max="' + definition.max + '" step="' + definition.step + '">' +
+            '<output data-world-output="' + definition.key + '">100%</output>';
+          worldSliderGrid.appendChild(row);
+        }
+      }
+
+      function putSettingsIntoCreator(settings) {
+        const normalized = normalizeWorldSettings(settings);
+        for (const definition of WORLD_SLIDER_DEFINITIONS) {
+          const input = worldSliderGrid.querySelector('[data-world-setting="' + definition.key + '"]');
+          const output = worldSliderGrid.querySelector('[data-world-output="' + definition.key + '"]');
+          if (input) input.value = normalized[definition.key];
+          if (output) output.textContent = normalized[definition.key] + "%";
+        }
+        worldDeathPenalty.value = normalized.deathPenalty;
+        worldDropRecovery.value = normalized.dropRecovery;
+        worldHardcoreSelect.value = normalized.hardcore ? "on" : "off";
+      }
+
+      function readSettingsFromCreator() {
+        const settings = {};
+        for (const definition of WORLD_SLIDER_DEFINITIONS) {
+          const input = worldSliderGrid.querySelector('[data-world-setting="' + definition.key + '"]');
+          settings[definition.key] = Number(input && input.value);
+        }
+        settings.deathPenalty = worldDeathPenalty.value;
+        settings.dropRecovery = worldDropRecovery.value;
+        settings.hardcore = worldHardcoreSelect.value === "on";
+        if (worldModeSelect.value === "sandbox") settings.hardcore = false;
+        return normalizeWorldSettings(settings);
+      }
+
+      function updateWorldCreatorMode() {
+        const sandbox = worldModeSelect.value === "sandbox";
+        worldHardcoreSelect.disabled = sandbox;
+        if (sandbox) {
+          worldHardcoreSelect.value = "off";
+          if (worldPresetSelect.value === "hardcore") {
+            worldPresetSelect.value = "custom";
+          }
+        }
+        worldSettingsWarning.textContent = sandbox
+          ? "Sandbox provides infinite resources. These settings can be reopened and changed whenever you want."
+          : "Normal-world settings cannot be changed after creation. Review every value before confirming.";
+      }
+
+      function applyPresetToCreator(presetId) {
+        const preset = WORLD_PRESETS[presetId];
+        if (!preset) return;
+        putSettingsIntoCreator(preset);
+        updateWorldCreatorMode();
+      }
+
+      function openWorldCreator(slotIndex, editingSandbox = false) {
+        renderWorldSliderControls();
+        worldCreatorSlot = slotIndex;
+        worldCreatorEditingSandbox = editingSandbox;
+        const entry = worldCollection?.slots?.[slotIndex] || null;
+        worldCreationError.textContent = "";
+        worldMenuView.hidden = true;
+        worldCreator.hidden = false;
+        worldGateOpen = true;
+        worldGate.classList.add("open");
+
+        if (entry && editingSandbox) {
+          worldCreatorTitle.textContent = "Edit Sandbox Settings";
+          worldCreatorSubtitle.textContent = "Changes apply immediately and affect future mountain generation.";
+          worldCreatorConfirm.textContent = "SAVE SETTINGS";
+          worldNameInput.value = entry.name;
+          worldSeedInput.value = entry.seed;
+          worldPresetSelect.value = entry.preset;
+          worldModeSelect.value = "sandbox";
+          worldModeSelect.disabled = true;
+          putSettingsIntoCreator(entry.settings);
+        } else {
+          worldCreatorTitle.textContent = "Create World — Slot " + (slotIndex + 1);
+          worldCreatorSubtitle.textContent = "Choose carefully. Normal-world rules become permanent.";
+          worldCreatorConfirm.textContent = "CREATE WORLD";
+          worldNameInput.value = "World " + (slotIndex + 1);
+          worldSeedInput.value = randomWorldSeed();
+          worldPresetSelect.value = "standard";
+          worldModeSelect.value = "normal";
+          worldModeSelect.disabled = false;
+          applyPresetToCreator("standard");
+        }
+        updateWorldCreatorMode();
+      }
+
+      function creatorSettingsChanged() {
+        if (worldPresetSelect.value !== "custom") worldPresetSelect.value = "custom";
+      }
+
+      function applyActiveWorldDefinition(entry, freshWorld = false) {
+        activeWorldEntry = entry;
+        worldSettings = normalizeWorldSettings(entry?.settings);
+        worldPlayTimeSeconds = Math.max(0, Number(entry?.playTimeSeconds) || 0);
+        worldSettingsButton.hidden = !isSandboxWorld();
+        worldsButtonStatus.textContent = entry ? entry.name.toUpperCase().slice(0, 18) : "3 SAVE SLOTS";
+        player.oxygen = maximumOxygenSeconds();
+        playerLightRevision++;
+        playerLightCacheRadius = -1;
+
+        if (freshWorld && isSandboxWorld()) {
+          ownedPickaxeLevel = PICKAXES.length;
+          ownedBackpackLevel = BACKPACKS.length;
+          ownedFlashlightLevel = FLASHLIGHTS.length;
+          unlockContractTiersThrough(MOUNTAIN_TIERS.length);
+        }
+
+        refreshMountainShop();
+        renderPickaxeShop();
+        renderBackpackShop();
+        renderFlashlightShop();
+      }
+
+      function commitCurrentWorldToCollection() {
+        if (
+          currentWorldSlot < 0 ||
+          !activeWorldEntry ||
+          !worldCollection?.slots?.[currentWorldSlot]
+        ) {
+          return false;
+        }
+
+        activeWorldEntry.settings = normalizeWorldSettings(worldSettings);
+        activeWorldEntry.playTimeSeconds = worldPlayTimeSeconds;
+        activeWorldEntry.updatedAt = new Date().toISOString();
+        activeWorldEntry.saveData = serializeGameState();
+        worldCollection.slots[currentWorldSlot] = activeWorldEntry;
+        return true;
+      }
+
+      function launchWorldSlot(slotIndex) {
+        const entry = worldCollection?.slots?.[slotIndex];
+        if (!entry || entry.fallen) return;
+        writeWorldCollection();
+        sessionStorage.setItem(WORLD_LAUNCH_KEY, String(slotIndex));
+        window.location.reload();
+      }
+
+      function confirmWorldCreator() {
+        const name = worldNameInput.value.trim();
+        if (!name) {
+          worldCreationError.textContent = "Enter a world name.";
+          return;
+        }
+
+        const seed = worldSeedInput.value.trim() || randomWorldSeed();
+        const gameMode = worldCreatorEditingSandbox ? "sandbox" : worldModeSelect.value;
+        const settings = readSettingsFromCreator();
+        const preset = worldPresetSelect.value;
+
+        if (worldCreatorEditingSandbox) {
+          const entry = worldCollection.slots[worldCreatorSlot];
+          if (!entry || entry.gameMode !== "sandbox") return;
+          entry.name = name.slice(0, 28);
+          entry.seed = seed.slice(0, 40);
+          entry.preset = preset;
+          entry.settings = settings;
+          entry.updatedAt = new Date().toISOString();
+          if (worldCreatorSlot === currentWorldSlot) {
+            applyActiveWorldDefinition(entry, false);
+            player.oxygen = clamp(player.oxygen, 0, maximumOxygenSeconds());
+            updateHUD();
+          }
+          writeWorldCollection();
+          if (worldCreatorSlot === currentWorldSlot) {
+            hideWorldGate();
+            saveLocalProgress(false);
+            showToast("Sandbox settings updated");
+          } else {
+            showWorldMenu();
+          }
+          return;
+        }
+
+        if (
+          gameMode === "normal" &&
+          !window.confirm(
+            'Create "' + name + '"? Its seed, difficulty, and world settings will be permanent.'
+          )
+        ) {
+          return;
+        }
+
+        const now = new Date().toISOString();
+        worldCollection.slots[worldCreatorSlot] = normalizeWorldEntry({
+          id: "world-" + Date.now().toString(36) + "-" + worldCreatorSlot,
+          name,
+          seed,
+          gameMode,
+          preset,
+          settings,
+          createdAt: now,
+          updatedAt: now,
+          playTimeSeconds: 0,
+          saveData: null
+        }, worldCreatorSlot);
+        writeWorldCollection();
+        launchWorldSlot(worldCreatorSlot);
+      }
+
+      function deleteWorldSlot(slotIndex) {
+        const entry = worldCollection?.slots?.[slotIndex];
+        if (!entry) return;
+        if (!window.confirm('Delete "' + entry.name + '" permanently? This cannot be undone.')) return;
+        worldCollection.slots[slotIndex] = null;
+        if (slotIndex === currentWorldSlot) {
+          currentWorldSlot = -1;
+          activeWorldEntry = null;
+          worldSettings = { ...WORLD_PRESETS.standard };
+        }
+        writeWorldCollection();
+        renderWorldSlots();
+      }
+
+      function initializeWorldSystem() {
+        renderWorldSliderControls();
+        let rawCollection = null;
+        let migratedLegacySave = false;
+        try {
+          const raw = localStorage.getItem(LOCAL_WORLDS_KEY);
+          if (raw) rawCollection = JSON.parse(raw);
+        } catch (error) {
+          console.error("World slots could not be read", error);
+        }
+
+        if (!rawCollection) {
+          try {
+            const legacyRaw = localStorage.getItem(LOCAL_SAVE_KEY);
+            if (legacyRaw) {
+              rawCollection = JSON.parse(legacyRaw);
+              migratedLegacySave = true;
+            }
+          } catch (error) {
+            console.error("Legacy save migration failed", error);
+          }
+        }
+
+        worldCollection = normalizeWorldCollection(rawCollection);
+        const collectionStored = writeWorldCollection();
+        if (migratedLegacySave && collectionStored) {
+          localStorage.removeItem(LOCAL_SAVE_KEY);
+        }
+
+        const launchValue = sessionStorage.getItem(WORLD_LAUNCH_KEY);
+        sessionStorage.removeItem(WORLD_LAUNCH_KEY);
+        const slotIndex = launchValue === null ? -1 : Number(launchValue);
+        const entry = Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < WORLD_SLOT_COUNT
+          ? worldCollection.slots[slotIndex]
+          : null;
+
+        if (!entry || entry.fallen) {
+          currentWorldSlot = -1;
+          activeWorldEntry = null;
+          showWorldMenu();
+          return false;
+        }
+
+        currentWorldSlot = slotIndex;
+        applyActiveWorldDefinition(entry, !entry.saveData);
+        if (entry.saveData) {
+          try {
+            restoreGameState(entry.saveData);
+          } catch (error) {
+            console.error("World slot could not be loaded", error);
+            currentWorldSlot = -1;
+            activeWorldEntry = null;
+            worldSettings = { ...WORLD_PRESETS.standard };
+            worldSettingsButton.hidden = true;
+            showWorldMenu();
+            showToast("That world could not be loaded");
+            return false;
+          }
+        }
+        hideWorldGate();
+        saveLocalProgress(false);
+        return true;
       }
 
       function serializeGameState() {
         return {
           formatVersion: SAVE_FORMAT_VERSION,
           savedAt: new Date().toISOString(),
+          worldDefinition: activeWorldEntry ? {
+            id: activeWorldEntry.id,
+            name: activeWorldEntry.name,
+            seed: activeWorldEntry.seed,
+            gameMode: activeWorldEntry.gameMode,
+            preset: activeWorldEntry.preset,
+            settings: normalizeWorldSettings(worldSettings),
+            playTimeSeconds: worldPlayTimeSeconds
+          } : null,
           worldHeight: WORLD_H,
           progression: {
             cash,
@@ -13250,7 +14358,8 @@
             radiation,
             gasExposure,
             corrosion,
-            playerStunTimer
+            playerStunTimer,
+            oxygen: player.oxygen
           },
           counters: {
             nextDepositId,
@@ -13299,7 +14408,12 @@
           if (type === WATER) {
             activeWater.add(cellIndex);
           }
-          if (type === GRAVEL && y + 1 < WORLD_H && tileAt(x, y + 1) === AIR) {
+          if (
+            type === GRAVEL &&
+            y + 1 < WORLD_H &&
+            tileAt(x, y + 1) === AIR &&
+            !structureCollisionCells.has(index(x, y + 1))
+          ) {
             fallingBlocks.add(cellIndex);
           }
         }
@@ -13391,6 +14505,7 @@
         }
 
         structures.length = 0;
+        structureCollisionCells.clear();
         if (Array.isArray(save.structures)) {
           for (const raw of save.structures) {
             const definition = raw && STRUCTURE_DEFINITIONS.find(
@@ -13464,6 +14579,11 @@
             structures.push(structure);
           }
         }
+
+        // Migrate existing saves made before structure floors replaced their
+        // underlying Stone/ore cells, and restore physical outer walls.
+        clearTerrainBehindStructureParts();
+        rebuildStructureCollisionCells();
 
         for (const structure of structures) {
           updateAncientShrineAltarLock(structure, false);
@@ -13540,7 +14660,7 @@
                 loadedEffects[effectId]
               ) || 0,
               0,
-              POTION_DURATION_SECONDS
+              POTION_DURATION_SECONDS * 2.5
             );
           activePotionPotencies[effectId] =
             activePotionEffects[effectId] > 0
@@ -13561,11 +14681,7 @@
           for (const raw of save.inventoryEntries) {
             if (!raw || !Number.isFinite(Number(raw.type))) continue;
             const item = cloneSaveItem(raw);
-            inventoryEntries.push(item);
-            inventory[item.type] += 1;
-            inventoryUnits[item.type] += Number(item.units) || 1;
-            inventoryValues[item.type] += Number(item.value) || 0;
-            inventoryWeight += Number(item.weight) || 0;
+            addInventoryItemObject(item, false);
           }
         }
 
@@ -13769,6 +14885,10 @@
         radiation = clamp(Number(hazards.radiation) || 0, 0, 100);
         gasExposure = clamp(Number(hazards.gasExposure) || 0, 0, 100);
         corrosion = clamp(Number(hazards.corrosion) || 0, 0, 100);
+        player.oxygen = Number.isFinite(Number(hazards.oxygen))
+          ? clamp(Number(hazards.oxygen), 0, maximumOxygenSeconds())
+          : maximumOxygenSeconds();
+        player.oxygenBarAlpha = 0;
         playerStunTimer = Math.max(
           0,
           Number(hazards.playerStunTimer) || 0
@@ -13813,7 +14933,7 @@
         );
 
         const preferences = save.preferences || {};
-        if (preferences.desktopPlacementMode === "torch" || preferences.desktopPlacementMode === "build") {
+        if (["torch", "build", "stone"].includes(preferences.desktopPlacementMode)) {
           desktopPlacementMode = preferences.desktopPlacementMode;
         }
         setMobileControlsVisible(preferences.mobileControlsVisible !== false);
@@ -13855,8 +14975,10 @@
         if (suppressLocalSave) return false;
 
         try {
-          const state = serializeGameState();
-          localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(state));
+          if (currentWorldSlot >= 0 && activeWorldEntry) {
+            commitCurrentWorldToCollection();
+          }
+          if (!writeWorldCollection()) throw new Error("World storage is full");
           if (showMessage) showToast("Progress saved locally");
           return true;
         } catch (error) {
@@ -13868,9 +14990,14 @@
 
       function loadLocalProgress(showMessage) {
         try {
-          const raw = localStorage.getItem(LOCAL_SAVE_KEY);
+          const raw = localStorage.getItem(LOCAL_WORLDS_KEY);
           if (!raw) return false;
-          restoreGameState(JSON.parse(raw));
+          worldCollection = normalizeWorldCollection(JSON.parse(raw));
+          const entry = worldCollection.slots[currentWorldSlot];
+          if (!entry || !entry.saveData) return false;
+          activeWorldEntry = entry;
+          worldSettings = normalizeWorldSettings(entry.settings);
+          restoreGameState(entry.saveData);
           if (showMessage) showToast("Local progress loaded");
           return true;
         } catch (error) {
@@ -14199,7 +15326,7 @@
       }
 
       async function syncLeaderboardEntry(silent = true) {
-        if (!supabaseClient || !cloudUser) return false;
+        if (!supabaseClient || !cloudUser || isSandboxWorld()) return false;
 
         try {
           const payload = {
@@ -14233,7 +15360,7 @@
 
       function scheduleLeaderboardSync(delay = 1400) {
         clearTimeout(leaderboardSyncTimer);
-        if (!supabaseClient || !cloudUser) return;
+        if (!supabaseClient || !cloudUser || isSandboxWorld()) return;
 
         leaderboardSyncTimer = setTimeout(() => {
           leaderboardSyncTimer = null;
@@ -14453,6 +15580,7 @@
           cloudUser = data.session ? data.session.user : null;
           if (cloudUser) {
             updateCloudUI("Account created. You are signed in.");
+            cloudBusy = false;
             await saveCloudProgress(false);
           } else {
             // No session means "Confirm email" is still enabled in Supabase.
@@ -14494,7 +15622,7 @@
             throw error;
           }
           cloudUser = data.user;
-          updateCloudUI("Signed in. Choose Load Cloud Save or Save to Cloud.");
+          updateCloudUI("Signed in. Choose Load Cloud Worlds or Save Worlds to Cloud.");
         } catch (error) {
           updateCloudUI("Sign-in failed: " + error.message);
         } finally {
@@ -14522,7 +15650,9 @@
           if (localSaveTimer) clearInterval(localSaveTimer);
           if (cloudSaveTimer) clearInterval(cloudSaveTimer);
           localStorage.removeItem(LOCAL_SAVE_KEY);
-          updateCloudUI("Signed out. Starting a fresh world...");
+          localStorage.removeItem(LOCAL_WORLDS_KEY);
+          sessionStorage.removeItem(WORLD_LAUNCH_KEY);
+          updateCloudUI("Signed out. Returning to empty world slots...");
           window.location.reload();
         } catch (error) {
           updateCloudUI("Sign-out failed: " + error.message);
@@ -14533,27 +15663,33 @@
       }
 
       function calculateProgressScore() {
-        // Returns a numeric score representing player progress. Higher = more progress.
-        // Weighted by: mountain tier (primary), then pickaxes, backpacks, and total cash.
-        const mountainTier = (currentMountain?.level || 0) * 10000000;
-        const pickaxeBonus = ownedPickaxeLevel * 100000;
-        const backpackBonus = ownedBackpackLevel * 50000;
-        const cashBonus = Math.min(displayCash / 100000, 10000000);
-        const inventoryBonus = inventoryEntries.reduce((sum, e) => sum + e.value, 0) / 10000;
+        if (currentWorldSlot >= 0) commitCurrentWorldToCollection();
+        return getProgressFromSaveData(worldCollection);
+      }
+
+      function singleSaveProgressScore(save) {
+        if (!save || typeof save !== "object") return 0;
+        const mountainTier = (save.currentMountain?.level || 0) * 10000000;
+        const pickaxeBonus = (save.progression?.ownedPickaxeLevel || 1) * 100000;
+        const backpackBonus = (save.progression?.ownedBackpackLevel || 1) * 50000;
+        const cashBonus = Math.min((save.progression?.cash || 0) / 100000, 10000000);
+        const inventoryBonus = (save.inventoryEntries || [])
+          .reduce((sum, entry) => sum + (entry.value || 0), 0) / 10000;
         return mountainTier + pickaxeBonus + backpackBonus + cashBonus + inventoryBonus;
       }
 
-      function getProgressFromSaveData(saveDataJson) {
-        // Extracts and calculates progress from a serialized save object.
+      function getProgressFromSaveData(saveDataValue) {
         try {
-          const save = JSON.parse(saveDataJson);
-          const mountainTier = (save.currentMountain?.level || 0) * 10000000;
-          const pickaxeBonus = (save.progression?.ownedPickaxeLevel || 1) * 100000;
-          const backpackBonus = (save.progression?.ownedBackpackLevel || 1) * 50000;
-          const cashBonus = Math.min((save.progression?.displayCash || 0) / 100000, 10000000);
-          const inventoryBonus = (save.inventory?.entries || [])
-            .reduce((sum, e) => sum + (e.value || 0), 0) / 10000;
-          return mountainTier + pickaxeBonus + backpackBonus + cashBonus + inventoryBonus;
+          const parsed = typeof saveDataValue === "string"
+            ? JSON.parse(saveDataValue)
+            : saveDataValue;
+          if (parsed?.format === WORLD_COLLECTION_FORMAT && Array.isArray(parsed.slots)) {
+            return parsed.slots.reduce(
+              (sum, entry) => sum + singleSaveProgressScore(entry?.saveData),
+              0
+            );
+          }
+          return singleSaveProgressScore(parsed);
         } catch (e) {
           return 0;
         }
@@ -14620,21 +15756,23 @@
         cloudBusy = true;
         updateCloudUI("Saving progress to the cloud…");
         try {
-          const saveData = serializeGameState();
+          if (currentWorldSlot >= 0) commitCurrentWorldToCollection();
+          writeWorldCollection();
+          const saveData = worldCollection || emptyWorldCollection();
           const savedAt = new Date().toISOString();
           const { error } = await supabaseClient
             .from("player_saves")
             .upsert({
               user_id: cloudUser.id,
               save_data: saveData,
-              version: SAVE_FORMAT_VERSION,
+              version: WORLD_COLLECTION_VERSION,
               updated_at: savedAt
             }, { onConflict: "user_id" });
           if (error) throw error;
           cloudLastSavedAt = savedAt;
           autoSaveBlocked = false;
           document.getElementById("autoSaveWarning").style.display = "none";
-          saveLocalProgress(false);
+          writeWorldCollection();
           await syncLeaderboardEntry(true);
           updateCloudUI("Cloud save completed.");
           if (showMessage) showToast("Progress saved to cloud");
@@ -14711,11 +15849,16 @@
 
           cloudBusy = true;
           updateCloudUI("Loading cloud progress…");
-          restoreGameState(data.save_data);
+          worldCollection = normalizeWorldCollection(data.save_data);
           cloudLastSavedAt = data.updated_at || null;
-          saveLocalProgress(false);
-          updateCloudUI("Cloud progress loaded.");
-          showToast("Cloud progress loaded");
+          writeWorldCollection();
+          suppressLocalSave = true;
+          currentWorldSlot = -1;
+          activeWorldEntry = null;
+          sessionStorage.removeItem(WORLD_LAUNCH_KEY);
+          updateCloudUI("All cloud world slots loaded.");
+          showToast("Cloud worlds loaded");
+          window.setTimeout(() => window.location.reload(), 120);
           return true;
         } catch (error) {
           console.error("Cloud load failed", error);
@@ -14780,6 +15923,7 @@
         player.vy = 0;
         player.grounded = true;
         player.jumpWasDown = false;
+        player.oxygen = maximumOxygenSeconds();
         clearMiningTarget();
 
         camera.revealTimer = 0;
@@ -14822,12 +15966,15 @@
         treasureChests.length = 0;
         nextTreasureChestId = 1;
         structures.length = 0;
+        structureCollisionCells.clear();
         nextStructureId = 1;
         nextStructurePartId = 1;
         radiation = 0;
         gasExposure = 0;
         corrosion = 0;
         corrosionToastStep = 0;
+        player.oxygen = maximumOxygenSeconds();
+        player.oxygenBarAlpha = 0;
         playerStunTimer = 0;
         gravelHitCooldown = 0;
         oreRevealTimer = 0;
@@ -14896,7 +16043,7 @@
         let total = activeLuckBonus();
 
         for (const item of plotSlots) {
-          if (item) total += itemLuck(item);
+          if (item) total += itemLuck(item) * worldSettingMultiplier("luckEffectiveness");
         }
 
         return total;
@@ -15565,8 +16712,9 @@
             createDeposit(type, cells);
           } else {
             for (const cell of cells) {
-              world[index(cell.x, cell.y)] =
-                type;
+              const cellIndex =
+                index(cell.x, cell.y);
+              world[cellIndex] = type;
               addSpecialVisualCell(
                 cell.x,
                 cell.y,
@@ -15575,6 +16723,14 @@
 
               if (type === LAVA) {
                 dynamicLavaCount++;
+                activeLava.add(cellIndex);
+              } else if (type === WATER) {
+                activeWater.add(cellIndex);
+              } else if (type === ACID) {
+                dynamicAcidCount++;
+                activeAcid.add(cellIndex);
+              } else if (type === GRAVEL) {
+                fallingBlocks.add(cellIndex);
               }
             }
           }
@@ -15849,7 +17005,8 @@
           pools.ore.totalWeight *
           baseClusterRate /
           1000 *
-          densityScalar;
+          densityScalar *
+          worldSettingMultiplier("oreAbundance");
         const clusterCount =
           stochasticGenerationCount(
             expectedClusters
@@ -15947,6 +17104,14 @@
             continue;
           }
 
+          expectedClusters *= worldSettingMultiplier(
+            type === WATER
+              ? "waterFrequency"
+              : type === LAVA
+                ? "lavaFrequency"
+                : "otherHazardFrequency"
+          );
+
           const clusterCount =
             stochasticGenerationCount(
               expectedClusters
@@ -15998,7 +17163,46 @@
         );
       }
 
+      function hashWorldSeed(text) {
+        let hash = 2166136261;
+        const source = String(text || "mountain");
+        for (let index = 0; index < source.length; index++) {
+          hash ^= source.charCodeAt(index);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function seededWorldRandom(seed) {
+        let state = hashWorldSeed(seed) || 0x6d2b79f5;
+        return function nextSeededRandom() {
+          state += 0x6d2b79f5;
+          let value = state;
+          value = Math.imul(value ^ value >>> 15, value | 1);
+          value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+          return ((value ^ value >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
       function generateMountain(tier) {
+        const originalRandom = Math.random;
+        const generationNumber = Math.max(
+          1,
+          Math.floor(Number(lifetimeStats?.mountainsGenerated) || 0) + 1
+        );
+        Math.random = seededWorldRandom(
+          (activeWorldEntry?.seed || "default") +
+            "|tier:" + tier.level +
+            "|generation:" + generationNumber
+        );
+        try {
+          return generateSeededMountain(tier);
+        } finally {
+          Math.random = originalRandom;
+        }
+      }
+
+      function generateSeededMountain(tier) {
         generateBaseWorld();
         const heights = new Float32Array(tier.width);
         const peakShift = (Math.random() - 0.5) * 0.16;
@@ -16155,6 +17359,10 @@
         assignOreModifiersToDeposits();
         generateStructures(tier);
         generateTreasureChests(tier);
+        // Structures can uncover or replace hazards after deposit generation.
+        // Rebuild once at the end so every remaining liquid—especially one
+        // exposed directly into cave air—starts awake with no stale cells.
+        rebuildLoadedWorldIndexes();
         terrainLightRevision++;
         sunlightRevision = -1;
         playerLightRevision = -1;
@@ -16387,7 +17595,7 @@
           button.dataset.mountainLevel = String(tier.level);
           button.innerHTML =
             '<span class="tier-label">Tier ' + tier.level + '</span>' +
-            '<span class="price-label">' + formatMoney(tier.price) + '</span>' +
+            '<span class="price-label">' + (isSandboxWorld() ? 'FREE' : formatMoney(effectiveMountainPrice(tier))) + '</span>' +
             '<span class="detail-label">' + tier.label + '<br>' +
             tier.width + ' × ' + tier.height +
             ' tile scale • ' +
@@ -16437,7 +17645,7 @@
         )) {
           const level = Number(button.dataset.mountainLevel);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             level <= highestTier + 1;
           button.disabled = !available;
           button.classList.toggle("locked", !available);
@@ -16445,7 +17653,7 @@
           const priceLabel = button.querySelector(".price-label");
           if (priceLabel) {
             priceLabel.textContent = available
-              ? formatMoney(MOUNTAIN_TIERS[level - 1].price)
+              ? (isSandboxWorld() ? "FREE" : formatMoney(effectiveMountainPrice(MOUNTAIN_TIERS[level - 1])))
               : "LOCKED • Purchase Tier " + (level - 1);
           }
         }
@@ -16481,7 +17689,7 @@
         }
 
         const cost = celestialLegacyCost();
-        if (!TEST_INFINITE_MONEY && cash < cost) {
+        if (!hasInfiniteWorldResources() && cash < cost) {
           showToast(
             "Need " +
               formatMoney(cost - cash) +
@@ -16490,7 +17698,7 @@
           return;
         }
 
-        if (!TEST_INFINITE_MONEY) cash -= cost;
+        if (!hasInfiniteWorldResources()) cash -= cost;
         celestialLegacyRank += 1;
         displayCash = cash;
         playPurchaseSound();
@@ -16514,7 +17722,7 @@
         equippedLevel
       ) {
         if (
-          !TEST_UNLOCK_ALL_UPGRADES &&
+          !worldUnlocksEverything() &&
           !equipmentTierUnlocked(equipment.tier)
         ) {
           return (
@@ -16538,7 +17746,7 @@
           const sequentiallyAvailable = pickaxe.level <= ownedPickaxeLevel + 1;
           const tierAvailable = equipmentTierUnlocked(pickaxe.tier);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
@@ -16569,7 +17777,7 @@
           const sequentiallyAvailable = backpack.level <= ownedBackpackLevel + 1;
           const tierAvailable = equipmentTierUnlocked(backpack.tier);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
@@ -16580,8 +17788,8 @@
             '<div class="pack-preview"><div class="pack-strap"></div><div class="pack-body"></div><div class="pack-flap"></div><div class="pack-pocket"></div></div>' +
             '<div><span class="tier-label">Mountain Tier ' + backpack.tier + ' • Pack ' + (((backpack.level - 1) % 3) + 1) + '/3</span>' +
             '<h2>' + backpack.name + '</h2>' +
-            '<span class="detail-label">Carries up to ' + formatCompact(backpack.capacity) + ' total weight.</span>' +
-            '<div class="upgrade-stats"><span>Capacity ' + formatCompact(backpack.capacity) + '</span><span>Level ' + backpack.level + '/30</span>' +
+            '<span class="detail-label">Carries up to ' + backpackCapacityLabel(backpack) + ' total weight.</span>' +
+            '<div class="upgrade-stats"><span>Capacity ' + backpackCapacityLabel(backpack) + '</span><span>Level ' + backpack.level + '/30</span>' +
             '<span>Current load ' + formatCompact(inventoryWeight) + '</span><span>Tier ' + backpack.tier + '</span></div>' +
             '<span class="upgrade-action">' + equipmentActionText(backpack, ownedBackpackLevel, equippedBackpackLevel) + '</span></div>';
 
@@ -16892,7 +18100,7 @@
 
         if (
           inventoryWeight + item.weight >
-          backpack.capacity + 1e-9
+          effectiveBackpackCapacity(backpack) + 1e-9
         ) {
           showToast("Not enough backpack capacity to take this ore");
           playErrorSound();
@@ -17230,9 +18438,9 @@
         if (completed.length === 1) {
           const contract = completed[0];
           contractCompleteTitle.textContent = contract.title;
-          contractCompleteReward.textContent = formatMoney(contract.reward) + " ready to claim at the Contract Station.";
+          contractCompleteReward.textContent = formatMoney(effectiveContractReward(contract)) + " ready to claim at the Contract Station.";
         } else {
-          const totalReward = completed.reduce((sum, contract) => sum + Number(contract.reward || 0), 0);
+          const totalReward = completed.reduce((sum, contract) => sum + effectiveContractReward(contract), 0);
           contractCompleteTitle.textContent = completed.length + " contracts completed";
           contractCompleteReward.textContent = formatMoney(totalReward) + " total ready to claim.";
         }
@@ -17482,7 +18690,7 @@
           ' contract</span><span class="contract-status ' + statusClass + '">' + statusText +
           '</span></div><h3>' + contract.title + '</h3></div>' +
           '<div class="contract-reward-wrap"><small>Cash reward</small><strong class="contract-reward">' +
-          formatMoney(contract.reward) + '</strong></div>';
+          formatMoney(effectiveContractReward(contract)) + '</strong></div>';
 
         const description = document.createElement("p");
         description.textContent = contract.description;
@@ -17521,7 +18729,7 @@
           const claim = document.createElement("button");
           claim.className = "claim";
           claim.textContent =
-            "CLAIM " + formatMoney(contract.reward);
+            "CLAIM " + formatMoney(effectiveContractReward(contract));
           claim.addEventListener(
             "click",
             () => claimContract(contract.id)
@@ -17803,7 +19011,8 @@
 
         state.claimed = true;
         state.active = false;
-        cash += contract.reward;
+        const paidReward = effectiveContractReward(contract);
+        if (!isSandboxWorld()) cash += paidReward;
         displayCash = cash;
         lifetimeStats.contractsCompleted += 1;
         pendingContractSwapId = null;
@@ -17813,7 +19022,7 @@
         renderContractsModal();
         showToast(
           "CONTRACT PAID • " +
-          formatMoney(contract.reward) +
+          formatMoney(paidReward) +
           " • " + contract.title
         );
       }
@@ -17947,7 +19156,7 @@
           const sequentiallyAvailable = pickaxe.level <= ownedPickaxeLevel + 1;
           const tierAvailable = equipmentTierUnlocked(pickaxe.tier);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
@@ -17974,7 +19183,7 @@
           const sequentiallyAvailable = backpack.level <= ownedBackpackLevel + 1;
           const tierAvailable = equipmentTierUnlocked(backpack.tier);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
@@ -17985,8 +19194,8 @@
             '<div class="pack-preview"><div class="pack-strap"></div><div class="pack-body"></div><div class="pack-flap"></div><div class="pack-pocket"></div></div>' +
             '<div><span class="tier-label">Mountain Tier ' + backpack.tier + ' • Pack ' + (((backpack.level - 1) % 3) + 1) + '/3</span>' +
             '<h2>' + backpack.name + '</h2>' +
-            '<span class="detail-label">Carries up to ' + formatCompact(backpack.capacity) + ' total weight.</span>' +
-            '<div class="upgrade-stats"><span>Capacity ' + formatCompact(backpack.capacity) + '</span><span>Level ' + backpack.level + '/30</span>' +
+            '<span class="detail-label">Carries up to ' + backpackCapacityLabel(backpack) + ' total weight.</span>' +
+            '<div class="upgrade-stats"><span>Capacity ' + backpackCapacityLabel(backpack) + '</span><span>Level ' + backpack.level + '/30</span>' +
             '<span>Current load ' + formatCompact(inventoryWeight) + '</span><span>Tier ' + backpack.tier + '</span></div>' +
             '<span class="upgrade-action">' + equipmentActionText(backpack, ownedBackpackLevel, equippedBackpackLevel) + '</span></div>';
           card.addEventListener("click", () => selectBackpack(backpack.level));
@@ -18000,7 +19209,7 @@
         if (!pickaxe) return;
 
         if (
-          !TEST_UNLOCK_ALL_UPGRADES &&
+          !worldUnlocksEverything() &&
           !equipmentTierUnlocked(pickaxe.tier)
         ) {
           showToast(
@@ -18009,18 +19218,18 @@
           return;
         }
 
-        if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedPickaxeLevel + 1) {
+        if (!worldUnlocksEverything() && level > ownedPickaxeLevel + 1) {
           showToast("Buy the previous pickaxe first");
           return;
         }
 
         const purchasedNow = level > ownedPickaxeLevel;
         if (purchasedNow) {
-          if (!TEST_INFINITE_MONEY && cash < pickaxe.price) {
+          if (!hasInfiniteWorldResources() && cash < pickaxe.price) {
             showToast("Not enough money");
             return;
           }
-          if (!TEST_INFINITE_MONEY) cash -= pickaxe.price;
+          if (!hasInfiniteWorldResources()) cash -= pickaxe.price;
           displayCash = cash;
           ownedPickaxeLevel = Math.max(ownedPickaxeLevel, level);
           playPurchaseSound();
@@ -18039,7 +19248,7 @@
         if (!backpack) return;
 
         if (
-          !TEST_UNLOCK_ALL_UPGRADES &&
+          !worldUnlocksEverything() &&
           !equipmentTierUnlocked(backpack.tier)
         ) {
           showToast(
@@ -18048,23 +19257,23 @@
           return;
         }
 
-        if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedBackpackLevel + 1) {
+        if (!worldUnlocksEverything() && level > ownedBackpackLevel + 1) {
           showToast("Buy the previous backpack first");
           return;
         }
 
-        if (backpack.capacity < inventoryWeight + pendingPickupWeight) {
+        if (effectiveBackpackCapacity(backpack) < inventoryWeight + pendingPickupWeight) {
           showToast("This backpack is too small for your inventory and incoming items");
           return;
         }
 
         const purchasedNow = level > ownedBackpackLevel;
         if (purchasedNow) {
-          if (!TEST_INFINITE_MONEY && cash < backpack.price) {
+          if (!hasInfiniteWorldResources() && cash < backpack.price) {
             showToast("Not enough money");
             return;
           }
-          if (!TEST_INFINITE_MONEY) cash -= backpack.price;
+          if (!hasInfiniteWorldResources()) cash -= backpack.price;
           displayCash = cash;
           ownedBackpackLevel = Math.max(ownedBackpackLevel, level);
           playPurchaseSound();
@@ -18082,7 +19291,7 @@
         if (!flashlight) return;
 
         if (
-          !TEST_UNLOCK_ALL_UPGRADES &&
+          !worldUnlocksEverything() &&
           !equipmentTierUnlocked(flashlight.tier)
         ) {
           showToast(
@@ -18091,18 +19300,18 @@
           return;
         }
 
-        if (!TEST_UNLOCK_ALL_UPGRADES && level > ownedFlashlightLevel + 1) {
+        if (!worldUnlocksEverything() && level > ownedFlashlightLevel + 1) {
           showToast("Buy the previous flashlight first");
           return;
         }
 
         const purchasedNow = level > ownedFlashlightLevel;
         if (purchasedNow) {
-          if (!TEST_INFINITE_MONEY && cash < flashlight.price) {
+          if (!hasInfiniteWorldResources() && cash < flashlight.price) {
             showToast("Not enough money");
             return;
           }
-          if (!TEST_INFINITE_MONEY) cash -= flashlight.price;
+          if (!hasInfiniteWorldResources()) cash -= flashlight.price;
           displayCash = cash;
           ownedFlashlightLevel = Math.max(ownedFlashlightLevel, level);
           playPurchaseSound();
@@ -18126,7 +19335,7 @@
           const sequentiallyAvailable = flashlight.level <= ownedFlashlightLevel + 1;
           const tierAvailable = equipmentTierUnlocked(flashlight.tier);
           const available =
-            TEST_UNLOCK_ALL_UPGRADES ||
+            worldUnlocksEverything() ||
             (sequentiallyAvailable && tierAvailable);
           const card = document.createElement("button");
           card.className = "upgrade-card";
@@ -18292,7 +19501,9 @@
         const unitsLabel =
           entry.units === 1
             ? "1 block"
-            : formatCompact(entry.units) + "-block clump";
+            : isBasicBlockStackType(entry.type)
+              ? formatCompact(entry.units) + " blocks stacked"
+              : formatCompact(entry.units) + "-block clump";
         const note = entry.note
           ? '<p><strong>Special:</strong> ' + entry.note + '</p>'
           : '';
@@ -18407,8 +19618,10 @@
       function renderInventory() {
         const backpack = currentBackpack();
         inventoryPackName.textContent = backpack.name + " • Level " + backpack.level;
-        capacityText.textContent = formatCompact(inventoryWeight) + " / " + formatCompact(backpack.capacity) + " weight";
-        capacityFill.style.width = Math.min(100, inventoryWeight / backpack.capacity * 100) + "%";
+        capacityText.textContent = formatCompact(inventoryWeight) + " / " + backpackCapacityLabel(backpack) + " weight";
+        capacityFill.style.width = isSandboxWorld()
+          ? "0%"
+          : Math.min(100, inventoryWeight / effectiveBackpackCapacity(backpack) * 100) + "%";
 
         document.getElementById("inventoryCancelFilter").style.display =
           (
@@ -18488,6 +19701,7 @@
           const inventoryKeySprite = entry.type === TREASURE_KEY
             ? create16BitTreasureKeySprite()
             : null;
+          const basicBlockStack = isBasicBlockStackType(entry.type);
           const unitLabel = special
             ? (
                 entry.type === TREASURE_KEY
@@ -18497,11 +19711,17 @@
                     ).bonusText
               )
             : (
-                entry.units === 1
+                basicBlockStack || entry.units === 1
                   ? "1 block"
                   : formatCompact(entry.units) +
                     " blocks"
               );
+          const displayedWeight = basicBlockStack
+            ? block.weight
+            : entry.weight;
+          const displayedValue = basicBlockStack
+            ? block.value
+            : entry.value;
           const inventoryDisplaySprite = inventoryOreSprite || inventoryStructureSprite;
           const swatchHtml = special
             ? (
@@ -18543,12 +19763,12 @@
             '<p>' +
             unitLabel +
             ' • ' +
-            formatCompact(entry.weight) +
+            formatCompact(displayedWeight) +
             ' wt • ' +
             (
               special
                 ? "Not sellable"
-                : formatMoney(entry.value)
+                : formatMoney(displayedValue)
             ) +
             '</p></div>' +
             '<div class="inventory-count">' +
@@ -18557,7 +19777,13 @@
                 ? '<span class="favorite-star">★</span><br>'
                 : ''
             ) +
-            '×1</div>';
+            '×' +
+            (
+              basicBlockStack
+                ? formatCompact(entry.units)
+                : '1'
+            ) +
+            '</div>';
           fragment.appendChild(row);
         }
 
@@ -18604,7 +19830,7 @@
           }
           count++;
           weight += item.weight;
-          value += item.value;
+          value += worldSaleValue(item);
         }
         sellItemCount.textContent = formatCompact(count);
         sellFavoriteCount.textContent = formatCompact(favorites);
@@ -18650,14 +19876,14 @@
         const batches = [];
         if (sellable.length <= visualLimit) {
           for (const item of sellable) {
-            batches.push({ value: item.value, color: BLOCKS[item.type].color, type: item.type });
+            batches.push({ value: worldSaleValue(item), color: BLOCKS[item.type].color, type: item.type });
           }
         } else {
           const batchSize = Math.ceil(sellable.length / visualLimit);
           for (let i = 0; i < sellable.length; i += batchSize) {
             const group = sellable.slice(i, i + batchSize);
             batches.push({
-              value: group.reduce((sum, item) => sum + item.value, 0),
+              value: group.reduce((sum, item) => sum + worldSaleValue(item), 0),
               color: BLOCKS[group[0].type].color,
               type: group[0].type
             });
@@ -18883,7 +20109,7 @@
           showToast("Unfavorite the placed ore before replacing it");
           return;
         }
-        if (existing && inventoryWeight - item.weight + existing.weight > currentBackpack().capacity) {
+        if (existing && inventoryWeight - item.weight + existing.weight > effectiveBackpackCapacity()) {
           showToast("Backpack needs room for the replaced ore");
           return;
         }
@@ -18915,7 +20141,7 @@
           showToast("Unfavorite this ore before removing it");
           return;
         }
-        if (inventoryWeight + item.weight > currentBackpack().capacity) {
+        if (inventoryWeight + item.weight > effectiveBackpackCapacity()) {
           showToast("Not enough backpack space");
           return;
         }
@@ -18930,7 +20156,7 @@
         if (!tier) return;
         const highestTier = highestUnlockedMountainTier();
         if (
-          !TEST_UNLOCK_ALL_UPGRADES &&
+          !worldUnlocksEverything() &&
           tier.level > highestTier + 1
         ) {
           showToast(
@@ -18940,11 +20166,12 @@
           );
           return;
         }
-        if (!TEST_INFINITE_MONEY && cash < tier.price) {
+        const mountainPrice = effectiveMountainPrice(tier);
+        if (!hasInfiniteWorldResources() && cash < mountainPrice) {
           showToast("Not enough money");
           return;
         }
-        if (!TEST_INFINITE_MONEY) cash -= tier.price;
+        if (!hasInfiniteWorldResources()) cash -= mountainPrice;
         displayCash = cash;
         updateHUD();
 
@@ -18960,6 +20187,7 @@
         player.vx = 0;
         player.vy = 0;
         player.grounded = true;
+        player.oxygen = maximumOxygenSeconds();
         clearMiningTarget();
         beginMountainReveal();
         updateHUD();
@@ -19319,7 +20547,7 @@
       function canCarryTarget(type, x, y) {
         const block = BLOCKS[type];
         if (block.collectible === false) return true;
-        return inventoryWeight + targetLoad(type, x, y) <= currentBackpack().capacity;
+        return inventoryWeight + targetLoad(type, x, y) <= effectiveBackpackCapacity();
       }
 
       function makeItem(
@@ -19362,14 +20590,67 @@
         };
       }
 
-      function addInventoryItemObject(item) {
-        inventoryEntries.push(item);
-        inventory[item.type] += 1;
+      function isBasicBlockStackType(type) {
+        const block = BLOCKS[type];
+        return !!(
+          type !== AIR &&
+          block &&
+          block.collectible !== false &&
+          ["grass", "dirt", "stone", "material"].includes(block.style)
+        );
+      }
+
+      function normalizeBasicBlockStackItem(item) {
+        if (!item || !isBasicBlockStackType(item.type)) return item;
+        const units = Math.max(1, Math.floor(Number(item.units) || 1));
+        const block = BLOCKS[item.type];
+        item.units = units;
+        item.weight = block.weight * units;
+        item.value = block.value * units;
+        item.grade = "Standard";
+        item.note = "";
+        item.valueMultiplier = 1;
+        item.bonusMultiplier = 1;
+        item.refinementCount = 0;
+        item.modifierId = null;
+        return item;
+      }
+
+      function addInventoryItemObject(item, refresh = true) {
+        if (!item) return false;
+        item.units = Math.max(1, Math.floor(Number(item.units) || 1));
+        item.weight = Math.max(0, Number(item.weight) || 0);
+        item.value = Math.max(0, Number(item.value) || 0);
+
+        if (isBasicBlockStackType(item.type)) {
+          normalizeBasicBlockStackItem(item);
+          const existingStack = inventoryEntries.find(
+            entry => entry.type === item.type
+          );
+
+          if (existingStack) {
+            normalizeBasicBlockStackItem(existingStack);
+            existingStack.units += item.units;
+            existingStack.weight = BLOCKS[item.type].weight * existingStack.units;
+            existingStack.value = BLOCKS[item.type].value * existingStack.units;
+            existingStack.favorite = existingStack.favorite || !!item.favorite;
+          } else {
+            inventoryEntries.push(item);
+            inventory[item.type] += 1;
+          }
+        } else {
+          inventoryEntries.push(item);
+          inventory[item.type] += 1;
+        }
+
         inventoryUnits[item.type] += item.units;
         inventoryValues[item.type] += item.value;
         inventoryWeight += item.weight;
-        updateHUD();
-        if (activeModal === "inventory") renderInventory();
+        if (refresh) {
+          updateHUD();
+          if (activeModal === "inventory") renderInventory();
+        }
+        return true;
       }
 
       function removeInventoryItemObject(item) {
@@ -19382,6 +20663,33 @@
         inventoryWeight = Math.max(0, inventoryWeight - item.weight);
         if (selectedInventoryItemId === item.id) selectedInventoryItemId = null;
         updateHUD();
+        return true;
+      }
+
+      function consumeOneInventoryMaterial(type) {
+        if (isSandboxWorld()) return true;
+        const item =
+          inventoryEntries.find(entry => entry.type === type && !entry.favorite) ||
+          inventoryEntries.find(entry => entry.type === type);
+        if (!item || (inventoryUnits[type] || 0) < 1) return false;
+
+        const units = Math.max(1, Number(item.units) || 1);
+        if (units <= 1) {
+          const removed = removeInventoryItemObject(item);
+          if (removed && activeModal === "inventory") renderInventory();
+          return removed;
+        }
+
+        const unitWeight = BLOCKS[type].weight;
+        const unitValue = BLOCKS[type].value;
+        item.units = units - 1;
+        item.weight = unitWeight * item.units;
+        item.value = unitValue * item.units;
+        inventoryUnits[type] = Math.max(0, inventoryUnits[type] - 1);
+        inventoryValues[type] = Math.max(0, inventoryValues[type] - unitValue);
+        inventoryWeight = Math.max(0, inventoryWeight - unitWeight);
+        updateHUD();
+        if (activeModal === "inventory") renderInventory();
         return true;
       }
 
@@ -19433,13 +20741,18 @@
 
       function createSingleBlockDrop(type, x, y) {
         const block = BLOCKS[type];
-        const multiplier = rollValueMultiplier();
+        const fixedBasicBlockValue = isBasicBlockStackType(type);
+        const multiplier = fixedBasicBlockValue ? 1 : rollValueMultiplier();
         const item = makeItem(
           type,
           1,
           block.weight,
-          Math.round(block.value * multiplier),
-          valueGrade(multiplier),
+          fixedBasicBlockValue
+            ? block.value
+            : Math.round(block.value * multiplier),
+          fixedBasicBlockValue
+            ? "Standard"
+            : valueGrade(multiplier),
           "",
           multiplier,
           1
@@ -19795,7 +21108,8 @@
               ny >= WORLD_H ||
               tileProtectedByShop(nx, ny) ||
               treasureChestAtCell(nx, ny) ||
-              tileAt(nx, ny) !== AIR
+              tileAt(nx, ny) !== AIR ||
+              structureCollisionCells.has(index(nx, ny))
             ) {
               continue;
             }
@@ -20117,17 +21431,92 @@
         }
       }
 
+      function applyInventoryDeathPenalty(recoverable) {
+        if (!inventoryEntries.length) return 0;
+        const droppedItems = inventoryEntries.map(cloneSaveItem);
+        inventoryEntries.length = 0;
+        inventory.fill(0);
+        inventoryUnits.fill(0);
+        inventoryValues.fill(0);
+        inventoryWeight = 0;
+
+        if (recoverable) {
+          const dropX = player.x + player.w * 0.5;
+          const dropY = player.y + player.h * 0.35;
+          droppedItems.forEach((item, itemIndex) => {
+            spawnWorldDrop(
+              item,
+              dropX,
+              dropY,
+              (Math.random() - 0.5) * 150,
+              -110 - (itemIndex % 7) * 12
+            );
+          });
+        }
+
+        return droppedItems.length;
+      }
+
+      function endHardcoreWorld(reason) {
+        if (!activeWorldEntry || currentWorldSlot < 0) return false;
+        activeWorldEntry.fallen = true;
+        activeWorldEntry.fallReason = String(reason || "Player died");
+        activeWorldEntry.updatedAt = new Date().toISOString();
+        commitCurrentWorldToCollection();
+        writeWorldCollection();
+        closeModal();
+        showWorldMenu();
+        showToast("Hardcore world ended: " + activeWorldEntry.fallReason);
+        return true;
+      }
+
       function respawnPlayer(reason) {
+        if (worldSettings.hardcore && !isSandboxWorld()) {
+          endHardcoreWorld(reason);
+          return;
+        }
+
+        const penalty = worldSettings.deathPenalty || "none";
+        let lostMoney = 0;
+        let affectedItems = 0;
+
+        if (!isSandboxWorld() && (penalty === "money" || penalty === "both")) {
+          lostMoney = Math.floor(cash * 0.2);
+          cash = Math.max(0, cash - lostMoney);
+          displayCash = cash;
+        }
+
+        if (penalty === "inventory" || penalty === "both") {
+          affectedItems = applyInventoryDeathPenalty(
+            worldSettings.dropRecovery !== "destroyed"
+          );
+        }
+
         player.x = PLAYER_SPAWN_X;
         player.y = GROUND_Y * TILE - player.h - 0.01;
         player.vx = 0;
         player.vy = 0;
+        player.oxygen = reason === "Drowned" ? 0 : maximumOxygenSeconds();
         radiation = Math.min(radiation, 25);
         gasExposure = 0;
         corrosion = 0;
         corrosionToastStep = 0;
         playerStunTimer = 0;
-        showToast(reason + " — returned to the shops");
+        updateHUD();
+
+        const penaltyParts = [];
+        if (lostMoney > 0) penaltyParts.push("lost " + formatMoney(lostMoney));
+        if (affectedItems > 0) {
+          penaltyParts.push(
+            worldSettings.dropRecovery === "destroyed"
+              ? affectedItems + " items destroyed"
+              : affectedItems + " items dropped"
+          );
+        }
+        showToast(
+          reason + " — returned to the shops" +
+          (penaltyParts.length ? " • " + penaltyParts.join(" • ") : "")
+        );
       }
 
       function explodeAt(x, y, radius, reason) {
@@ -20420,19 +21809,122 @@
         return best;
       }
 
+      function masonryMaterialForCell(x, y) {
+        const preferred =
+          depthBelowLocalSurface(x, y) >= DEEPSTONE_MIDPOINT_DEPTH
+            ? DEEPSTONE
+            : STONE;
+        if (isSandboxWorld()) return preferred;
+        const fallback = preferred === STONE ? DEEPSTONE : STONE;
+        if ((inventoryUnits[preferred] || 0) >= 1) return preferred;
+        if ((inventoryUnits[fallback] || 0) >= 1) return fallback;
+        return null;
+      }
+
+      function canPlaceMasonryAt(tx, ty) {
+        return (
+          tx >= 0 &&
+          tx < WORLD_W &&
+          ty >= 0 &&
+          ty < activeGeneratedWorldHeight() &&
+          tileAt(tx, ty) === AIR &&
+          !hasPlank(tx, ty) &&
+          !hasTorch(tx, ty) &&
+          hasCaveBackgroundWall(tx, ty) &&
+          !tileOverlapsPlayer(tx, ty) &&
+          !treasureChestAtCell(tx, ty) &&
+          !structurePartAtCell(tx, ty) &&
+          !cellInsideStructure(tx, ty)
+        );
+      }
+
+      function findMasonryTargetCursor() {
+        const originX = player.x + player.w * 0.5;
+        const originY = player.y + player.h * 0.16;
+        const cursorTileX = Math.floor(cursorWorldX / TILE);
+        const cursorTileY = Math.floor(cursorWorldY / TILE);
+        const maxDistance = BUILD_REACH_TILES * TILE;
+        if (Math.hypot(cursorWorldX - originX, cursorWorldY - originY) > maxDistance) {
+          return null;
+        }
+
+        let best = null;
+        let bestScore = Infinity;
+        for (let ty = cursorTileY - 2; ty <= cursorTileY + 2; ty++) {
+          for (let tx = cursorTileX - 2; tx <= cursorTileX + 2; tx++) {
+            if (!canPlaceMasonryAt(tx, ty)) continue;
+            const targetX = (tx + 0.5) * TILE;
+            const targetY = (ty + 0.5) * TILE;
+            if (Math.hypot(targetX - originX, targetY - originY) > maxDistance) continue;
+            const score = Math.hypot(
+              targetX - cursorWorldX,
+              targetY - cursorWorldY
+            );
+            if (score < bestScore) {
+              bestScore = score;
+              best = { x: tx, y: ty };
+            }
+          }
+        }
+        return best;
+      }
+
+      function findMasonryTarget() {
+        const originX = player.x + player.w * 0.5;
+        const originY = player.y + player.h * 0.16;
+        const centerTileX = Math.floor(originX / TILE);
+        const centerTileY = Math.floor(originY / TILE);
+        const scanRadius = Math.ceil(BUILD_REACH_TILES) + 1;
+        const maxDistance = BUILD_REACH_TILES * TILE;
+        let best = null;
+        let bestScore = Infinity;
+
+        for (let ty = centerTileY - scanRadius; ty <= centerTileY + scanRadius; ty++) {
+          for (let tx = centerTileX - scanRadius; tx <= centerTileX + scanRadius; tx++) {
+            if (!canPlaceMasonryAt(tx, ty)) continue;
+            const targetX = (tx + 0.5) * TILE;
+            const targetY = (ty + 0.5) * TILE;
+            const dx = targetX - originX;
+            const dy = targetY - originY;
+            const distance = Math.hypot(dx, dy);
+            if (distance < TILE * 0.55 || distance > maxDistance) continue;
+            const dot = (dx / distance) * aim.x + (dy / distance) * aim.y;
+            if (dot < 0.56) continue;
+            const score = distance - dot * TILE * 0.9;
+            if (score < bestScore) {
+              bestScore = score;
+              best = { x: tx, y: ty };
+            }
+          }
+        }
+        return best;
+      }
+
       function updateBuilding(dt) {
         if (activeModal || camera.revealTimer > 0) {
           building.targetX = -1;
           building.targetY = -1;
           building.valid = false;
+          building.materialType = null;
           buildRepeatTimer = 0;
           return;
         }
 
-        const target = desktopControlsActive() ? findBuildTargetCursor() : findBuildTarget();
+        const isMasonry =
+          desktopControlsActive() &&
+          desktopPlacementMode === "stone";
+        const target = isMasonry
+          ? findMasonryTargetCursor()
+          : desktopControlsActive()
+            ? findBuildTargetCursor()
+            : findBuildTarget();
         building.targetX = target ? target.x : -1;
         building.targetY = target ? target.y : -1;
         building.valid = !!target;
+        building.materialType =
+          isMasonry && target
+            ? masonryMaterialForCell(target.x, target.y)
+            : null;
 
         if (!input.build || input.torch) {
           buildRepeatTimer = 0;
@@ -20445,6 +21937,28 @@
 
         if (!target) {
           playErrorSound();
+          return;
+        }
+
+        if (isMasonry) {
+          const materialType = building.materialType;
+          if (materialType === null) {
+            playErrorSound();
+            showToast("Need Stone or Deepstone to place a block");
+            return;
+          }
+          if (!setTile(target.x, target.y, materialType)) {
+            playErrorSound();
+            return;
+          }
+          if (!consumeOneInventoryMaterial(materialType)) {
+            setTile(target.x, target.y, AIR);
+            playErrorSound();
+            showToast("Need Stone or Deepstone to place a block");
+            return;
+          }
+          playPlatformPlaceSound();
+          mining.scanTimer = 0;
           return;
         }
 
@@ -20833,7 +22347,8 @@
           y >= WORLD_H ||
           tileProtectedByShop(x, y) ||
           treasureChestAtCell(x, y) ||
-          tileAt(x, y) !== AIR
+          tileAt(x, y) !== AIR ||
+          structureCollisionCells.has(index(x, y))
         ) {
           return false;
         }
@@ -20893,9 +22408,52 @@
         return Infinity;
       }
 
+      function breakPlacedObjectsInFluidCell(x, y) {
+        const brokePlank = removePlank(x, y);
+        const brokeTorch = removeTorch(x, y);
+        return brokePlank || brokeTorch;
+      }
+
+      function fluidFlowBudget(activeCount) {
+        return Math.min(
+          FLUID_FLOW_MAX_BUDGET,
+          Math.max(
+            FLUID_FLOW_BASE_BUDGET,
+            Math.ceil(
+              activeCount *
+                FLUID_FLOW_ACTIVE_SHARE
+            )
+          )
+        );
+      }
+
+      function takeActiveFluidCells(activeSet) {
+        const candidates = [];
+        const budget = fluidFlowBudget(
+          activeSet.size
+        );
+
+        // Do not clone the entire Set. Large reservoirs may contain thousands
+        // of cells even though only a bounded slice should run this tick.
+        for (const cellIndex of activeSet) {
+          candidates.push(cellIndex);
+          if (candidates.length >= budget) break;
+        }
+
+        // Remove the snapshot before simulating it. Moving cells are appended
+        // again, which keeps work fair and prevents one cell running twice.
+        for (const cellIndex of candidates) {
+          activeSet.delete(cellIndex);
+        }
+
+        return candidates;
+      }
+
       function moveLavaCell(fromX, fromY, toX, toY) {
         // Move one existing lava unit. The old cell is always vacated before
         // the target is filled, so movement never creates additional lava.
+        breakPlacedObjectsInFluidCell(fromX, fromY);
+        breakPlacedObjectsInFluidCell(toX, toY);
         setTile(fromX, fromY, AIR);
         setTile(toX, toY, LAVA);
         moveSpecialVisualCell(
@@ -20914,18 +22472,15 @@
       function updateLavaFlow() {
         if (!activeLava.size) return;
 
-        const candidates = Array.from(activeLava);
-        let processed = 0;
+        const candidates =
+          takeActiveFluidCells(activeLava);
 
         for (const cellIndex of candidates) {
-          if (processed++ >= 24) break;
-
-          activeLava.delete(cellIndex);
-
           const x = cellIndex % WORLD_W;
           const y = Math.floor(cellIndex / WORLD_W);
 
           if (tileAt(x, y) !== LAVA) continue;
+          breakPlacedObjectsInFluidCell(x, y);
 
           // Gravity always has priority.
           if (lavaCanMoveTo(x, y + 1)) {
@@ -21002,7 +22557,8 @@
           y >= WORLD_H ||
           tileProtectedByShop(x, y) ||
           treasureChestAtCell(x, y) ||
-          tileAt(x, y) !== AIR
+          tileAt(x, y) !== AIR ||
+          structureCollisionCells.has(index(x, y))
         ) {
           return false;
         }
@@ -21063,6 +22619,8 @@
       }
 
       function moveWaterCell(fromX, fromY, toX, toY) {
+        breakPlacedObjectsInFluidCell(fromX, fromY);
+        breakPlacedObjectsInFluidCell(toX, toY);
         setTile(fromX, fromY, AIR);
         setTile(toX, toY, WATER);
         activeWater.add(index(toX, toY));
@@ -21073,18 +22631,15 @@
       function updateWaterFlow() {
         if (!activeWater.size) return;
 
-        const candidates = Array.from(activeWater);
-        let processed = 0;
+        const candidates =
+          takeActiveFluidCells(activeWater);
 
         for (const cellIndex of candidates) {
-          if (processed++ >= 24) break;
-
-          activeWater.delete(cellIndex);
-
           const x = cellIndex % WORLD_W;
           const y = Math.floor(cellIndex / WORLD_W);
 
           if (tileAt(x, y) !== WATER) continue;
+          breakPlacedObjectsInFluidCell(x, y);
 
           if (waterCanMoveTo(x, y + 1)) {
             moveWaterCell(x, y, x, y + 1);
@@ -21160,7 +22715,8 @@
           if (
             tileAt(x, y) !== GRAVEL ||
             y + 1 >= WORLD_H ||
-            tileAt(x, y + 1) !== AIR
+            tileAt(x, y + 1) !== AIR ||
+            structureCollisionCells.has(index(x, y + 1))
           ) {
             continue;
           }
@@ -21229,18 +22785,72 @@
         return exposure;
       }
 
+      function playerHeadInWater() {
+        const headTileX = Math.floor(
+          (player.x + player.w * 0.5) / TILE
+        );
+        const headTileY = Math.floor(
+          (player.y + player.h * 0.18) / TILE
+        );
+        return tileAt(headTileX, headTileY) === WATER;
+      }
+
+      function oxygenBarColor(oxygenFraction) {
+        const fraction = clamp(oxygenFraction, 0, 1);
+        const dangerBlend = clamp((0.25 - fraction) / 0.25, 0, 1);
+        const red = Math.round(52 + (235 - 52) * dangerBlend);
+        const green = Math.round(169 + (66 - 169) * dangerBlend);
+        const blue = Math.round(244 + (68 - 244) * dangerBlend);
+        return "rgb(" + red + "," + green + "," + blue + ")";
+      }
+
+      function updatePlayerOxygen(dt) {
+        const underwater = playerHeadInWater();
+        const oxygenMaximum = maximumOxygenSeconds();
+        player.oxygen = clamp(
+          player.oxygen +
+            (underwater
+              ? -dt
+              : dt * OXYGEN_RECOVERY_MULTIPLIER),
+          0,
+          oxygenMaximum
+        );
+
+        const barTarget =
+          oxygenMaximum > 0 &&
+          player.oxygen < oxygenMaximum - 0.0001
+            ? 1
+            : 0;
+        player.oxygenBarAlpha = moveToward(
+          player.oxygenBarAlpha,
+          barTarget,
+          OXYGEN_BAR_FADE_SPEED * dt
+        );
+
+        if (underwater && player.oxygen <= 0.0001) {
+          respawnPlayer("Drowned");
+          return true;
+        }
+        return false;
+      }
+
       function updateHazards(dt) {
-        environmentTimer -= dt;
+        lavaTimer -= dt;
+        waterTimer -= dt;
         acidTimer -= dt;
         fallingTimer -= dt;
         hazardScanTimer -= dt;
         playerStunTimer = Math.max(0, playerStunTimer - dt);
         gravelHitCooldown = Math.max(0, gravelHitCooldown - dt);
 
-        if (environmentTimer <= 0) {
-          environmentTimer = 0.16;
-          updateLavaFlow();
+        if (waterTimer <= 0) {
+          waterTimer = WATER_FLOW_INTERVAL;
           updateWaterFlow();
+        }
+        if (updatePlayerOxygen(dt)) return;
+        if (lavaTimer <= 0) {
+          lavaTimer = LAVA_FLOW_INTERVAL;
+          updateLavaFlow();
         }
         if (acidTimer <= 0) {
           acidTimer = 0.32;
@@ -21418,7 +23028,7 @@
       // Camera and update
       // --------------------------------------------------
       function remainingBackpackCapacity() {
-        return Math.max(0, currentBackpack().capacity - inventoryWeight - pendingPickupWeight);
+        return Math.max(0, effectiveBackpackCapacity() - inventoryWeight - pendingPickupWeight);
       }
 
       function dropCanFit(drop) {
@@ -21848,9 +23458,12 @@
         depthBlocks,
         lightLevel = equippedFlashlightLevel
       ) {
-        return baseEffectivePlayerBlockLightRadius(
-          depthBlocks,
-          lightLevel
+        return Math.max(
+          0.25,
+          baseEffectivePlayerBlockLightRadius(
+            depthBlocks,
+            lightLevel
+          ) * worldSettingMultiplier("playerLightRange")
         );
       }
 
@@ -25441,9 +27054,11 @@
           const baseFlashlightRange = fl ? fl.range : 4;
           const flRange = Math.max(
             0.25,
-            baseFlashlightRange *
-              playerRadiusMultiplier +
-              activePlayerLightBonus()
+            (
+              baseFlashlightRange *
+                playerRadiusMultiplier +
+                activePlayerLightBonus()
+            ) * worldSettingMultiplier("playerLightRange")
           );
           const flR = Math.ceil(flRange + 1);
           for (
@@ -25556,6 +27171,9 @@
       }
 
       function update(dt) {
+        if (worldGateOpen || currentWorldSlot < 0) return;
+        worldPlayTimeSeconds += dt;
+
         // Increment day/night cycle timer
         dayNightTime = (dayNightTime + dt) % DAY_NIGHT_PERIOD;
 
@@ -26255,7 +27873,11 @@
           target.fillRect(7, 7, 2, 2);
         }
 
-        if (block.hazard) {
+        if (
+          block.hazard &&
+          type !== WATER &&
+          type !== LAVA
+        ) {
           target.fillStyle = "#ff6b4a";
           target.fillRect(13, 0, 3, 1);
           target.fillRect(14, 1, 2, 1);
@@ -27688,7 +29310,7 @@
         if (desktopControlsActive()) {
           if (
             desktopPreviewMode !== "place" ||
-            desktopPlacementMode !== "build" ||
+            !["build", "stone"].includes(desktopPlacementMode) ||
             !building.valid
           ) return;
         } else if (!input.build || input.torch || !building.valid) {
@@ -27697,11 +29319,147 @@
         const sx = worldToScreenX(building.targetX * TILE);
         const sy = worldToScreenY(building.targetY * TILE);
         const size = TILE * camera.zoom;
-        ctx.strokeStyle = "rgba(255,213,126,0.98)";
+        const masonryMode =
+          desktopControlsActive() &&
+          desktopPlacementMode === "stone";
+        const hasMaterial = !masonryMode || building.materialType !== null;
+
+        if (masonryMode) {
+          ctx.save();
+          ctx.globalAlpha = hasMaterial ? 0.62 : 0.24;
+          ctx.imageSmoothingEnabled = false;
+          if (hasMaterial) {
+            const sprite = create16BitBlockSprite(building.materialType, 0);
+            ctx.drawImage(sprite, sx, sy, size, size);
+          } else {
+            ctx.fillStyle = "rgba(255,72,72,0.8)";
+            ctx.fillRect(sx, sy, size, size);
+          }
+          ctx.restore();
+        }
+
+        ctx.strokeStyle = masonryMode
+          ? hasMaterial
+            ? "rgba(124,232,255,0.98)"
+            : "rgba(255,92,92,0.98)"
+          : "rgba(255,213,126,0.98)";
         ctx.lineWidth = Math.max(2, 3 * camera.zoom);
         ctx.setLineDash([Math.max(3, 5 * camera.zoom), Math.max(2, 3 * camera.zoom)]);
         ctx.strokeRect(sx + 2, sy + 2, size - 4, size - 4);
         ctx.setLineDash([]);
+      }
+
+      function drawPlacementSelectionWheel() {
+        if (!placementWheelActive) return;
+
+        const centerX = screenW * 0.5;
+        const centerY = screenH * 0.5;
+        const radius = Math.min(88, screenW * 0.18, screenH * 0.18);
+        const optionRadius = Math.max(27, Math.min(35, radius * 0.42));
+        const options = [
+          { mode: "torch", x: centerX, y: centerY - radius, label: "TORCH" },
+          { mode: "stone", x: centerX - radius * 0.866, y: centerY + radius * 0.5, label: "STONE" },
+          { mode: "build", x: centerX + radius * 0.866, y: centerY + radius * 0.5, label: "PLATFORM" }
+        ];
+
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = "rgba(4,12,18,0.72)";
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius + optionRadius + 17, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(164,220,226,0.72)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        for (const option of options) {
+          const hovered = placementWheelHoveredMode === option.mode;
+          const selected = desktopPlacementMode === option.mode;
+          ctx.fillStyle = hovered
+            ? "rgba(255,211,102,0.95)"
+            : selected
+              ? "rgba(61,137,150,0.95)"
+              : "rgba(18,46,56,0.96)";
+          ctx.strokeStyle = hovered
+            ? "rgba(255,247,205,1)"
+            : "rgba(142,205,214,0.9)";
+          ctx.lineWidth = hovered ? 4 : 2;
+          ctx.beginPath();
+          ctx.arc(option.x, option.y, optionRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.imageSmoothingEnabled = false;
+          if (option.mode === "torch") {
+            const sprite = create16BitTorchFrame(Math.floor(performance.now() / 115) % 3);
+            ctx.drawImage(sprite, option.x - 8, option.y - 19, 16, 31);
+          } else if (option.mode === "stone") {
+            const stoneSprite = create16BitBlockSprite(STONE, 0);
+            const deepSprite = create16BitBlockSprite(DEEPSTONE, 0);
+            ctx.drawImage(stoneSprite, option.x - 19, option.y - 12, 20, 20);
+            ctx.drawImage(deepSprite, option.x + 1, option.y - 8, 20, 20);
+          } else {
+            ctx.fillStyle = "#8a5a31";
+            ctx.fillRect(option.x - 21, option.y - 7, 42, 14);
+            ctx.fillStyle = "#d29a57";
+            ctx.fillRect(option.x - 19, option.y - 5, 38, 4);
+            ctx.fillStyle = "#4e321f";
+            ctx.fillRect(option.x - 2, option.y - 5, 4, 12);
+          }
+
+          ctx.fillStyle = hovered ? "#fff8da" : "#d8f2f2";
+          ctx.font = "900 11px monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillText(option.label, option.x, option.y + optionRadius + 7);
+          if (option.mode === "stone") {
+            ctx.font = "800 9px monospace";
+            ctx.fillText(
+              Math.floor(inventoryUnits[STONE] || 0) + " / " +
+                Math.floor(inventoryUnits[DEEPSTONE] || 0),
+              option.x,
+              option.y + optionRadius + 21
+            );
+          }
+        }
+
+        ctx.fillStyle = "rgba(6,20,27,0.96)";
+        ctx.strokeStyle = placementWheelHoveredMode
+          ? "rgba(255,216,111,0.95)"
+          : "rgba(140,198,208,0.88)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, PLACEMENT_WHEEL_DEAD_ZONE, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#e9ffff";
+        ctx.font = "900 11px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(
+          placementWheelHoveredMode
+            ? placementModeLabel(placementWheelHoveredMode).toUpperCase()
+            : "NO CHANGE",
+          centerX,
+          centerY
+        );
+
+        const cursorX = centerX + placementWheelOffsetX;
+        const cursorY = centerY + placementWheelOffsetY;
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "rgba(0,0,0,0.85)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(236,255,255,0.92)";
+        ctx.font = "900 12px monospace";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("RELEASE Q TO SELECT", centerX, centerY - radius - optionRadius - 25);
+        ctx.restore();
       }
 
       function drawOreModifierCanvas(
@@ -29071,6 +30829,59 @@
         draw16BitMinerCharacter(px, py, pw, ph, player.facing, frame);
       }
 
+      function drawPlayerOxygenBar() {
+        if (player.oxygenBarAlpha <= 0.001) return;
+
+        const fraction = clamp(
+          player.oxygen / Math.max(0.001, maximumOxygenSeconds()),
+          0,
+          1
+        );
+        const barWidth = Math.max(
+          38,
+          Math.round(player.w * camera.zoom * 2.05)
+        );
+        const barHeight = Math.max(6, Math.round(6 * camera.zoom));
+        const centerX = Math.round(
+          worldToScreenX(player.x + player.w * 0.5)
+        );
+        const barX = Math.round(centerX - barWidth * 0.5);
+        const barY = Math.round(
+          worldToScreenY(player.y) - Math.max(11, 10 * camera.zoom)
+        );
+        const inset = 2;
+        const innerWidth = Math.max(0, barWidth - inset * 2);
+        const innerHeight = Math.max(2, barHeight - inset * 2);
+        const fillWidth = Math.round(innerWidth * fraction);
+
+        ctx.save();
+        ctx.globalAlpha = clamp(player.oxygenBarAlpha, 0, 1);
+        ctx.fillStyle = "rgba(2,10,18,0.88)";
+        ctx.fillRect(barX - 1, barY - 1, barWidth + 2, barHeight + 2);
+        ctx.fillStyle = "rgba(12,37,52,0.94)";
+        ctx.fillRect(barX + inset, barY + inset, innerWidth, innerHeight);
+        if (fillWidth > 0) {
+          ctx.fillStyle = oxygenBarColor(fraction);
+          ctx.fillRect(
+            barX + inset,
+            barY + inset,
+            fillWidth,
+            innerHeight
+          );
+          ctx.fillStyle = "rgba(255,255,255,0.32)";
+          ctx.fillRect(
+            barX + inset,
+            barY + inset,
+            fillWidth,
+            Math.max(1, Math.floor(innerHeight * 0.3))
+          );
+        }
+        ctx.strokeStyle = "rgba(196,237,255,0.92)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX + 0.5, barY + 0.5, barWidth - 1, barHeight - 1);
+        ctx.restore();
+      }
+
       function drawAimIndicator() {
         if (camera.zoom < 0.55 || activeModal || camera.revealTimer > 0) return;
         const originX = worldToScreenX(player.x + player.w * 0.5);
@@ -29624,6 +31435,7 @@
         drawPlayer(now || performance.now());
         drawWaterTiles();
         drawLightingAndFog();
+        drawPlayerOxygenBar();
 
         if (camera.revealTimer > 0 && currentMountain) {
           ctx.fillStyle = "rgba(10,35,38,0.64)";
@@ -29634,6 +31446,8 @@
           ctx.textBaseline = "middle";
           ctx.fillText("TIER " + currentMountain.level + " MOUNTAIN", screenW * 0.5, screenH * 0.08 + 19);
         }
+
+        drawPlacementSelectionWheel();
       }
 
       // --------------------------------------------------
@@ -29673,6 +31487,11 @@
       window.addEventListener("touchstart", handleGlobalAudioGesture, { capture: true, passive: true });
       window.addEventListener("mousedown", handleGlobalAudioGesture, { capture: true, passive: true });
       window.addEventListener("keydown", handleGlobalAudioGesture, { capture: true, passive: true });
+      window.addEventListener("pointermove", event => {
+        if (!placementWheelActive) return;
+        if (event.cancelable) event.preventDefault();
+        movePlacementWheel(event.movementX, event.movementY);
+      }, { capture: true, passive: false });
       document.addEventListener("visibilitychange", () => {
         updateGeneratorAudio(document.hidden);
       });
@@ -29789,6 +31608,10 @@
       }
 
       canvas.addEventListener("pointerdown", event => {
+        if (placementWheelActive) {
+          event.preventDefault();
+          return;
+        }
         registerDesktopPointer(event);
         if (activeModal) return;
 
@@ -29801,7 +31624,7 @@
             event.preventDefault();
 
             // Right click immediately places the currently selected object.
-            // E is the only control that switches between platforms and torches.
+            // E cycles placement modes, while Q opens the radial selector.
             desktopActiveMode = desktopPlacementMode;
             setDesktopPreviewMode("place");
             updateDesktopPlacementUI();
@@ -29851,6 +31674,10 @@
       });
 
       canvas.addEventListener("pointermove", event => {
+        if (placementWheelActive) {
+          event.preventDefault();
+          return;
+        }
         registerDesktopPointer(event);
         if (activeModal) return;
         updateMouseAim(event.clientX, event.clientY);
@@ -29961,6 +31788,75 @@
         openModal("cloud");
       });
 
+      worldAccountButton.addEventListener("click", () => {
+        openModal("cloud");
+      });
+
+      worldsButton.addEventListener("click", () => {
+        setBurgerMenuOpen(false);
+        saveLocalProgress(false);
+        sessionStorage.removeItem(WORLD_LAUNCH_KEY);
+        window.location.reload();
+      });
+
+      worldSettingsButton.addEventListener("click", () => {
+        setBurgerMenuOpen(false);
+        if (isSandboxWorld() && currentWorldSlot >= 0) {
+          openWorldCreator(currentWorldSlot, true);
+        }
+      });
+
+      worldSlotList.addEventListener("click", event => {
+        const target = event.target.closest("button");
+        if (!target) return;
+        if (target.dataset.createWorld !== undefined) {
+          openWorldCreator(Number(target.dataset.createWorld), false);
+        } else if (target.dataset.playWorld !== undefined) {
+          launchWorldSlot(Number(target.dataset.playWorld));
+        } else if (target.dataset.editWorld !== undefined) {
+          openWorldCreator(Number(target.dataset.editWorld), true);
+        } else if (target.dataset.deleteWorld !== undefined) {
+          deleteWorldSlot(Number(target.dataset.deleteWorld));
+        } else if (target.dataset.viewWorld !== undefined) {
+          const entry = worldCollection.slots[Number(target.dataset.viewWorld)];
+          if (entry) {
+            window.alert(
+              entry.name + " uses permanent " + entry.preset +
+              " settings. Normal-world rules cannot be edited after creation."
+            );
+          }
+        }
+      });
+
+      worldPresetSelect.addEventListener("change", () => {
+        if (WORLD_PRESETS[worldPresetSelect.value]) {
+          applyPresetToCreator(worldPresetSelect.value);
+        }
+      });
+
+      worldSliderGrid.addEventListener("input", event => {
+        const input = event.target.closest("[data-world-setting]");
+        if (!input) return;
+        const output = worldSliderGrid.querySelector(
+          '[data-world-output="' + input.dataset.worldSetting + '"]'
+        );
+        if (output) output.textContent = input.value + "%";
+        creatorSettingsChanged();
+      });
+
+      worldDeathPenalty.addEventListener("change", creatorSettingsChanged);
+      worldDropRecovery.addEventListener("change", creatorSettingsChanged);
+      worldHardcoreSelect.addEventListener("change", creatorSettingsChanged);
+      worldModeSelect.addEventListener("change", updateWorldCreatorMode);
+      worldCreatorConfirm.addEventListener("click", confirmWorldCreator);
+      worldCreatorCancel.addEventListener("click", () => {
+        if (worldCreatorEditingSandbox && worldCreatorSlot === currentWorldSlot) {
+          hideWorldGate();
+        } else {
+          showWorldMenu();
+        }
+      });
+
       statsButton.addEventListener("click", () => {
         setBurgerMenuOpen(false);
         openModal("stats");
@@ -29989,9 +31885,13 @@
       cloudLoadNow.addEventListener("click", loadCloudProgress);
       localSaveNow.addEventListener("click", () => saveLocalProgress(true));
       localResetSave.addEventListener("click", () => {
-        if (!window.confirm("Delete the local save stored on this device? Your cloud save will not be deleted.")) return;
+        if (!window.confirm("Delete all three local world slots stored on this device? Your cloud worlds will not be deleted.")) return;
+        suppressLocalSave = true;
         localStorage.removeItem(LOCAL_SAVE_KEY);
-        showToast("Local save deleted");
+        localStorage.removeItem(LOCAL_WORLDS_KEY);
+        sessionStorage.removeItem(WORLD_LAUNCH_KEY);
+        showToast("Local world slots deleted");
+        window.setTimeout(() => window.location.reload(), 120);
       });
       surfaceButton.addEventListener("click", returnToSurface);
       async function toggleSoundEffects() {
@@ -30116,7 +32016,8 @@
 
           removedCounts.set(
             blockName,
-            (removedCounts.get(blockName) || 0) + 1
+            (removedCounts.get(blockName) || 0) +
+              Math.max(1, Number(item.units) || 1)
           );
 
           removeInventoryItemObject(item);
@@ -30596,9 +32497,7 @@
             if (property === "mine") {
               setDesktopPreviewMode("mine");
             } else if (property === "build" || property === "torch") {
-              desktopPlacementMode = property;
-              setDesktopPreviewMode("place");
-              updateDesktopPlacementUI();
+              setDesktopPlacementMode(property);
             }
           }
 
@@ -30636,7 +32535,11 @@
           }
           input.jump = keys.has("KeyW") || keys.has("ArrowUp") || keys.has("Space");
           input.mine = mouseMineDown || keys.has("KeyF");
-          input.build = (mousePlaceDown && desktopPlacementMode === "build") || keys.has("KeyG");
+          input.build =
+            (mousePlaceDown &&
+              (desktopPlacementMode === "build" ||
+                desktopPlacementMode === "stone")) ||
+            keys.has("KeyG");
           input.torch = (mousePlaceDown && desktopPlacementMode === "torch") || keys.has("KeyT");
         } else {
           if (keys.has("ArrowUp") || keys.has("KeyW")) y -= 1;
@@ -30651,6 +32554,12 @@
           input.mine = keys.has("KeyF");
           input.build = keys.has("KeyG");
           input.torch = keys.has("KeyT");
+        }
+
+        if (placementWheelActive) {
+          input.mine = false;
+          input.build = false;
+          input.torch = false;
         }
 
         jumpButton.classList.toggle("pressed", input.jump);
@@ -31258,6 +33167,21 @@
       }
 
       window.addEventListener("keydown", event => {
+        if (worldGateOpen) {
+          if (
+            event.code === "Escape" &&
+            !worldCreator.hidden
+          ) {
+            if (worldCreatorEditingSandbox && worldCreatorSlot === currentWorldSlot) {
+              hideWorldGate();
+            } else {
+              showWorldMenu();
+            }
+          }
+          if (!isTextInputTarget(event.target)) event.preventDefault();
+          return;
+        }
+
         if (
           event.code === "Escape" &&
           burgerMenuWrap.classList.contains("open")
@@ -31271,7 +33195,7 @@
         const gameplayKey = [
           "KeyW", "KeyA", "KeyS", "KeyD",
           "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
-          "Space", "KeyE", "KeyF", "KeyG", "KeyT",
+          "Space", "KeyE", "KeyF", "KeyG", "KeyT", "KeyQ",
           "KeyB", "KeyI", "KeyX", "KeyM", "KeyL", "KeyR"
         ].includes(event.code);
 
@@ -31287,6 +33211,12 @@
         if (isTextInputTarget(event.target)) {
           if (activeModal) return;
           focusGameControls();
+        }
+
+        if (event.code === "KeyQ" && !activeModal && !playerInShop) {
+          if (!event.repeat) beginPlacementWheel();
+          event.preventDefault();
+          return;
         }
         if (!event.repeat && event.code === "KeyI" && !activeModal) {
           if (!playerInShop) {
@@ -31366,13 +33296,9 @@
           if (event.code === "KeyF") {
             setDesktopPreviewMode("mine");
           } else if (event.code === "KeyG") {
-            desktopPlacementMode = "build";
-            setDesktopPreviewMode("place");
-            updateDesktopPlacementUI();
+            setDesktopPlacementMode("build");
           } else if (event.code === "KeyT") {
-            desktopPlacementMode = "torch";
-            setDesktopPreviewMode("place");
-            updateDesktopPlacementUI();
+            setDesktopPlacementMode("torch");
           }
         }
 
@@ -31383,10 +33309,16 @@
 
       window.addEventListener("keyup", event => {
         keys.delete(event.code);
+        if (event.code === "KeyQ") {
+          finishPlacementWheel(true);
+          event.preventDefault();
+          return;
+        }
         refreshKeyboard();
       });
 
       window.addEventListener("blur", () => {
+        finishPlacementWheel(false);
         keys.clear();
         resetJoystick();
         mouseMineDown = false;
@@ -31427,7 +33359,7 @@
         if (event.ctrlKey || event.metaKey) preventViewportGesture(event);
       }, { passive: false });
       document.addEventListener("touchmove", event => {
-        const panel = event.target.closest ? event.target.closest(".panel") : null;
+        const panel = event.target.closest ? event.target.closest(".panel, .world-panel") : null;
         if (event.touches.length > 1 || !panel) preventViewportGesture(event);
       }, { passive: false });
       window.addEventListener("scroll", () => window.scrollTo(0, 0), { passive: true });
@@ -31449,7 +33381,7 @@
       updateDesktopPlacementUI();
       updatePotionEffectsHud(true);
       resize();
-      loadLocalProgress(false);
+      initializeWorldSystem();
       updateHUD();
       updateSurfaceButton(true);
       updateSoundButton();

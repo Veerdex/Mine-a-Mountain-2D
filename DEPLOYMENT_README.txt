@@ -1,143 +1,98 @@
-MOUNTAIN TYCOON — CURRENT DEPLOYMENT FILES
-==========================================
+MOUNTAIN TYCOON — VERSION 19 DEPLOYMENT PACKAGE
+================================================
 
-CONTENTS
---------
+PACKAGE CONTENTS
+----------------
 index.html
-  Latest playable main-game build:
-  Depth Overhaul + treasure consumables + contracts + collection book +
-  restored per-tier ore density + weighted, depth-aware structure generation +
-  Tier 1 Underground Houses + Tier 2 Miner Supply Rooms +
-  Tier 3 Underground Workshops + Tier 4 Abandoned Mineshafts +
-  Tier 5 Rail Stations + Tier 6 Ancient Shrines + Tier 7 Crystal Chambers +
-  Tier 8 Underground Laboratories + Tier 9 Sealed Vaults +
-  Tier 10 Forgotten Temples + complete 16-bit terrain block artwork +
-  seamless 16-bit sky, mountain, cloud, and forest background artwork +
-  visible structure-loot orb drops.
-
-16-BIT BLOCK ART
-----------------
-All 42 mineable terrain, ore, material, and hazard block types now use the
-approved 16x16 pixel-art designs, including Deepstone and the later-added Tier
-7-10 materials. Each design has three deterministic coordinate-based texture
-variations. Sprites are cached at their native 16x16 size and enlarged to the
-game's 28px tile grid with nearest-neighbor rendering for crisp pixels.
-
-16-BIT WORLD BACKGROUND
------------------------
-The surface background now uses crisp pixel-art sky bands, mountains, and two
-layers of evergreen trees. Every landscape layer tiles according to the live
-viewport width, so ultrawide displays remain fully covered without stretched
-edges or empty gaps. Five distinct pixel-art cloud variants move continuously
-at different speeds, wrap to the current viewport, and render behind all
-mountains, trees, terrain, structures, shops, drops, effects, and the player.
-Mountain layers now move downward with vertical camera motion during jumps.
-Their opaque bases extend continuously into the layer below and to the terrain,
-eliminating sky-colored gaps. Both forest layers use slower horizontal parallax.
-Vertical mountain parallax is calculated directly from the camera every frame,
-with no grounded-state dependency. Forest movement is reduced by another 50%.
-
-16-BIT SHOPS
--------------
-Mountain, Equipment, and Sell storefronts now use cached pixel-art building
-sprites with stepped roofs, masonry foundations, timber or metal courses,
-pixel windows, doors, signs, and shop-specific display details. The Equipment
-Shop interior now has tiled brick walls, timber beams, iron ceiling brackets,
-plank flooring, paneled counters, a reinforced exit, and dedicated 16-bit
-displays for pickaxes, backpacks, flashlights, the animated refinery machine,
-and the contract board. Upgrade-card previews for pickaxes, backpacks, and
-flashlights use the same square-pixel style. Forest parallax is 25% faster than
-the previous package while retaining the deliberately slow background motion.
-
-FORGOTTEN TEMPLE
-----------------
-Tier 10 Forgotten Temples have permanently open monumental entrances and no
-access item. Three Ancient Ward Statues take 3 seconds each to destroy. Once
-all three are gone, the Royal Reliquary becomes mineable and takes 10 seconds
-to open. During that process, the temple shakes and sheds increasingly dense
-dust. Every Temple contains 6-8 unique ordinary sell-only relics and one
-guaranteed Crown of the First Mountain. The Crown receives 65-75% of the exact
-structure value, and all Temple rewards always total that generated value.
-
-SEALED VAULT
-------------
-Tier 9 Sealed Vaults use permanently open two-tile armored entrances. There
-is no Vault Keycard, clearance item, or access chain. Every Vault contains
-5-7 unique ordinary sell-only reserve rewards and one guaranteed Sealed Gold
-Bar. The Gold Bar receives 60-70% of the exact structure value and is released
-by dismantling the central Bullion Pedestal for 8 seconds. Its paired red
-beacons flash progressively faster during that process. All Vault rewards
-always total the exact generated structure value.
-
-UNDERGROUND LABORATORY
-----------------------
-Tier 8 Laboratories have permanently open three-tile side entrances and use
-no Clearance Chips, keycards, or other access chain. Every Laboratory contains
-4-6 ordinary sell-only research rewards and one guaranteed Experimental Power
-Cell. The Power Cell receives 55-65% of the structure value and drops after the
-central containment unit is dismantled for 7 seconds. All Laboratory rewards
-always total the exact generated structure value.
-
-CRYSTAL CHAMBER
----------------
-Tier 7 Crystal Chambers contain two Resonance Nodes that take 3 seconds each
-to mine. Destroying both permanently exposes the central Crystal Cradle, which
-takes 6 seconds to mine. Every chamber contains a guaranteed Crystal Core plus
-3-5 ordinary sell-only crystal rewards. The Core receives 50-60% of the value,
-and all chamber rewards always total the exact generated structure value.
-
-ANCIENT SHRINE
---------------
-Break both ritual seals (2 seconds each) to unlock the central altar
-(5 seconds). Sellable shrine rewards always add up to the structure value.
-The altar also has a 50% chance to drop one of three Greater Potions. Each
-Greater Potion has triple the corresponding standard potion's effect for the
-normal five-minute duration.
-
-Structure rewards now launch and settle like mined block drops. Ordinary
-rewards use glowing orbs, while rewards with dedicated artwork keep it.
-Legacy structure-container loot links are repaired when opened.
+  Complete playable game and three-world-slot implementation.
 
 manifest.webmanifest
-  PWA name, colors, display mode, orientation and icon paths.
+  PWA identity, description, colors, orientation, and icon paths.
 
 service-worker.js
-  Offline app shell and cache update logic. The cache name has been bumped
-  for this package so browsers discard the previous deployment cache.
+  Offline app shell and cache replacement logic.
 
 supabase-config.js
-  Browser-safe Supabase configuration template. Replace the placeholders
-  with your project URL and publishable/anon key.
-  NEVER use a service_role key in a browser file.
+  Public browser configuration for the Supabase Project URL and publishable
+  key. Never place a service_role key here.
 
 supabase-schema.sql
-  Current database schema for private JSONB saves and the public lifetime
-  money leaderboard, including row-level-security policies.
+  Private account save storage, three-slot save-format documentation, Row
+  Level Security policies, and the public lifetime-money leaderboard.
+
+audio/
+  Game music, ambience, mining, movement, interface, hazard, and reward audio.
 
 icons/
-  Favicon, Apple touch icon, standard PWA icons and maskable PWA icons.
+  Browser, Apple touch, standard PWA, and maskable PWA icons.
+
+WORLD SLOT SYSTEM
+-----------------
+- Every local browser and signed-in account can hold up to three worlds.
+- Empty slots can be used to create Normal or Sandbox worlds.
+- Every world has its own name, seed, difficulty, settings, generated terrain,
+  inventory, progression, structures, and play time.
+- Normal-world settings become permanent when creation is confirmed.
+- Sandbox-world settings can be reopened and edited.
+- Deleting a slot removes only that world.
+- A legacy single-world save is imported into slot 1 automatically.
+- Local autosaving applies to the active slot.
+- Signed-in cloud saving writes the entire three-slot collection atomically.
+
+CLOUD SAVE FORMAT
+-----------------
+The player_saves table keeps one private row per authenticated account.
+The save_data JSONB column contains:
+
+  format: mountain-tycoon-world-slots
+  version: 1
+  updatedAt: ISO timestamp
+  slots: three world entries or null values
+
+This design does not need one database row per slot. Row Level Security makes
+the full collection readable and writable only by its owner.
+
+SCHEMA UPDATE
+-------------
+Run the complete supabase-schema.sql in Supabase Dashboard > SQL Editor.
+
+The script is safe to rerun:
+- Existing player saves are not erased.
+- Existing player_saves and leaderboard_entries tables are retained.
+- The player_saves default is updated to a valid empty three-slot collection.
+- Save-format and version comments are attached to the database schema.
+- Policies and the leaderboard trigger are recreated in their current form.
+- Legacy single-world JSON remains accepted and is migrated by the game.
+
+Do not add a JSON shape constraint that rejects legacy saves. The client must
+be allowed to read an older row before it can migrate it.
+
+ACCOUNT SETUP
+-------------
+1. Enable the Email provider in Supabase Authentication.
+2. Turn Confirm email OFF.
+3. Mountain Tycoon uses usernames in the interface and creates private
+   internal email addresses for Supabase Auth.
+4. Put the Project URL and publishable key in supabase-config.js.
+5. Never use a service_role key in a browser deployment.
 
 DEPLOYMENT
 ----------
-1. Replace the placeholders in supabase-config.js.
-2. Upload index.html, manifest.webmanifest, service-worker.js,
-   supabase-config.js and the icons folder to the same public root.
-3. Deploy using HTTPS. Service workers and installation require HTTPS,
-   except during localhost development.
-4. Hard-refresh once after deployment if an older version is still visible.
+1. Upload the complete contents of this folder to one public site root.
+2. Keep index.html, the manifest, service worker, configuration, audio, and
+   icon paths together.
+3. Serve the site over HTTPS.
+4. Make index.html the root page.
+5. Hard-refresh or fully reopen an installed PWA after deployment.
 
-SUPABASE
---------
-- For a brand-new Supabase project, run supabase-schema.sql once in:
-  Supabase Dashboard -> SQL Editor.
-- If player_saves and leaderboard_entries already exist with the included
-  policies and trigger, no migration is required.
-- The structure system does not add database columns or tables. Structures,
-  their opened containers and their collected loot are stored in save_data.
-- Game progress is stored inside player_saves.save_data JSONB, so most new
-  gameplay fields do not require a database migration.
+Do not deploy an incomplete outer extraction folder. Version 19 has a single
+flat project root and is ready to upload as-is.
 
-IMPORTANT
----------
-This package's index.html is the current playable source. The visual-lab files
-remain separate development previews.
+FILES THAT DO NOT REQUIRE DATABASE CHANGES
+------------------------------------------
+World settings, generated structures, inventories, opened containers, terrain,
+fluids, and collected rewards remain inside save_data JSONB. New gameplay
+fields normally do not require database columns.
+
+The visual-lab HTML files are separate development previews and are not part of
+this production package.

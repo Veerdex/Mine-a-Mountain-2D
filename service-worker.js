@@ -1,4 +1,4 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v51-smooth-light-runtime-fix";
+const CACHE_NAME = "mountain-tycoon-pwa-v62-world-schema-docs";
 
 const APP_SHELL = [
   "./",
@@ -111,7 +111,7 @@ self.addEventListener("fetch", event => {
           return response;
         }
 
-        // Don't cache partial responses (206) — audio range requests
+        // Do not cache partial responses (206), including audio range requests.
         if (response.status === 206) return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
