@@ -1,10 +1,10 @@
-MOUNTAIN TYCOON — VERSION 19 DEPLOYMENT PACKAGE
+MOUNTAIN TYCOON — VERSION 20 DEPLOYMENT PACKAGE
 ================================================
 
 PACKAGE CONTENTS
 ----------------
 index.html
-  Complete playable game and three-world-slot implementation.
+  Complete playable game, three-world-slot implementation, and planet registry.
 
 manifest.webmanifest
   PWA identity, description, colors, orientation, and icon paths.
@@ -20,6 +20,13 @@ supabase-schema.sql
   Private account save storage, three-slot save-format documentation, Row
   Level Security policies, and the public lifetime-money leaderboard.
 
+planets/
+  Preloaded planet-pack queue and a development template for future planets.
+
+PLANET_DEVELOPMENT.md
+  Stable block-key rules, planet definition fields, lifecycle hooks, generic
+  liquids, custom hazards/events, generation overrides, and shop extensions.
+
 audio/
   Game music, ambience, mining, movement, interface, hazard, and reward audio.
 
@@ -31,7 +38,7 @@ WORLD SLOT SYSTEM
 - Every local browser and signed-in account can hold up to three worlds.
 - Empty slots can be used to create Normal or Sandbox worlds.
 - Every world has its own name, seed, difficulty, settings, generated terrain,
-  inventory, progression, structures, and play time.
+  planet, inventory, progression, structures, planet state, and play time.
 - Normal-world settings become permanent when creation is confirmed.
 - Sandbox-world settings can be reopened and edited.
 - Deleting a slot removes only that world.
@@ -85,7 +92,7 @@ DEPLOYMENT
 4. Make index.html the root page.
 5. Hard-refresh or fully reopen an installed PWA after deployment.
 
-Do not deploy an incomplete outer extraction folder. Version 19 has a single
+Do not deploy an incomplete outer extraction folder. Version 20 has a single
 flat project root and is ready to upload as-is.
 
 FILES THAT DO NOT REQUIRE DATABASE CHANGES

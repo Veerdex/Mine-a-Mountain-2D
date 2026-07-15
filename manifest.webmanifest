@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Mountain Tycoon",
   "short_name": "Mountain Tycoon",
-  "description": "Create up to three custom mining worlds, explore randomized mountains, recover structure rewards, upgrade equipment, and build your fortune.",
+  "description": "Create custom planetary mining worlds, explore randomized mountains, recover structure rewards, upgrade equipment, and build your fortune.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

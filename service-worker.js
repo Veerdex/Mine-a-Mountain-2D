@@ -1,10 +1,11 @@
-const CACHE_NAME = "mountain-tycoon-pwa-v62-world-schema-docs";
+const CACHE_NAME = "mountain-tycoon-pwa-v63-planet-registry";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./supabase-config.js",
+  "./planets/planet-packs.js",
   "./icons/favicon-32.png",
   "./icons/apple-touch-icon.png",
   "./icons/icon-192.png",

@@ -1,11 +1,15 @@
 # Mountain Tycoon — Vercel + Supabase
 
-Version 19 is a complete static deployment package for Mountain Tycoon.
+Version 20 is a complete static deployment package for Mountain Tycoon.
 
 ## Included
 
 - Full game in index.html
 - Three independent world slots per account
+- Permanent planet identity stored independently for every world
+- A data-driven planet registry with Earth as the default content pack
+- Extension points for planet blocks, terrain, ores, hazards, liquids,
+  mountains, structures, events, artwork, and Equipment Shop rooms
 - World name, seed, difficulty preset, game mode, and custom world settings
 - Permanent settings for Normal worlds
 - Editable settings and infinite resources in Sandbox worlds
@@ -16,6 +20,10 @@ Version 19 is a complete static deployment package for Mountain Tycoon.
 - Private cloud saves protected by Supabase Row Level Security
 - Public lifetime-money leaderboard
 - Installable offline PWA
+
+See PLANET_DEVELOPMENT.md and planets/planet-template.js before adding a new
+planet. Finished planet scripts load before the main game and register through
+planets/planet-packs.js.
 
 ## Supabase setup
 
@@ -37,6 +45,9 @@ value contains the complete three-slot collection:
 - version: 1
 - updatedAt: collection timestamp
 - slots: exactly three world entries or null values
+
+Each world entry stores planetId. Its saveData also stores planetState for
+planet-specific systems without requiring new database columns.
 
 Saving the collection in one row makes creating, deleting, and updating slots
 atomic. The included schema remains compatible with old single-world rows. The

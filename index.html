@@ -3489,6 +3489,7 @@
         <div class="world-create-grid">
           <label class="world-field"><span>World Name</span><input id="worldNameInput" maxlength="28" placeholder="My Mountain World" /></label>
           <label class="world-field"><span>World Seed</span><input id="worldSeedInput" maxlength="40" placeholder="Leave blank for a random seed" /></label>
+          <label class="world-field"><span>Planet</span><select id="worldPlanetSelect"></select></label>
           <label class="world-field"><span>Difficulty Preset</span>
             <select id="worldPresetSelect">
               <option value="explorer">Explorer</option>
@@ -4043,6 +4044,7 @@
 
   <script src="./supabase-config.js?v=4"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./planets/planet-packs.js?v=1"></script>
   <script>
     (() => {
       "use strict";
@@ -5007,23 +5009,24 @@
       // that tier: the price of the next mountain. Tier 10 extrapolates the
       // last observed price ratio because it has no following shop entry.
       function currentMountainTierValue(mountainTier) {
+        const planetTiers = activePlanetMountainTiers();
         const level = clamp(
           Math.floor(Number(mountainTier) || 1),
           1,
-          MOUNTAIN_TIERS.length
+          planetTiers.length
         );
 
-        if (level < MOUNTAIN_TIERS.length) {
-          return Math.max(1, Number(MOUNTAIN_TIERS[level].price) || 1);
+        if (level < planetTiers.length) {
+          return Math.max(1, Number(planetTiers[level].price) || 1);
         }
 
         const current = Math.max(
           1,
-          Number(MOUNTAIN_TIERS[level - 1].price) || 1
+          Number(planetTiers[level - 1].price) || 1
         );
         const previous = Math.max(
           1,
-          Number(MOUNTAIN_TIERS[level - 2].price) || current
+          Number(planetTiers[level - 2]?.price) || current
         );
         return Math.max(1, roundPrice(current * Math.max(1, current / previous)));
       }
@@ -9073,6 +9076,14 @@
       }
 
       function buildStructureFromDefinition(definition, mountainTier) {
+        if (typeof definition.build === "function") {
+          return invokePlanetExtension(
+            "structure builder " + definition.id,
+            definition.build,
+            planetRuntimeContext({ definition, mountainTier }),
+            null
+          );
+        }
         if (definition.id === "abandoned-mineshaft") {
           return buildAbandonedMineshaft(definition, mountainTier);
         }
@@ -9142,7 +9153,8 @@
         nextStructureId = 1;
         nextStructurePartId = 1;
 
-        const currentDefinition = STRUCTURE_DEFINITIONS.find(definition =>
+        const planetStructures = activePlanetStructureDefinitions();
+        const currentDefinition = planetStructures.find(definition =>
           definition.enabled && definition.tier === tier.level
         );
         const structureFrequency = worldSettingMultiplier("structureFrequency");
@@ -9194,7 +9206,7 @@
         // pool samples with replacement, so the same structure type may appear
         // repeatedly. Selection weights reverse the eligible tier costs: on a
         // Tier 10 mountain, T1 receives T9's weight and T9 receives T1's.
-        let olderPool = STRUCTURE_DEFINITIONS.filter(definition =>
+        let olderPool = planetStructures.filter(definition =>
           definition.enabled && definition.tier < tier.level
         );
         const blockedDefinitionIds = new Set();
@@ -10265,6 +10277,633 @@
       });
 
       // --------------------------------------------------
+      // Planet content registry
+      // --------------------------------------------------
+      // Planet packs are loaded before this main script. They add plain
+      // definitions to window.MOUNTAIN_TYCOON_PLANET_PACKS, which are
+      // normalized here before fixed-size inventory arrays are allocated.
+      const PLANET_API_VERSION = 1;
+      const DEFAULT_PLANET_ID = "earth";
+      const PLANET_REGISTRY = new Map();
+      const BLOCK_TYPE_BY_KEY = new Map();
+      let planetRegistryLocked = false;
+
+      function planetSlug(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      function installCoreBlockKeys() {
+        for (let type = 0; type < BLOCKS.length; type++) {
+          const block = BLOCKS[type];
+          let key = block.key || "earth." + planetSlug(block.name || ("block-" + type));
+          if (BLOCK_TYPE_BY_KEY.has(key)) key += "-" + type;
+          block.id = type;
+          block.key = key;
+          block.planetId = block.planetId || DEFAULT_PLANET_ID;
+          BLOCK_TYPE_BY_KEY.set(key, type);
+        }
+      }
+
+      function resolveBlockType(reference) {
+        if (Number.isInteger(reference) && reference >= 0 && reference < BLOCKS.length) {
+          return reference;
+        }
+        const key = String(reference || "");
+        return BLOCK_TYPE_BY_KEY.has(key) ? BLOCK_TYPE_BY_KEY.get(key) : null;
+      }
+
+      function requiredBlockType(reference, fieldName) {
+        const type = resolveBlockType(reference);
+        if (type === null) {
+          throw new Error("Unknown block reference for " + fieldName + ": " + reference);
+        }
+        return type;
+      }
+
+      function registerPlanetBlock(planetId, rawBlock) {
+        if (!rawBlock || typeof rawBlock !== "object") {
+          throw new Error("Planet block definitions must be objects.");
+        }
+        if (BLOCKS.length >= 65535) {
+          throw new Error("The 16-bit world block limit has been reached.");
+        }
+
+        const localKey = planetSlug(rawBlock.key || rawBlock.name);
+        if (!localKey) throw new Error("Every planet block needs a key or name.");
+        const key = String(rawBlock.key || "").includes(".")
+          ? String(rawBlock.key)
+          : planetId + "." + localKey;
+        if (BLOCK_TYPE_BY_KEY.has(key)) {
+          throw new Error("Duplicate block key: " + key);
+        }
+
+        const type = BLOCKS.length;
+        const block = {
+          weight: 0,
+          hardness: 1,
+          value: 0,
+          breakTime: 0.5,
+          color: "#777777",
+          style: "material",
+          collectible: true,
+          deposit: true,
+          ...rawBlock,
+          id: type,
+          key,
+          planetId
+        };
+        BLOCKS.push(block);
+        BLOCK_TYPE_BY_KEY.set(key, type);
+        return type;
+      }
+
+      function resolveBlockList(values, fieldName) {
+        if (!Array.isArray(values)) return [];
+        const resolved = [];
+        for (const value of values) {
+          const reference =
+            value && typeof value === "object" && "blockType" in value
+              ? value.blockType
+              : value;
+          resolved.push(requiredBlockType(reference, fieldName));
+        }
+        return Array.from(new Set(resolved));
+      }
+
+      function normalizedPlanetMountainTiers(rawTiers) {
+        const source = Array.isArray(rawTiers) && rawTiers.length
+          ? rawTiers
+          : MOUNTAIN_TIERS;
+        return source.map((raw, index) => {
+          const tier = raw && typeof raw === "object" ? raw : {};
+          return {
+            ...tier,
+            level: Math.max(1, Math.floor(Number(tier.level) || index + 1)),
+            width: Math.max(8, Math.floor(Number(tier.width) || 16)),
+            height: Math.max(5, Math.floor(Number(tier.height) || 7)),
+            label: String(tier.label || ("Mountain " + (index + 1))),
+            price: Math.max(0, Number(tier.price) || 0)
+          };
+        });
+      }
+
+      function normalizedPlanetHazards(rawHazards) {
+        if (!Array.isArray(rawHazards)) return [];
+        return rawHazards.map((raw, index) => {
+          const source = raw && typeof raw === "object"
+            ? raw
+            : { blockType: raw };
+          return {
+            ...source,
+            id: String(source.id || ("hazard-" + index)),
+            blockType: requiredBlockType(source.blockType, "hazards")
+          };
+        });
+      }
+
+      function normalizedPlanetLiquids(rawLiquids) {
+        if (!Array.isArray(rawLiquids)) return [];
+        return rawLiquids.map((raw, index) => {
+          const source = raw && typeof raw === "object"
+            ? raw
+            : { blockType: raw };
+          return {
+            ...source,
+            id: String(source.id || ("liquid-" + index)),
+            interval: Math.max(0.02, Number(source.interval) || 0.12),
+            horizontalSearch: Math.max(1, Math.floor(Number(source.horizontalSearch) || 5)),
+            breaksPlacedObjects: source.breaksPlacedObjects !== false,
+            blockType: requiredBlockType(source.blockType, "liquids")
+          };
+        });
+      }
+
+      function registerPlanetDefinition(rawDefinition) {
+        if (planetRegistryLocked) {
+          throw new Error("Planet packs must load before the main game starts.");
+        }
+        if (!rawDefinition || typeof rawDefinition !== "object") {
+          throw new Error("Planet definitions must be objects.");
+        }
+
+        const id = planetSlug(rawDefinition.id);
+        if (!id) throw new Error("Every planet needs an id.");
+        if (PLANET_REGISTRY.has(id)) throw new Error("Duplicate planet id: " + id);
+
+        const blockCountBeforeRegistration = BLOCKS.length;
+        try {
+        const registeredBlocks = [];
+        for (const rawBlock of rawDefinition.blocks || []) {
+          registeredBlocks.push(registerPlanetBlock(id, rawBlock));
+        }
+
+        const terrainSource = rawDefinition.terrain || {};
+        const fallbackTerrain = {
+          air: AIR,
+          surface: GRASS,
+          subsurface: DIRT,
+          underground: STONE,
+          deep: DEEPSTONE
+        };
+        const terrain = {};
+        for (const [key, fallback] of Object.entries(fallbackTerrain)) {
+          const reference = terrainSource[key];
+          terrain[key] = reference === undefined
+            ? fallback
+            : requiredBlockType(reference, "terrain." + key);
+        }
+
+        const content = rawDefinition.content || {};
+        const oreTypes = resolveBlockList(
+          content.oreTypes || registeredBlocks.filter(type => {
+            const block = BLOCKS[type];
+            return block.spawnRate && block.collectible !== false && !block.hazard;
+          }),
+          "content.oreTypes"
+        );
+        const hazards = normalizedPlanetHazards(
+          content.hazards || registeredBlocks.filter(type => BLOCKS[type].hazard)
+        );
+        const liquids = normalizedPlanetLiquids(content.liquids || []);
+        const firstOreByTier = {};
+        for (const [tier, reference] of Object.entries(content.firstOreByTier || {})) {
+          firstOreByTier[tier] = requiredBlockType(reference, "content.firstOreByTier." + tier);
+        }
+        const oreBookRows = Array.isArray(content.oreBookRows)
+          ? content.oreBookRows.map(
+              (row, index) => resolveBlockList(row, "content.oreBookRows." + index)
+            )
+          : Array.from(
+              oreTypes.reduce((groups, type) => {
+                const tier = Math.max(1, Number(BLOCKS[type].tier) || 1);
+                if (!groups.has(tier)) groups.set(tier, []);
+                groups.get(tier).push(type);
+                return groups;
+              }, new Map()).entries()
+            )
+              .sort((left, right) => left[0] - right[0])
+              .map(entry => entry[1]);
+
+        const equipmentShops = (rawDefinition.equipmentShops || []).map((shop, index) => ({
+          ...shop,
+          id: id + ":" + planetSlug(shop.id || ("shop-" + index)),
+          label: String(shop.label || shop.name || ("Planet Shop " + (index + 1))),
+          description: String(shop.description || ""),
+          width: Math.max(260, Math.floor(Number(shop.width) || 380))
+        }));
+
+        const definition = {
+          apiVersion: PLANET_API_VERSION,
+          id,
+          name: String(rawDefinition.name || id),
+          description: String(rawDefinition.description || ""),
+          available: rawDefinition.available !== false,
+          blocks: registeredBlocks,
+          terrain,
+          mountainTiers: normalizedPlanetMountainTiers(rawDefinition.mountainTiers),
+          structures: (
+            Array.isArray(content.structures)
+              ? content.structures
+              : STRUCTURE_DEFINITIONS
+          ).map(structure => ({
+            ...structure,
+            slotCost: Math.max(
+              1,
+              Number(structure.slotCost) || structureSlotCost(structure.tier)
+            )
+          })),
+          oreTypes,
+          oreTypeSet: new Set(oreTypes),
+          hazards,
+          hazardTypeSet: new Set(hazards.map(hazard => hazard.blockType)),
+          liquids,
+          liquidTypeSet: new Set(liquids.map(liquid => liquid.blockType)),
+          firstOreByTier,
+          oreBookRows,
+          equipmentShops,
+          events: Array.isArray(rawDefinition.events) ? rawDefinition.events : [],
+          hooks: rawDefinition.hooks && typeof rawDefinition.hooks === "object"
+            ? rawDefinition.hooks
+            : {},
+          theme: rawDefinition.theme && typeof rawDefinition.theme === "object"
+            ? rawDefinition.theme
+            : {}
+        };
+
+        PLANET_REGISTRY.set(id, definition);
+        return definition;
+        } catch (error) {
+          while (BLOCKS.length > blockCountBeforeRegistration) {
+            const removedBlock = BLOCKS.pop();
+            if (removedBlock?.key) BLOCK_TYPE_BY_KEY.delete(removedBlock.key);
+          }
+          throw error;
+        }
+      }
+
+      function planetDefinitionById(planetId) {
+        return PLANET_REGISTRY.get(String(planetId || DEFAULT_PLANET_ID)) || null;
+      }
+
+      function activePlanetDefinition() {
+        return (
+          planetDefinitionById(activeWorldEntry && activeWorldEntry.planetId) ||
+          PLANET_REGISTRY.get(DEFAULT_PLANET_ID)
+        );
+      }
+
+      function activePlanetTerrain() {
+        return activePlanetDefinition().terrain;
+      }
+
+      function activePlanetMountainTiers() {
+        return activePlanetDefinition().mountainTiers;
+      }
+
+      function activePlanetStructureDefinitions() {
+        return activePlanetDefinition().structures;
+      }
+
+      function planetStructureDefinitionById(definitionId) {
+        return (
+          activePlanetStructureDefinitions().find(candidate => candidate.id === definitionId) ||
+          STRUCTURE_DEFINITIONS.find(candidate => candidate.id === definitionId) ||
+          null
+        );
+      }
+
+      function activePlanetAllowsOre(type) {
+        return activePlanetDefinition().oreTypeSet.has(type);
+      }
+
+      function activePlanetAllowsHazard(type) {
+        return activePlanetDefinition().hazardTypeSet.has(type);
+      }
+
+      function activePlanetHazardForType(type) {
+        return activePlanetDefinition().hazards.find(
+          hazard => hazard.blockType === type
+        ) || null;
+      }
+
+      function activePlanetFirstOreForTier(tier) {
+        return activePlanetDefinition().firstOreByTier[tier] ?? null;
+      }
+
+      function activePlanetOreBookRows() {
+        return activePlanetDefinition().oreBookRows;
+      }
+
+      function activePlanetOreBookTypes() {
+        return activePlanetOreBookRows().flat();
+      }
+
+      function activePlanetEquipmentShops() {
+        return activePlanetDefinition().equipmentShops;
+      }
+
+      function activePlanetLiquids() {
+        return activePlanetDefinition().liquids;
+      }
+
+      function activePlanetLiquidForType(type) {
+        return activePlanetLiquids().find(liquid => liquid.blockType === type) || null;
+      }
+
+      function isRegisteredLiquidType(type) {
+        return !!activePlanetLiquidForType(type);
+      }
+
+      function planetEquipmentShopById(shopId) {
+        return activePlanetEquipmentShops().find(shop => shop.id === shopId) || null;
+      }
+
+      function createPlanetRuntimeState(planetId = DEFAULT_PLANET_ID) {
+        return {
+          planetId: String(planetId || DEFAULT_PLANET_ID),
+          events: {},
+          data: {}
+        };
+      }
+
+      function normalizePlanetRuntimeState(raw, planetId) {
+        const state = createPlanetRuntimeState(planetId);
+        if (!raw || typeof raw !== "object") return state;
+        state.events = raw.events && typeof raw.events === "object" ? { ...raw.events } : {};
+        state.data = raw.data && typeof raw.data === "object" ? { ...raw.data } : {};
+        return state;
+      }
+
+      function spendPlanetShopCash(amount) {
+        const price = Math.max(0, Number(amount) || 0);
+        if (hasInfiniteWorldResources()) return true;
+        if (cash < price) return false;
+        cash -= price;
+        displayCash = cash;
+        updateHUD();
+        return true;
+      }
+
+      function grantPlanetItem(blockReference, units = 1, overrides = {}) {
+        const type = requiredBlockType(blockReference, "grantItem");
+        const block = BLOCKS[type];
+        const quantity = Math.max(1, Math.floor(Number(units) || 1));
+        const requestedWeight = Number(overrides.weight);
+        const requestedValue = Number(overrides.value);
+        const requestedValueMultiplier = Number(overrides.valueMultiplier);
+        const requestedBonusMultiplier = Number(overrides.bonusMultiplier);
+        const item = makeItem(
+          type,
+          quantity,
+          Math.max(0, Number.isFinite(requestedWeight) ? requestedWeight : block.weight * quantity),
+          Math.max(0, Number.isFinite(requestedValue) ? requestedValue : block.value * quantity),
+          String(overrides.grade || "Standard"),
+          String(overrides.note || ""),
+          Math.max(0, Number.isFinite(requestedValueMultiplier) ? requestedValueMultiplier : 1),
+          Math.max(0, Number.isFinite(requestedBonusMultiplier) ? requestedBonusMultiplier : 1)
+        );
+        if (inventoryWeight + item.weight > effectiveBackpackCapacity()) return false;
+        return addInventoryItemObject(item);
+      }
+
+      function planetRuntimeContext(extra = {}) {
+        return {
+          apiVersion: PLANET_API_VERSION,
+          planet: activePlanetDefinition(),
+          planetState: planetRuntimeState,
+          world,
+          blocks: BLOCKS,
+          player,
+          camera,
+          currentMountain,
+          worldSettings,
+          tileSize: TILE,
+          worldWidth: WORLD_W,
+          worldHeight: WORLD_H,
+          getTile: tileAt,
+          setTile,
+          showToast,
+          respawnPlayer,
+          explodeAt,
+          resolveBlockType,
+          getCash: () => cash,
+          spendCash: spendPlanetShopCash,
+          grantItem: grantPlanetItem,
+          inventoryCount: blockReference => {
+            const type = requiredBlockType(blockReference, "inventoryCount");
+            return inventoryUnits[type] || 0;
+          },
+          saveData: planetRuntimeState.data,
+          ...extra
+        };
+      }
+
+      function runPlanetHook(name, detail = {}) {
+        const hook = activePlanetDefinition().hooks[name];
+        return invokePlanetExtension(
+          "hook " + name,
+          hook,
+          planetRuntimeContext(detail)
+        );
+      }
+
+      function invokePlanetExtension(label, callback, context, fallback = undefined) {
+        if (typeof callback !== "function") return fallback;
+        try {
+          return callback(context);
+        } catch (error) {
+          console.error("Planet extension failed: " + label, error);
+          return fallback;
+        }
+      }
+
+      function planetEventDelay(eventDefinition) {
+        const interval = eventDefinition.interval;
+        if (Array.isArray(interval)) {
+          const minimum = Math.max(0.1, Number(interval[0]) || 30);
+          const maximum = Math.max(minimum, Number(interval[1]) || minimum);
+          return minimum + Math.random() * (maximum - minimum);
+        }
+        return Math.max(0.1, Number(interval) || 60);
+      }
+
+      function updatePlanetEvents(dt) {
+        const planet = activePlanetDefinition();
+        for (const eventDefinition of planet.events) {
+          if (!eventDefinition || !eventDefinition.id) continue;
+          const eventId = String(eventDefinition.id);
+          let state = planetRuntimeState.events[eventId];
+          if (!state || typeof state !== "object") {
+            state = { timeUntil: planetEventDelay(eventDefinition), count: 0 };
+            planetRuntimeState.events[eventId] = state;
+          }
+
+          if (typeof eventDefinition.update === "function") {
+            invokePlanetExtension(
+              "event update " + eventId,
+              eventDefinition.update,
+              planetRuntimeContext({
+                dt,
+                event: eventDefinition,
+                eventState: state
+              })
+            );
+          }
+
+          if (typeof eventDefinition.trigger !== "function") continue;
+          state.timeUntil = Number(state.timeUntil) - dt;
+          if (state.timeUntil > 0) continue;
+          const canTrigger = typeof eventDefinition.canTrigger !== "function" ||
+            invokePlanetExtension(
+              "event condition " + eventId,
+              eventDefinition.canTrigger,
+              planetRuntimeContext({
+                event: eventDefinition,
+                eventState: state
+              }),
+              false
+            ) !== false;
+          state.timeUntil = planetEventDelay(eventDefinition);
+          if (!canTrigger) continue;
+          state.count = Math.max(0, Number(state.count) || 0) + 1;
+          invokePlanetExtension(
+            "event trigger " + eventId,
+            eventDefinition.trigger,
+            planetRuntimeContext({
+              event: eventDefinition,
+              eventState: state
+            })
+          );
+        }
+      }
+
+      function updatePlanetHazardExtensions(dt) {
+        const contactTypes = new Set([
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.18) / TILE)
+          ),
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.5) / TILE)
+          ),
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.82) / TILE)
+          )
+        ]);
+
+        for (const hazard of activePlanetDefinition().hazards) {
+          if (typeof hazard.update === "function") {
+            invokePlanetExtension(
+              "hazard update " + hazard.id,
+              hazard.update,
+              planetRuntimeContext({ dt, hazard })
+            );
+          }
+          if (
+            contactTypes.has(hazard.blockType) &&
+            typeof hazard.onPlayerContact === "function"
+          ) {
+            invokePlanetExtension(
+              "hazard contact " + hazard.id,
+              hazard.onPlayerContact,
+              planetRuntimeContext({ dt, hazard })
+            );
+          }
+        }
+      }
+
+      function runPlanetHazardMineHandler(type, x, y) {
+        const hazard = activePlanetHazardForType(type);
+        if (!hazard || typeof hazard.onMine !== "function") return false;
+        return invokePlanetExtension(
+          "hazard mine " + hazard.id,
+          hazard.onMine,
+          planetRuntimeContext({ type, x, y, hazard }),
+          false
+        ) === true;
+      }
+
+      installCoreBlockKeys();
+      registerPlanetDefinition({
+        id: DEFAULT_PLANET_ID,
+        name: "Earth",
+        description: "The original Mountain Tycoon world.",
+        available: true,
+        terrain: {
+          air: AIR,
+          surface: GRASS,
+          subsurface: DIRT,
+          underground: STONE,
+          deep: DEEPSTONE
+        },
+        mountainTiers: MOUNTAIN_TIERS,
+        content: {
+          oreTypes: BLOCKS.map((block, type) => ({ block, type }))
+            .filter(entry =>
+              entry.block.tier &&
+              entry.block.spawnRate &&
+              entry.block.collectible !== false &&
+              entry.block.deposit !== false &&
+              !entry.block.hazard
+            )
+            .map(entry => entry.type),
+          hazards: BLOCKS.map((block, type) => ({ block, type }))
+            .filter(entry => entry.type === GRAVEL || entry.block.hazard)
+            .map(entry => ({ blockType: entry.type })),
+          liquids: [
+            { id: "water", blockType: WATER, core: true, frequencySetting: "waterFrequency" },
+            { id: "lava", blockType: LAVA, core: true, frequencySetting: "lavaFrequency" },
+            { id: "acid", blockType: ACID, core: true, frequencySetting: "otherHazardFrequency" }
+          ],
+          firstOreByTier: {
+            2: COPPER,
+            3: IRON,
+            4: LITHIUM,
+            5: COBALT,
+            6: GOLD,
+            7: RUBY,
+            8: DIAMOND,
+            9: PLATINUM,
+            10: NEUTRONITE
+          },
+          oreBookRows: ORE_BOOK_ROWS,
+          structures: STRUCTURE_DEFINITIONS
+        }
+      });
+
+      const queuedPlanetPacks = Array.isArray(window.MOUNTAIN_TYCOON_PLANET_PACKS)
+        ? window.MOUNTAIN_TYCOON_PLANET_PACKS
+        : [];
+      for (const queuedPlanet of queuedPlanetPacks) {
+        try {
+          registerPlanetDefinition(queuedPlanet);
+        } catch (error) {
+          console.error("Planet pack could not be registered", error);
+        }
+      }
+      for (const planet of PLANET_REGISTRY.values()) {
+        for (const type of planet.oreBookRows.flat()) {
+          if (ORE_BOOK_TYPE_SET.has(type)) continue;
+          ORE_BOOK_TYPE_SET.add(type);
+          ORE_BOOK_TYPES.push(type);
+        }
+      }
+      planetRegistryLocked = true;
+      window.MountainTycoonPlanetAPI = Object.freeze({
+        version: PLANET_API_VERSION,
+        defaultPlanetId: DEFAULT_PLANET_ID,
+        listPlanets: () => Array.from(PLANET_REGISTRY.values()),
+        getPlanet: planetDefinitionById,
+        resolveBlockType
+      });
+
+      // --------------------------------------------------
       // DOM and game state
       // --------------------------------------------------
       const canvas = document.getElementById("game");
@@ -10332,6 +10971,7 @@
       const worldCreatorSubtitle = document.getElementById("worldCreatorSubtitle");
       const worldNameInput = document.getElementById("worldNameInput");
       const worldSeedInput = document.getElementById("worldSeedInput");
+      const worldPlanetSelect = document.getElementById("worldPlanetSelect");
       const worldPresetSelect = document.getElementById("worldPresetSelect");
       const worldModeSelect = document.getElementById("worldModeSelect");
       const worldSliderGrid = document.getElementById("worldSliderGrid");
@@ -10392,6 +11032,17 @@
       const contractReadyCount = document.getElementById("contractReadyCount");
       const contractBudgetNote = document.getElementById("contractBudgetNote");
 
+      const planetShopModal = document.createElement("div");
+      planetShopModal.id = "planetShopModal";
+      planetShopModal.className = "modal";
+      planetShopModal.innerHTML =
+        '<div class="panel"><div class="panel-header"><div><span class="panel-kicker">PLANET EQUIPMENT</span>' +
+        '<h1 id="planetShopTitle">Planet Shop</h1></div><button class="close-button" aria-label="Close">×</button></div>' +
+        '<div id="planetShopContent"></div></div>';
+      document.body.appendChild(planetShopModal);
+      const planetShopTitle = document.getElementById("planetShopTitle");
+      const planetShopContent = document.getElementById("planetShopContent");
+
       const MODALS = {
         mountain: document.getElementById("mountainModal"),
         pickaxe: document.getElementById("pickaxeModal"),
@@ -10406,10 +11057,13 @@
         leaderboard: document.getElementById("leaderboardModal"),
         contracts: document.getElementById("contractsModal"),
         refinery: document.getElementById("refineryModal"),
-        flashlight: document.getElementById("flashlightModal")
+        flashlight: document.getElementById("flashlightModal"),
+        planetShop: planetShopModal
       };
 
-      const world = new Uint8Array(WORLD_W * WORLD_H);
+      // Uint16 preserves all existing numeric block IDs while increasing the
+      // total cross-planet block capacity from 255 to 65,535.
+      const world = new Uint16Array(WORLD_W * WORLD_H);
       const mountainMask = new Uint8Array(WORLD_W * WORLD_H);
       const mountainSurfaceY = new Int16Array(WORLD_W);
       const depositAt = new Int32Array(WORLD_W * WORLD_H);
@@ -11141,7 +11795,8 @@
       function updateOreBookMenuStatus() {
         if (!oreBookStatus) return;
 
-        const mined = ORE_BOOK_TYPES.reduce(
+        const activeTypes = activePlanetOreBookTypes();
+        const mined = activeTypes.reduce(
           (count, type) =>
             count +
             (
@@ -11155,7 +11810,7 @@
         oreBookStatus.textContent =
           mined +
           " / " +
-          ORE_BOOK_TYPES.length +
+          activeTypes.length +
           " MINED";
       }
 
@@ -11268,7 +11923,7 @@
         updateOreBookMenuStatus();
       }
 
-      const SAVE_FORMAT_VERSION = 23;
+      const SAVE_FORMAT_VERSION = 24;
       const LOCAL_SAVE_KEY = "mountain-tycoon-save-v1";
       const LOCAL_WORLDS_KEY = "mountain-tycoon-world-slots-v1";
       const WORLD_LAUNCH_KEY = "mountain-tycoon-launch-slot";
@@ -11347,6 +12002,7 @@
       let worldCollection = null;
       let currentWorldSlot = -1;
       let activeWorldEntry = null;
+      let planetRuntimeState = createPlanetRuntimeState(DEFAULT_PLANET_ID);
       let worldSettings = { ...WORLD_PRESETS.standard };
       let worldPlayTimeSeconds = 0;
       let worldCreatorSlot = -1;
@@ -11391,7 +12047,8 @@
       let mobileControlsVisible = true;
       let playerInShop = false;
       let shopExitX = null;
-      const SHOP_ROOM_W = 2200;
+      const BASE_EQUIPMENT_SHOP_ROOM_W = 2200;
+      let SHOP_ROOM_W = BASE_EQUIPMENT_SHOP_ROOM_W;
       const SHOP_ZONE_PICKAXE = 475;
       const SHOP_ZONE_BACKPACK_L = 475;
       const SHOP_ZONE_BACKPACK_R = 950;
@@ -11400,12 +12057,106 @@
       const SHOP_ZONE_REFINERY_L = 1350;
       const SHOP_ZONE_REFINERY_R = 1725;
       const SHOP_ZONE_CONTRACTS = 1725;
-      let shopPlayerX = SHOP_ROOM_W / 2;
+      let shopPlayerX = BASE_EQUIPMENT_SHOP_ROOM_W / 2;
       let shopCameraX = shopPlayerX;
       let shopPlayerVX = 0;
       let shopPlayerFacing = 1;
       let shopLastZone = null;
       let shopCurrentZone = null;
+      let activePlanetShopDefinition = null;
+
+      function activePlanetEquipmentShopLayout() {
+        let cursor = BASE_EQUIPMENT_SHOP_ROOM_W;
+        return activePlanetEquipmentShops().map(shop => {
+          const zone = {
+            ...shop,
+            startX: cursor,
+            endX: cursor + shop.width
+          };
+          cursor = zone.endX;
+          return zone;
+        });
+      }
+
+      function configureEquipmentShopForPlanet() {
+        const extensions = activePlanetEquipmentShopLayout();
+        SHOP_ROOM_W = extensions.length
+          ? extensions[extensions.length - 1].endX
+          : BASE_EQUIPMENT_SHOP_ROOM_W;
+        shopPlayerX = clamp(shopPlayerX, 50, SHOP_ROOM_W - 50);
+        shopCameraX = clamp(shopCameraX, 0, SHOP_ROOM_W);
+      }
+
+      function equipmentShopZoneAt(positionX) {
+        if (positionX <= SHOP_ZONE_PICKAXE) return "pickaxe";
+        if (positionX <= SHOP_ZONE_BACKPACK_R) return "backpack";
+        if (positionX <= SHOP_ZONE_FLASHLIGHT_R) return "flashlight";
+        if (positionX <= SHOP_ZONE_REFINERY_R) return "refinery";
+        if (positionX < BASE_EQUIPMENT_SHOP_ROOM_W) return "contracts";
+        const extension = activePlanetEquipmentShopLayout().find(
+          shop => positionX >= shop.startX && positionX < shop.endX
+        );
+        return extension ? extension.id : null;
+      }
+
+      function equipmentShopZoneLabel(zoneId) {
+        const coreLabels = {
+          pickaxe: "Pickaxes",
+          backpack: "Backpacks",
+          flashlight: "Flashlights",
+          refinery: "Refinery",
+          contracts: "Contracts"
+        };
+        return coreLabels[zoneId] || planetEquipmentShopById(zoneId)?.label || "Planet Shop";
+      }
+
+      function openPlanetEquipmentShop(shopId) {
+        const shop = planetEquipmentShopById(shopId);
+        if (!shop) return false;
+        setBurgerMenuOpen(false);
+        closeModal();
+        activePlanetShopDefinition = shop;
+        activeModal = "planetShop";
+        planetShopTitle.textContent = shop.label;
+        planetShopContent.textContent = "";
+
+        let rendered = null;
+        if (typeof shop.render === "function") {
+          rendered = invokePlanetExtension(
+            "shop render " + shop.id,
+            shop.render,
+            planetRuntimeContext({ shop }),
+            null
+          );
+        }
+        if (rendered instanceof Node) {
+          planetShopContent.appendChild(rendered);
+        } else if (rendered !== null && rendered !== undefined) {
+          planetShopContent.innerHTML = String(rendered);
+        } else {
+          const message = document.createElement("p");
+          message.textContent = shop.description || "This planet shop is ready for its inventory.";
+          planetShopContent.appendChild(message);
+        }
+
+        MODALS.planetShop.classList.add("open");
+        if (typeof shop.onOpen === "function") {
+          invokePlanetExtension(
+            "shop open " + shop.id,
+            shop.onOpen,
+            planetRuntimeContext({ shop, container: planetShopContent })
+          );
+        }
+        resetJoystick();
+        return true;
+      }
+
+      function activateEquipmentShopZone(zoneId) {
+        if (!zoneId) return false;
+        if (planetEquipmentShopById(zoneId)) return openPlanetEquipmentShop(zoneId);
+        openModal(zoneId);
+        return true;
+      }
 
       // Bundled sound effects are pooled so rapid footsteps and pickaxe hits can
       // overlap without cutting one another off. Web Audio remains available as
@@ -11653,6 +12404,7 @@
       const activeLava = new Set();
       const activeAcid = new Set();
       const activeWater = new Set();
+      const extensionLiquidRuntimes = new Map();
       const fallingBlocks = new Set();
       const triggeredHazardCells = new Set();
       const tntFuses = [];
@@ -11666,6 +12418,33 @@
       const resonanceBursts = [];
       const voidFissures = [];
       const voidCollapses = [];
+
+      function liquidRuntimeForType(type) {
+        if (type === WATER) return { activeCells: activeWater, core: true };
+        if (type === LAVA) return { activeCells: activeLava, core: true };
+        if (type === ACID) return { activeCells: activeAcid, core: true };
+        if (!isRegisteredLiquidType(type)) return null;
+        let runtime = extensionLiquidRuntimes.get(type);
+        if (!runtime) {
+          runtime = { activeCells: new Set(), timer: 0, core: false };
+          extensionLiquidRuntimes.set(type, runtime);
+        }
+        return runtime;
+      }
+
+      function setRegisteredLiquidCellActive(type, cellIndex, active) {
+        const runtime = liquidRuntimeForType(type);
+        if (!runtime) return;
+        if (active) runtime.activeCells.add(cellIndex);
+        else runtime.activeCells.delete(cellIndex);
+      }
+
+      function resetExtensionLiquidRuntimes() {
+        for (const runtime of extensionLiquidRuntimes.values()) {
+          runtime.activeCells.clear();
+          runtime.timer = 0;
+        }
+      }
 
       const input = { stickX: 0, stickY: 0, jump: false, mine: false, build: false, torch: false };
       const aim = { x: 1, y: 0 };
@@ -11759,7 +12538,7 @@
         if (
           y >= activeGeneratedWorldHeight()
         ) {
-          return STONE;
+          return activePlanetTerrain().underground;
         }
 
         return world[index(x, y)];
@@ -11817,9 +12596,19 @@
         if (previousType === WATER) activeWater.delete(cellIndex);
         if (previousType === LAVA) activeLava.delete(cellIndex);
         if (previousType === ACID) activeAcid.delete(cellIndex);
+        if (
+          previousType !== WATER &&
+          previousType !== LAVA &&
+          previousType !== ACID
+        ) {
+          setRegisteredLiquidCellActive(previousType, cellIndex, false);
+        }
         if (type === WATER) activeWater.add(cellIndex);
         if (type === LAVA) activeLava.add(cellIndex);
         if (type === ACID) activeAcid.add(cellIndex);
+        if (type !== WATER && type !== LAVA && type !== ACID) {
+          setRegisteredLiquidCellActive(type, cellIndex, true);
+        }
 
         if (type === AIR) {
           removeOpenedChestAboveFloor(x, y);
@@ -11908,7 +12697,7 @@
         const tileX = Math.floor(px / TILE);
         const tileY = Math.floor(py / TILE);
         const type = tileAt(tileX, tileY);
-        if (type !== AIR && type !== LAVA && type !== GAS && type !== WATER) {
+        if (type !== AIR && type !== GAS && !isRegisteredLiquidType(type)) {
           return true;
         }
         return (
@@ -13816,12 +14605,18 @@
         if (!raw || typeof raw !== "object") return null;
         const gameMode = raw.gameMode === "sandbox" ? "sandbox" : "normal";
         const preset = WORLD_PRESETS[raw.preset] ? raw.preset : "custom";
+        const planetId = String(
+          raw.planetId ||
+          raw.saveData?.worldDefinition?.planetId ||
+          DEFAULT_PLANET_ID
+        );
         const settings = normalizeWorldSettings(raw.settings || WORLD_PRESETS[preset] || WORLD_PRESETS.standard);
         if (gameMode === "sandbox") settings.hardcore = false;
         return {
           id: String(raw.id || ("world-" + Date.now().toString(36) + "-" + slotIndex)),
           name: String(raw.name || ("World " + (slotIndex + 1))).slice(0, 28),
           seed: String(raw.seed || randomWorldSeed()).slice(0, 40),
+          planetId,
           gameMode,
           preset,
           settings,
@@ -13839,6 +14634,7 @@
           id: "legacy-" + Date.now().toString(36),
           name: "Legacy World",
           seed: "legacy-" + (save.currentMountain?.generationId || Date.now()),
+          planetId: DEFAULT_PLANET_ID,
           gameMode: "normal",
           preset: "standard",
           settings: WORLD_PRESETS.standard,
@@ -13917,6 +14713,8 @@
               '<h2>Empty World</h2><p class="world-slot-meta">Create a new permanent Normal world or an editable Sandbox.</p>' +
               '<div class="world-slot-actions"><button class="world-action play" data-create-world="' + slotIndex + '">CREATE WORLD</button></div>';
           } else {
+            const planet = planetDefinitionById(entry.planetId);
+            const planetUnavailable = !planet || !planet.available;
             const modeLabel = entry.gameMode === "sandbox" ? "Sandbox" : "Normal";
             const presetLabel = entry.preset.charAt(0).toUpperCase() + entry.preset.slice(1);
             const tier = currentWorldTier(entry);
@@ -13926,11 +14724,12 @@
               '<h2>' + escapeWorldHtml(entry.name) + '</h2>' +
               '<div class="world-badges"><span class="world-badge ' + (entry.gameMode === "sandbox" ? "sandbox" : "") + '">' + modeLabel + '</span>' +
               '<span class="world-badge">' + presetLabel + '</span>' +
+              '<span class="world-badge">' + escapeWorldHtml(planet ? planet.name : entry.planetId + " missing") + '</span>' +
               (entry.settings.hardcore ? '<span class="world-badge hardcore">Hardcore</span>' : '') + '</div>' +
-              '<p class="world-slot-meta">' + status + '<br>Cash: ' + (entry.gameMode === "sandbox" ? '∞' : formatMoney(currentWorldCash(entry))) +
+              '<p class="world-slot-meta">' + (planetUnavailable ? 'PLANET PACK UNAVAILABLE' : status) + '<br>Cash: ' + (entry.gameMode === "sandbox" ? '∞' : formatMoney(currentWorldCash(entry))) +
               '<br>Playtime: ' + formatWorldPlayTime(entry.playTimeSeconds) + '<br>Seed: ' + escapeWorldHtml(entry.seed) + '</p>' +
               '<div class="world-slot-actions">' +
-              '<button class="world-action play" data-play-world="' + slotIndex + '" ' + (entry.fallen ? 'disabled' : '') + '>' + (entry.fallen ? 'WORLD ENDED' : 'PLAY') + '</button>' +
+              '<button class="world-action play" data-play-world="' + slotIndex + '" ' + (entry.fallen || planetUnavailable ? 'disabled' : '') + '>' + (entry.fallen ? 'WORLD ENDED' : planetUnavailable ? 'PLANET MISSING' : 'PLAY') + '</button>' +
               (entry.gameMode === "sandbox" ? '<button class="world-action secondary" data-edit-world="' + slotIndex + '">SETTINGS</button>' : '<button class="world-action secondary" data-view-world="' + slotIndex + '">RULES LOCKED</button>') +
               '<button class="world-action danger" data-delete-world="' + slotIndex + '">DELETE</button></div>';
           }
@@ -13966,6 +14765,20 @@
             '<output data-world-output="' + definition.key + '">100%</output>';
           worldSliderGrid.appendChild(row);
         }
+      }
+
+      function renderWorldPlanetOptions(selectedPlanetId = DEFAULT_PLANET_ID) {
+        worldPlanetSelect.textContent = "";
+        for (const planet of PLANET_REGISTRY.values()) {
+          if (!planet.available) continue;
+          const option = document.createElement("option");
+          option.value = planet.id;
+          option.textContent = planet.name;
+          worldPlanetSelect.appendChild(option);
+        }
+        worldPlanetSelect.value = planetDefinitionById(selectedPlanetId)?.available
+          ? selectedPlanetId
+          : DEFAULT_PLANET_ID;
       }
 
       function putSettingsIntoCreator(settings) {
@@ -14017,6 +14830,7 @@
 
       function openWorldCreator(slotIndex, editingSandbox = false) {
         renderWorldSliderControls();
+        renderWorldPlanetOptions();
         worldCreatorSlot = slotIndex;
         worldCreatorEditingSandbox = editingSandbox;
         const entry = worldCollection?.slots?.[slotIndex] || null;
@@ -14032,6 +14846,8 @@
           worldCreatorConfirm.textContent = "SAVE SETTINGS";
           worldNameInput.value = entry.name;
           worldSeedInput.value = entry.seed;
+          worldPlanetSelect.value = entry.planetId;
+          worldPlanetSelect.disabled = true;
           worldPresetSelect.value = entry.preset;
           worldModeSelect.value = "sandbox";
           worldModeSelect.disabled = true;
@@ -14042,6 +14858,8 @@
           worldCreatorConfirm.textContent = "CREATE WORLD";
           worldNameInput.value = "World " + (slotIndex + 1);
           worldSeedInput.value = randomWorldSeed();
+          worldPlanetSelect.value = DEFAULT_PLANET_ID;
+          worldPlanetSelect.disabled = false;
           worldPresetSelect.value = "standard";
           worldModeSelect.value = "normal";
           worldModeSelect.disabled = false;
@@ -14055,7 +14873,14 @@
       }
 
       function applyActiveWorldDefinition(entry, freshWorld = false) {
+        const planet = planetDefinitionById(entry?.planetId);
+        if (!planet || !planet.available) {
+          throw new Error("Required planet pack is unavailable: " + (entry?.planetId || "unknown"));
+        }
         activeWorldEntry = entry;
+        planetRuntimeState = freshWorld
+          ? createPlanetRuntimeState(entry.planetId)
+          : normalizePlanetRuntimeState(planetRuntimeState, entry.planetId);
         worldSettings = normalizeWorldSettings(entry?.settings);
         worldPlayTimeSeconds = Math.max(0, Number(entry?.playTimeSeconds) || 0);
         worldSettingsButton.hidden = !isSandboxWorld();
@@ -14063,15 +14888,17 @@
         player.oxygen = maximumOxygenSeconds();
         playerLightRevision++;
         playerLightCacheRadius = -1;
+        configureEquipmentShopForPlanet();
+        runPlanetHook("onWorldActivated", { freshWorld });
 
         if (freshWorld && isSandboxWorld()) {
           ownedPickaxeLevel = PICKAXES.length;
           ownedBackpackLevel = BACKPACKS.length;
           ownedFlashlightLevel = FLASHLIGHTS.length;
-          unlockContractTiersThrough(MOUNTAIN_TIERS.length);
+          unlockContractTiersThrough(activePlanetMountainTiers().length);
         }
 
-        refreshMountainShop();
+        buildMountainShop();
         renderPickaxeShop();
         renderBackpackShop();
         renderFlashlightShop();
@@ -14097,6 +14924,11 @@
       function launchWorldSlot(slotIndex) {
         const entry = worldCollection?.slots?.[slotIndex];
         if (!entry || entry.fallen) return;
+        const planet = planetDefinitionById(entry.planetId);
+        if (!planet || !planet.available) {
+          showToast("Install the " + entry.planetId + " planet pack before loading this world");
+          return;
+        }
         writeWorldCollection();
         sessionStorage.setItem(WORLD_LAUNCH_KEY, String(slotIndex));
         window.location.reload();
@@ -14110,9 +14942,17 @@
         }
 
         const seed = worldSeedInput.value.trim() || randomWorldSeed();
+        const planetId = worldCreatorEditingSandbox
+          ? worldCollection.slots[worldCreatorSlot].planetId
+          : worldPlanetSelect.value;
         const gameMode = worldCreatorEditingSandbox ? "sandbox" : worldModeSelect.value;
         const settings = readSettingsFromCreator();
         const preset = worldPresetSelect.value;
+        const planet = planetDefinitionById(planetId);
+        if (!planet || !planet.available) {
+          worldCreationError.textContent = "Select an installed planet.";
+          return;
+        }
 
         if (worldCreatorEditingSandbox) {
           const entry = worldCollection.slots[worldCreatorSlot];
@@ -14141,7 +14981,7 @@
         if (
           gameMode === "normal" &&
           !window.confirm(
-            'Create "' + name + '"? Its seed, difficulty, and world settings will be permanent.'
+            'Create "' + name + '" on ' + planet.name + '? Its planet, seed, difficulty, and world settings will be permanent.'
           )
         ) {
           return;
@@ -14152,6 +14992,7 @@
           id: "world-" + Date.now().toString(36) + "-" + worldCreatorSlot,
           name,
           seed,
+          planetId,
           gameMode,
           preset,
           settings,
@@ -14172,6 +15013,7 @@
         if (slotIndex === currentWorldSlot) {
           currentWorldSlot = -1;
           activeWorldEntry = null;
+          planetRuntimeState = createPlanetRuntimeState(DEFAULT_PLANET_ID);
           worldSettings = { ...WORLD_PRESETS.standard };
         }
         writeWorldCollection();
@@ -14214,10 +15056,15 @@
           ? worldCollection.slots[slotIndex]
           : null;
 
-        if (!entry || entry.fallen) {
+        const launchPlanet = entry ? planetDefinitionById(entry.planetId) : null;
+        if (!entry || entry.fallen || !launchPlanet || !launchPlanet.available) {
           currentWorldSlot = -1;
           activeWorldEntry = null;
+          planetRuntimeState = createPlanetRuntimeState(DEFAULT_PLANET_ID);
           showWorldMenu();
+          if (entry && (!launchPlanet || !launchPlanet.available)) {
+            showToast("Install the " + entry.planetId + " planet pack before loading this world");
+          }
           return false;
         }
 
@@ -14230,6 +15077,7 @@
             console.error("World slot could not be loaded", error);
             currentWorldSlot = -1;
             activeWorldEntry = null;
+            planetRuntimeState = createPlanetRuntimeState(DEFAULT_PLANET_ID);
             worldSettings = { ...WORLD_PRESETS.standard };
             worldSettingsButton.hidden = true;
             showWorldMenu();
@@ -14250,11 +15098,16 @@
             id: activeWorldEntry.id,
             name: activeWorldEntry.name,
             seed: activeWorldEntry.seed,
+            planetId: activeWorldEntry.planetId,
             gameMode: activeWorldEntry.gameMode,
             preset: activeWorldEntry.preset,
             settings: normalizeWorldSettings(worldSettings),
             playTimeSeconds: worldPlayTimeSeconds
           } : null,
+          planetState: normalizePlanetRuntimeState(
+            planetRuntimeState,
+            activeWorldEntry?.planetId || DEFAULT_PLANET_ID
+          ),
           worldHeight: WORLD_H,
           progression: {
             cash,
@@ -14387,6 +15240,7 @@
         activeLava.clear();
         activeAcid.clear();
         activeWater.clear();
+        resetExtensionLiquidRuntimes();
         fallingBlocks.clear();
         triggeredHazardCells.clear();
         dynamicAcidCount = 0;
@@ -14408,6 +15262,9 @@
           if (type === WATER) {
             activeWater.add(cellIndex);
           }
+          if (type !== WATER && type !== LAVA && type !== ACID) {
+            setRegisteredLiquidCellActive(type, cellIndex, true);
+          }
           if (
             type === GRAVEL &&
             y + 1 < WORLD_H &&
@@ -14424,6 +15281,12 @@
         if ((save.formatVersion || 0) > SAVE_FORMAT_VERSION) {
           throw new Error("This save was created by a newer game version");
         }
+        planetRuntimeState = normalizePlanetRuntimeState(
+          save.planetState,
+          activeWorldEntry?.planetId ||
+            save.worldDefinition?.planetId ||
+            DEFAULT_PLANET_ID
+        );
 
         const inferredSavedWorldHeight =
           Math.ceil(
@@ -14508,9 +15371,7 @@
         structureCollisionCells.clear();
         if (Array.isArray(save.structures)) {
           for (const raw of save.structures) {
-            const definition = raw && STRUCTURE_DEFINITIONS.find(
-              candidate => candidate.id === raw.definitionId
-            );
+            const definition = raw && planetStructureDefinitionById(raw.definitionId);
             if (
               !raw ||
               !definition ||
@@ -14995,8 +15856,7 @@
           worldCollection = normalizeWorldCollection(JSON.parse(raw));
           const entry = worldCollection.slots[currentWorldSlot];
           if (!entry || !entry.saveData) return false;
-          activeWorldEntry = entry;
-          worldSettings = normalizeWorldSettings(entry.settings);
+          applyActiveWorldDefinition(entry, false);
           restoreGameState(entry.saveData);
           if (showMessage) showToast("Local progress loaded");
           return true;
@@ -15855,6 +16715,7 @@
           suppressLocalSave = true;
           currentWorldSlot = -1;
           activeWorldEntry = null;
+          planetRuntimeState = createPlanetRuntimeState(DEFAULT_PLANET_ID);
           sessionStorage.removeItem(WORLD_LAUNCH_KEY);
           updateCloudUI("All cloud world slots loaded.");
           showToast("Cloud worlds loaded");
@@ -15951,6 +16812,7 @@
         activeLava.clear();
         activeAcid.clear();
         activeWater.clear();
+        resetExtensionLiquidRuntimes();
         fallingBlocks.clear();
         triggeredHazardCells.clear();
         tntFuses.length = 0;
@@ -16009,16 +16871,24 @@
       function generateBaseWorld() {
         world.fill(AIR);
         resetMountainSystems();
+        const terrain = activePlanetTerrain();
+        runPlanetHook("beforeBaseWorld");
 
-        // Ordinary grass/dirt/stone exists throughout the base world.
+        // The active planet supplies its surface, subsurface, and underground.
         // All special resources are added later and only where mountainMask = 1.
         for (let x = 0; x < WORLD_W; x++) {
           for (let y = GROUND_Y; y < WORLD_H; y++) {
             const depth = y - GROUND_Y;
-            world[index(x, y)] = depth === 0 ? GRASS : depth <= 4 ? DIRT : STONE;
+            world[index(x, y)] =
+              depth === 0
+                ? terrain.surface
+                : depth <= 4
+                  ? terrain.subsurface
+                  : terrain.underground;
           }
         }
         chunkCache.clear();
+        runPlanetHook("afterBaseWorld");
       }
 
       function smoothNoise(values, passes) {
@@ -16301,15 +17171,17 @@
         }
 
         const type = tileAt(x, y);
+        const terrain = activePlanetTerrain();
 
         return (
-          type === STONE ||
-          type === DEEPSTONE
+          type === terrain.underground ||
+          type === terrain.deep
         );
       }
 
       function applyDeepstoneLayer() {
         if (!currentMountain) return;
+        const terrain = activePlanetTerrain();
 
         // Mountain body — only cells inside the mountain mask.
         for (
@@ -16326,7 +17198,7 @@
 
             if (
               !mountainMask[cellIndex] ||
-              world[cellIndex] !== STONE
+              world[cellIndex] !== terrain.underground
             ) {
               continue;
             }
@@ -16341,7 +17213,7 @@
                 Math.random() < chance
               )
             ) {
-              world[cellIndex] = DEEPSTONE;
+              world[cellIndex] = terrain.deep;
             }
           }
         }
@@ -16351,17 +17223,20 @@
           if (x >= currentMountain.resourceStartX && x <= currentMountain.resourceEndX) continue;
           for (let y = GROUND_Y; y < WORLD_H; y++) {
             const cellIndex = index(x, y);
-            if (world[cellIndex] !== STONE) continue;
+            if (world[cellIndex] !== terrain.underground) continue;
             const chance = deepstoneChanceAtY(y);
             if (chance >= 1 || (chance > 0 && Math.random() < chance)) {
-              world[cellIndex] = DEEPSTONE;
+              world[cellIndex] = terrain.deep;
             }
           }
         }
       }
 
       function addSpecialVisualCell(x, y, type) {
+        const block = BLOCKS[type];
         if (
+          block?.specialVisual ||
+          block?.lightRadius ||
           type === GLOWSTONE ||
           type === PRISMSTONE ||
           type === RADIUM ||
@@ -16763,12 +17638,7 @@
       }
 
       function isGenerationHazardType(type) {
-        const block = BLOCKS[type];
-
-        return !!(
-          type === GRAVEL ||
-          (block && block.hazard)
-        );
+        return activePlanetAllowsHazard(type);
       }
 
       const FIRST_ORE_BY_TIER = {
@@ -16791,6 +17661,7 @@
 
         return !!(
           block &&
+          activePlanetAllowsOre(type) &&
           block.tier &&
           block.tier <= maximumTier &&
           block.spawnRate &&
@@ -16875,10 +17746,7 @@
           });
         }
 
-        const previewType =
-          FIRST_ORE_BY_TIER[
-            tier.level + 1
-          ];
+        const previewType = activePlanetFirstOreForTier(tier.level + 1);
         const previewBlock =
           BLOCKS[previewType];
 
@@ -17074,6 +17942,7 @@
             !block ||
             !block.tier ||
             !block.spawnRate ||
+            !activePlanetAllowsHazard(type) ||
             !isGenerationHazardType(type)
           ) {
             continue;
@@ -17104,12 +17973,9 @@
             continue;
           }
 
+          const liquidDefinition = activePlanetLiquidForType(type);
           expectedClusters *= worldSettingMultiplier(
-            type === WATER
-              ? "waterFrequency"
-              : type === LAVA
-                ? "lavaFrequency"
-                : "otherHazardFrequency"
+            liquidDefinition?.frequencySetting || "otherHazardFrequency"
           );
 
           const clusterCount =
@@ -17153,6 +18019,7 @@
         const pools =
           buildGenerationCellPools();
 
+        runPlanetHook("beforeDeposits", { tier, pools });
         generateControlledOres(
           tier,
           pools
@@ -17161,6 +18028,7 @@
           tier,
           pools
         );
+        runPlanetHook("afterDeposits", { tier, pools });
       }
 
       function hashWorldSeed(text) {
@@ -17191,11 +18059,25 @@
           Math.floor(Number(lifetimeStats?.mountainsGenerated) || 0) + 1
         );
         Math.random = seededWorldRandom(
-          (activeWorldEntry?.seed || "default") +
+          (activeWorldEntry?.planetId || DEFAULT_PLANET_ID) +
+            "|" + (activeWorldEntry?.seed || "default") +
             "|tier:" + tier.level +
             "|generation:" + generationNumber
         );
         try {
+          const customGenerator = activePlanetDefinition().hooks.generateMountain;
+          if (typeof customGenerator === "function") {
+            const result = invokePlanetExtension(
+              "mountain generator",
+              customGenerator,
+              planetRuntimeContext({
+                tier,
+                generateDefault: () => generateSeededMountain(tier)
+              }),
+              false
+            );
+            if (result !== false) return result;
+          }
           return generateSeededMountain(tier);
         } finally {
           Math.random = originalRandom;
@@ -17203,7 +18085,9 @@
       }
 
       function generateSeededMountain(tier) {
+        runPlanetHook("beforeMountainGeneration", { tier });
         generateBaseWorld();
+        const terrain = activePlanetTerrain();
         const heights = new Float32Array(tier.width);
         const peakShift = (Math.random() - 0.5) * 0.16;
         const steepness = 0.78 + (tier.level - 1) * 0.11;
@@ -17241,6 +18125,7 @@
           const jagged = 1 + (Math.random() - 0.5) * roughness * 2;
           heights[x] = Math.max(1, tier.height * verticalScale * shape * edgeFade * jagged);
         }
+        runPlanetHook("modifyMountainHeights", { tier, heights });
 
         // Keep a smooth silhouette at every tier. Higher tiers may change by up
         // to roughly five blocks per column, but the amount varies continuously
@@ -17311,13 +18196,13 @@
             mountainMask[cellIndex] = 1;
 
             if (y === surfaceY) {
-              world[cellIndex] = GRASS;
+              world[cellIndex] = terrain.surface;
             } else if (y < GROUND_Y && y <= surfaceY + 3) {
-              world[cellIndex] = DIRT;
+              world[cellIndex] = terrain.subsurface;
             } else if (y >= GROUND_Y && y < GROUND_Y + preservedSoilDepth) {
-              world[cellIndex] = DIRT;
+              world[cellIndex] = terrain.subsurface;
             } else {
-              world[cellIndex] = STONE;
+              world[cellIndex] = terrain.underground;
             }
           }
         }
@@ -17352,6 +18237,7 @@
         }
 
         currentMountain.topY = actualTop;
+        runPlanetHook("afterMountainTerrain", { tier, heights });
         applyDeepstoneLayer();
         generateCaves(tier);
         generateDeposits(tier);
@@ -17367,6 +18253,7 @@
         sunlightRevision = -1;
         playerLightRevision = -1;
         chunkCache.clear();
+        runPlanetHook("afterMountainGeneration", { tier, heights });
       }
 
       function hashCoord(x, y, seed) {
@@ -17420,6 +18307,7 @@
       }
 
       function generateCaves(tier) {
+        const terrain = activePlanetTerrain();
         // Generate caves and air pockets everywhere, with density increasing at depth
         const caveScale = 8 + Math.max(0, (tier.level - 1) * 1); // Smaller scale = smaller caves
         const airScale = 12 + Math.max(0, (tier.level - 1) * 1.5); // Air pockets less common
@@ -17431,7 +18319,10 @@
           for (let x = 0; x < WORLD_W; x++) {
             if (isProtectedArea(x, y)) continue;
             if (tileAt(x, y) === AIR) continue;
-            if (tileAt(x, y) === DIRT || tileAt(x, y) === GRASS) continue;
+            if (
+              tileAt(x, y) === terrain.subsurface ||
+              tileAt(x, y) === terrain.surface
+            ) continue;
 
             // Use the same mountain-height-aware depth as ambience and
             // lighting. Cells inside the mountain body measure from the
@@ -17507,7 +18398,8 @@
         if (name === "equipment") {
           playerInShop = true;
           shopExitX = player.x;
-          shopPlayerX = SHOP_ROOM_W / 2;
+          configureEquipmentShopForPlanet();
+          shopPlayerX = BASE_EQUIPMENT_SHOP_ROOM_W / 2;
           shopCameraX = shopPlayerX;
           shopPlayerVX = 0;
           shopPlayerFacing = 1;
@@ -17557,10 +18449,26 @@
       function closeModal() {
         const closingModal = activeModal;
 
+        if (
+          closingModal === "planetShop" &&
+          activePlanetShopDefinition &&
+          typeof activePlanetShopDefinition.onClose === "function"
+        ) {
+          invokePlanetExtension(
+            "shop close " + activePlanetShopDefinition.id,
+            activePlanetShopDefinition.onClose,
+            planetRuntimeContext({
+              shop: activePlanetShopDefinition,
+              container: planetShopContent
+            })
+          );
+        }
+
         for (const modal of Object.values(MODALS)) {
           modal.classList.remove("open");
         }
         activeModal = null;
+        activePlanetShopDefinition = null;
 
         if (closingModal === "inventory") {
           inventorySearchQuery = "";
@@ -17589,7 +18497,7 @@
       function buildMountainShop() {
         mountainOptions.textContent = "";
         const fragment = document.createDocumentFragment();
-        for (const tier of MOUNTAIN_TIERS) {
+        for (const tier of activePlanetMountainTiers()) {
           const button = document.createElement("button");
           button.className = "mountain-option";
           button.dataset.mountainLevel = String(tier.level);
@@ -17653,7 +18561,7 @@
           const priceLabel = button.querySelector(".price-label");
           if (priceLabel) {
             priceLabel.textContent = available
-              ? (isSandboxWorld() ? "FREE" : formatMoney(effectiveMountainPrice(MOUNTAIN_TIERS[level - 1])))
+              ? (isSandboxWorld() ? "FREE" : formatMoney(effectiveMountainPrice(activePlanetMountainTiers()[level - 1])))
               : "LOCKED • Purchase Tier " + (level - 1);
           }
         }
@@ -20152,7 +21060,7 @@
       }
 
       function purchaseMountain(level) {
-        const tier = MOUNTAIN_TIERS[level - 1];
+        const tier = activePlanetMountainTiers()[level - 1];
         if (!tier) return;
         const highestTier = highestUnlockedMountainTier();
         if (
@@ -21599,6 +22507,15 @@
           if (type === WATER) {
             activeWater.add(index(nx, ny));
           }
+          if (
+            type !== WATER &&
+            type !== LAVA &&
+            type !== ACID &&
+            isRegisteredLiquidType(type)
+          ) {
+            recordHazardContractTrigger(type, nx, ny);
+            setRegisteredLiquidCellActive(type, index(nx, ny), true);
+          }
           if (type === VOID_FISSURE && tileIsExposed(nx, ny)) {
             scheduleVoidFissure(nx, ny);
           }
@@ -21630,6 +22547,14 @@
             const type = tileAt(nx, ny);
             if (type === LAVA) activeLava.add(index(nx, ny));
             if (type === WATER) activeWater.add(index(nx, ny));
+            if (
+              type !== WATER &&
+              type !== LAVA &&
+              type !== ACID &&
+              isRegisteredLiquidType(type)
+            ) {
+              setRegisteredLiquidCellActive(type, index(nx, ny), true);
+            }
           }
         }
 
@@ -21667,6 +22592,11 @@
         }
 
         playBreakSound(type);
+
+        if (runPlanetHazardMineHandler(type, x, y)) {
+          activateEnvironmentAround(x, y);
+          return;
+        }
 
         if (type === FRACTURED_STONE) {
           setTile(x, y, AIR);
@@ -22449,6 +23379,181 @@
         return candidates;
       }
 
+      function registeredLiquidCanMoveTo(x, y) {
+        if (
+          x < 0 ||
+          x >= WORLD_W ||
+          y < 0 ||
+          y >= WORLD_H ||
+          tileProtectedByShop(x, y) ||
+          treasureChestAtCell(x, y) ||
+          tileAt(x, y) !== AIR ||
+          structureCollisionCells.has(index(x, y))
+        ) {
+          return false;
+        }
+        return !(
+          currentMountain &&
+          (x < currentMountain.startX - 2 || x > currentMountain.endX + 2)
+        );
+      }
+
+      function activateAdjacentRegisteredLiquid(type, x, y) {
+        const runtime = liquidRuntimeForType(type);
+        if (!runtime) return;
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (
+            nx >= 0 &&
+            nx < WORLD_W &&
+            ny >= 0 &&
+            ny < WORLD_H &&
+            tileAt(nx, ny) === type
+          ) {
+            runtime.activeCells.add(index(nx, ny));
+          }
+        }
+      }
+
+      function moveRegisteredLiquidCell(definition, fromX, fromY, toX, toY) {
+        if (definition.breaksPlacedObjects) {
+          breakPlacedObjectsInFluidCell(fromX, fromY);
+          breakPlacedObjectsInFluidCell(toX, toY);
+        }
+        setTile(fromX, fromY, AIR);
+        setTile(toX, toY, definition.blockType);
+        moveSpecialVisualCell(
+          definition.blockType,
+          fromX,
+          fromY,
+          toX,
+          toY
+        );
+        activateAdjacentRegisteredLiquid(definition.blockType, fromX, fromY);
+        activateAdjacentRegisteredLiquid(definition.blockType, toX, toY);
+      }
+
+      function registeredLiquidDropDistance(definition, x, y, direction) {
+        for (let distance = 1; distance <= definition.horizontalSearch; distance++) {
+          const nextX = x + direction * distance;
+          if (!registeredLiquidCanMoveTo(nextX, y)) return Infinity;
+          if (registeredLiquidCanMoveTo(nextX, y + 1)) return distance;
+        }
+        return Infinity;
+      }
+
+      function updateGenericRegisteredLiquid(definition, runtime) {
+        const candidates = takeActiveFluidCells(runtime.activeCells);
+        for (const cellIndex of candidates) {
+          const x = cellIndex % WORLD_W;
+          const y = Math.floor(cellIndex / WORLD_W);
+          if (tileAt(x, y) !== definition.blockType) continue;
+
+          if (registeredLiquidCanMoveTo(x, y + 1)) {
+            moveRegisteredLiquidCell(definition, x, y, x, y + 1);
+            continue;
+          }
+
+          const firstDirection = Math.random() < 0.5 ? -1 : 1;
+          let moved = false;
+          for (const direction of [firstDirection, -firstDirection]) {
+            if (
+              registeredLiquidCanMoveTo(x + direction, y) &&
+              registeredLiquidCanMoveTo(x + direction, y + 1)
+            ) {
+              moveRegisteredLiquidCell(
+                definition,
+                x,
+                y,
+                x + direction,
+                y + 1
+              );
+              moved = true;
+              break;
+            }
+          }
+          if (moved) continue;
+
+          const leftDrop = registeredLiquidDropDistance(definition, x, y, -1);
+          const rightDrop = registeredLiquidDropDistance(definition, x, y, 1);
+          if (Number.isFinite(leftDrop) || Number.isFinite(rightDrop)) {
+            const direction = leftDrop === rightDrop
+              ? firstDirection
+              : (leftDrop < rightDrop ? -1 : 1);
+            moveRegisteredLiquidCell(
+              definition,
+              x,
+              y,
+              x + direction,
+              y
+            );
+            continue;
+          }
+
+          for (const direction of [firstDirection, -firstDirection]) {
+            if (registeredLiquidCanMoveTo(x + direction, y)) {
+              moveRegisteredLiquidCell(
+                definition,
+                x,
+                y,
+                x + direction,
+                y
+              );
+              moved = true;
+              break;
+            }
+          }
+          if (!moved) runtime.activeCells.add(cellIndex);
+        }
+      }
+
+      function updatePlanetExtensionLiquids(dt) {
+        const contactTypes = new Set([
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.18) / TILE)
+          ),
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.5) / TILE)
+          ),
+          tileAt(
+            Math.floor((player.x + player.w * 0.5) / TILE),
+            Math.floor((player.y + player.h * 0.82) / TILE)
+          )
+        ]);
+
+        for (const definition of activePlanetLiquids()) {
+          if (definition.core) continue;
+          const runtime = liquidRuntimeForType(definition.blockType);
+          if (!runtime) continue;
+          runtime.timer -= dt;
+          if (runtime.timer <= 0) {
+            runtime.timer = definition.interval;
+            if (typeof definition.update === "function") {
+              invokePlanetExtension(
+                "liquid update " + definition.id,
+                definition.update,
+                planetRuntimeContext({ dt, liquid: definition, liquidRuntime: runtime })
+              );
+            } else {
+              updateGenericRegisteredLiquid(definition, runtime);
+            }
+          }
+          if (
+            contactTypes.has(definition.blockType) &&
+            typeof definition.onPlayerContact === "function"
+          ) {
+            invokePlanetExtension(
+              "liquid contact " + definition.id,
+              definition.onPlayerContact,
+              planetRuntimeContext({ dt, liquid: definition, liquidRuntime: runtime })
+            );
+          }
+        }
+      }
+
       function moveLavaCell(fromX, fromY, toX, toY) {
         // Move one existing lava unit. The old cell is always vacated before
         // the target is filled, so movement never creates additional lava.
@@ -22856,6 +23961,7 @@
           acidTimer = 0.32;
           updateAcidFlow();
         }
+        updatePlanetExtensionLiquids(dt);
         if (fallingTimer <= 0) {
           fallingTimer = 0.11;
           updateFallingGravel();
@@ -23022,6 +24128,9 @@
           hazardHudTimer = 0.15;
           updateHUD();
         }
+        updatePlanetHazardExtensions(dt);
+        updatePlanetEvents(dt);
+        runPlanetHook("update", { dt });
       }
 
       // --------------------------------------------------
@@ -23172,7 +24281,7 @@
       }
 
       function lightPassCost(type) {
-        return type === AIR || type === GAS || type === LAVA || type === WATER
+        return type === AIR || type === GAS || isRegisteredLiquidType(type)
           ? PLAYER_LIGHT_AIR_COST
           : PLAYER_LIGHT_SOLID_COST;
       }
@@ -23724,6 +24833,10 @@
       }
 
       function lightSourceRadius(type) {
+        const configuredRadius = Number(BLOCKS[type]?.lightRadius);
+        if (Number.isFinite(configuredRadius) && configuredRadius > 0) {
+          return configuredRadius;
+        }
         if (type === GLOWSTONE) return 8;
         if (type === PRISMSTONE) return 7;
         if (type === LAVA) return 6;
@@ -27223,30 +28336,7 @@
               walkSoundTimer = Math.min(walkSoundTimer, 0.06);
             }
 
-            shopCurrentZone = null;
-
-            if (shopPlayerX <= SHOP_ZONE_PICKAXE) {
-              shopCurrentZone = "pickaxe";
-            } else if (
-              shopPlayerX > SHOP_ZONE_BACKPACK_L &&
-              shopPlayerX <= SHOP_ZONE_BACKPACK_R
-            ) {
-              shopCurrentZone = "backpack";
-            } else if (
-              shopPlayerX > SHOP_ZONE_FLASHLIGHT_L &&
-              shopPlayerX <= SHOP_ZONE_FLASHLIGHT_R
-            ) {
-              shopCurrentZone = "flashlight";
-            } else if (
-              shopPlayerX > SHOP_ZONE_REFINERY_L &&
-              shopPlayerX <= SHOP_ZONE_REFINERY_R
-            ) {
-              shopCurrentZone = "refinery";
-            } else if (
-              shopPlayerX >= SHOP_ZONE_CONTRACTS
-            ) {
-              shopCurrentZone = "contracts";
-            }
+            shopCurrentZone = equipmentShopZoneAt(shopPlayerX);
 
             if (!shopCurrentZone) {
               shopLastZone = null;
@@ -27256,7 +28346,7 @@
             ) {
               // Mobile: auto-open on zone entry.
               shopLastZone = shopCurrentZone;
-              openModal(shopCurrentZone);
+              activateEquipmentShopZone(shopCurrentZone);
             }
           } else {
             shopPlayerVX = 0;
@@ -27530,9 +28620,30 @@
         const target = sprite.getContext("2d", { alpha: true });
         target.imageSmoothingEnabled = false;
         const block = BLOCKS[type];
-        const motif = BLOCK_16BIT_MOTIFS[type];
+        const motif = BLOCK_16BIT_MOTIFS[type] || block.motif;
         const random = seeded16BitRandom(type * 1009 + textureVariant * 7919);
         const rock = block.tier && block.tier >= 8 ? "#414850" : "#626a70";
+
+        if (typeof block.paint16Bit === "function") {
+          const painted = invokePlanetExtension(
+            "block painter " + block.key,
+            block.paint16Bit,
+            {
+              context: target,
+              block,
+              type,
+              textureVariant,
+              random,
+              shadeColor: shade16BitColor,
+              paintBase: paint16BitBase,
+              paintLine: paint16BitLine,
+              paintCrystal: paint16BitCrystal
+            },
+            false
+          );
+          if (painted !== false) return sprite;
+          target.clearRect(0, 0, 16, 16);
+        }
 
         if (motif === "grass") {
           paint16BitBase(target, "#88512f", random, true);
@@ -27875,8 +28986,7 @@
 
         if (
           block.hazard &&
-          type !== WATER &&
-          type !== LAVA
+          !isRegisteredLiquidType(type)
         ) {
           target.fillStyle = "#ff6b4a";
           target.fillRect(13, 0, 3, 1);
@@ -27905,10 +29015,10 @@
       function paintTile(target, type, sx, sy, x, y) {
         const block = BLOCKS[type];
 
-        if (BLOCK_16BIT_MOTIFS[type]) {
-          if (type === WATER) {
+        if (BLOCK_16BIT_MOTIFS[type] || block?.motif || block?.paint16Bit) {
+          if (isRegisteredLiquidType(type)) {
             target.save();
-            target.globalAlpha = 0.65;
+            target.globalAlpha = clamp(Number(block.renderAlpha) || 0.65, 0.05, 1);
             paint16BitBlock(target, type, sx, sy, x, y);
             target.restore();
           } else {
@@ -29460,6 +30570,51 @@
         ctx.textBaseline = "bottom";
         ctx.fillText("RELEASE Q TO SELECT", centerX, centerY - radius - optionRadius - 25);
         ctx.restore();
+      }
+
+      function drawPlanetLiquidOverlays() {
+        const visibleW = screenW / camera.zoom;
+        const visibleH = screenH / camera.zoom;
+        const startTX = Math.max(0, Math.floor(camera.x / TILE));
+        const endTX = Math.min(WORLD_W - 1, Math.ceil((camera.x + visibleW) / TILE));
+        const startTY = Math.max(0, Math.floor(camera.y / TILE));
+        const endTY = Math.min(WORLD_H - 1, Math.ceil((camera.y + visibleH) / TILE));
+
+        for (const liquid of activePlanetLiquids()) {
+          if (liquid.core || liquid.overlayPlayer === false) continue;
+          if (typeof liquid.drawOverlay === "function") {
+            invokePlanetExtension(
+              "liquid overlay " + liquid.id,
+              liquid.drawOverlay,
+              planetRuntimeContext({
+                liquid,
+                context: ctx,
+                visibleTiles: { startTX, endTX, startTY, endTY }
+              })
+            );
+            continue;
+          }
+
+          ctx.save();
+          ctx.translate(-camera.x * camera.zoom, -camera.y * camera.zoom);
+          ctx.scale(camera.zoom, camera.zoom);
+          ctx.imageSmoothingEnabled = false;
+          for (let ty = startTY; ty <= endTY; ty++) {
+            for (let tx = startTX; tx <= endTX; tx++) {
+              if (world[index(tx, ty)] === liquid.blockType) {
+                paintTile(
+                  ctx,
+                  liquid.blockType,
+                  tx * TILE,
+                  ty * TILE,
+                  tx,
+                  ty
+                );
+              }
+            }
+          }
+          ctx.restore();
+        }
       }
 
       function drawOreModifierCanvas(
@@ -31331,6 +32486,39 @@
           ctx.fillText("REWARD READY", sx(contractCX), counterTop - 48);
         }
 
+        // Planet packs can extend the equipment shop to the right of Contracts.
+        for (const extension of activePlanetEquipmentShopLayout()) {
+          const centerX = extension.startX + extension.width / 2;
+          ctx.fillStyle = "#19333c";
+          ctx.fillRect(sx(extension.startX + 24), floorY - 150, extension.width - 48, 82);
+          ctx.fillStyle = "#4f7f89";
+          ctx.fillRect(sx(extension.startX + 30), floorY - 144, extension.width - 60, 70);
+          ctx.fillStyle = "#101c22";
+          ctx.fillRect(sx(extension.startX + 42), floorY - 58, extension.width - 84, 40);
+          ctx.fillStyle = "#8fe5cf";
+          ctx.font = "bold 15px monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(extension.label.toUpperCase(), sx(centerX), floorY - 112);
+          ctx.fillStyle = "#d6fff3";
+          ctx.font = "10px monospace";
+          ctx.fillText(activePlanetDefinition().name.toUpperCase(), sx(centerX), floorY - 88);
+
+          if (typeof extension.draw === "function") {
+            try {
+              extension.draw(planetRuntimeContext({
+                shop: extension,
+                context: ctx,
+                screenX: sx,
+                floorY,
+                centerX
+              }));
+            } catch (error) {
+              console.error("Planet equipment shop drawing failed", error);
+            }
+          }
+        }
+
         // Exit door (on right wall, twice as tall as before)
         const exitDoorH = 112;
         const exitDoorX = SHOP_ROOM_W - wallW;
@@ -31361,16 +32549,7 @@
           ctx.font = "900 14px monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          const zoneLabel =
-            shopCurrentZone === "pickaxe"
-              ? "Pickaxes"
-              : shopCurrentZone === "backpack"
-                ? "Backpacks"
-                : shopCurrentZone === "flashlight"
-                  ? "Flashlights"
-                  : shopCurrentZone === "refinery"
-                    ? "Refinery"
-                    : "Contracts";
+          const zoneLabel = equipmentShopZoneLabel(shopCurrentZone);
           const promptText = isDesktop
             ? `[E] Browse ${zoneLabel}`
             : `Tap to browse ${zoneLabel}`;
@@ -31411,9 +32590,13 @@
         }
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawParallaxBackground(now || performance.now());
-        drawCaveBackground();
+        const drawTime = now || performance.now();
+        if (runPlanetHook("drawBackground", { now: drawTime, context: ctx }) !== true) {
+          drawParallaxBackground(drawTime);
+          drawCaveBackground();
+        }
         drawStructureBackgrounds();
+        runPlanetHook("drawWorldBeforeTerrain", { now: drawTime, context: ctx });
         for (const shop of SHOPS) drawShop(shop);
         drawPixelLuckPlot(now || performance.now());
         drawVisibleTerrain();
@@ -31434,6 +32617,8 @@
         drawAimIndicator();
         drawPlayer(now || performance.now());
         drawWaterTiles();
+        drawPlanetLiquidOverlays();
+        runPlanetHook("drawWorldAfterPlayer", { now: drawTime, context: ctx });
         drawLightingAndFog();
         drawPlayerOxygenBar();
 
@@ -32762,11 +33947,13 @@
 
       function renderOreBook() {
         oreBookContent.textContent = "";
+        const planetRows = activePlanetOreBookRows();
+        const planetTypes = planetRows.flat();
 
         let identified = 0;
         let mined = 0;
 
-        for (const type of ORE_BOOK_TYPES) {
+        for (const type of planetTypes) {
           const stage = oreBookEntry(type).stage;
           if (stage >= 1) identified++;
           if (stage >= 2) mined++;
@@ -32778,24 +33965,24 @@
           '<strong>' +
           identified +
           " / " +
-          ORE_BOOK_TYPES.length +
+          planetTypes.length +
           '</strong></div>' +
           '<div class="ore-book-summary-card">' +
           '<small>Successfully Mined</small>' +
           '<strong>' +
           mined +
           " / " +
-          ORE_BOOK_TYPES.length +
+          planetTypes.length +
           '</strong></div>' +
           '<div class="ore-book-summary-card">' +
           '<small>Rewards</small>' +
           '<strong>None</strong>' +
           '</div>';
 
-        ORE_BOOK_ROWS.forEach(
+        planetRows.forEach(
           (row, rowIndex) => {
             const structureValuableRow =
-              rowIndex === ORE_BOOK_ROWS.length - 1;
+              row.some(type => BLOCKS[type]?.structureValuable);
             const section =
               document.createElement("section");
             section.className =
@@ -33281,7 +34468,7 @@
 
         if (event.code === "KeyE") {
           if (playerInShop && !activeModal && shopCurrentZone) {
-            openModal(shopCurrentZone);
+            activateEquipmentShopZone(shopCurrentZone);
             event.preventDefault();
             return;
           }

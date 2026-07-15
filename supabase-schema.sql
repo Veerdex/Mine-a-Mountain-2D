@@ -11,8 +11,10 @@
 --   "slots": [<world or null>, <world or null>, <world or null>]
 -- }
 --
--- Older rows may contain one legacy world instead. Do not add a JSON shape
--- constraint that would reject them; the game migrates them into slot 1.
+-- Each world entry may contain a permanent planetId and its saveData contains
+-- planetState for planet-specific events, machines, hazards, and progression.
+-- Older rows may contain one legacy Earth world instead. Do not add a JSON
+-- shape constraint that would reject them; the game migrates them into slot 1.
 -- ============================================================
 
 create table if not exists public.player_saves (
@@ -34,7 +36,7 @@ comment on table public.player_saves is
   'One private save row per account. save_data contains all three world slots.';
 
 comment on column public.player_saves.save_data is
-  'Versioned Mountain Tycoon world-slot collection. Legacy single-world JSON remains valid for client migration.';
+  'Versioned Mountain Tycoon world-slot collection. Worlds include planetId and planetState; legacy single-world JSON remains valid for client migration.';
 
 comment on column public.player_saves.version is
   'Server-side world-collection format version. Current version is 1.';

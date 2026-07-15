@@ -8,6 +8,7 @@ REQUIRED FILES
 - service-worker.js
 - supabase-config.js
 - supabase-schema.sql
+- planets/planet-packs.js
 - audio/
 - icons/
 
@@ -25,6 +26,7 @@ PRIVATE SAVES
 -------------
 - One player_saves row belongs to each authenticated account.
 - save_data contains the complete three-world collection.
+- Every world stores its planetId and planet-specific runtime state in JSONB.
 - Row Level Security prevents access to another player's collection.
 - Old single-world saves remain loadable and migrate into slot 1.
 - The public leaderboard exposes only username and lifetime money.
